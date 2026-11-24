@@ -11,7 +11,7 @@ Aleksandr Makarov's (iknowkingrabbit) pixel-art packs.
 | Spire Roguelite | In progress | |
 | Heroes Lite | In progress | |
 | City Chief: run the police force of Tiny Town (see docs/games/city-chief.md) | Playable | [/city-chief/](https://dianteclark.github.io/KingRabbit-Collection/city-chief/) |
-| Soccer | In progress | |
+| Pocket Soccer: 5-a-side arcade football (see docs/games/soccer.md) | Playable | [/soccer/](https://dianteclark.github.io/KingRabbit-Collection/soccer/) |
 
 Progress on each game is tracked on the GitHub Project board, with one label per game.
 
