@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { PALETTE, hex } from '../../../shared/core/palette.js';
 import { text, button, panel } from '../../../shared/core/ui.js';
 import { sfx } from '../../../shared/core/sfx.js';
-import { WIDTH, HEIGHT, store, toast, setBackground, openHowTo, modal } from './common.js';
+import { WIDTH, HEIGHT, store, toast, setBackground, openHowTo, modal, hint } from './common.js';
 import { creatureInfo } from './heroPanel.js';
 import * as C from '../logic/combat.js';
 import { CREATURES, SPELLS } from '../logic/data.js';
@@ -49,6 +49,7 @@ export class Battle extends Phaser.Scene {
     this.syncAll();
     window.__heroes = { ...(window.__heroes || {}), battle: this };
     this.input.on('pointerup', (p) => this.tap(p));
+    hint(this, 'battle', 'Your stack has a gold frame. Tap a lit square to move, or a red-framed enemy to attack. Auto fights for you.', 548);
     this.time.delayedCall(300, () => this.next());
   }
 
@@ -78,8 +79,9 @@ export class Battle extends Phaser.Scene {
     const img = sprite(this, 0, -6, unitFrame(def.sprite, 'idle', 0), 3);
     if (s.side === 1) img.setFlipX(true);
     const mine = s.side === this.human;
-    const badge = this.add.rectangle(s.side === 0 ? 14 : -14, 16, 30, 16, hex(SIDE_COLORS[mine ? 0 : 1])).setStrokeStyle(2, hex(PALETTE.ink));
-    const n = text(this, s.side === 0 ? 14 : -14, 16, `${s.count}`, { color: mine ? PALETTE.night : PALETTE.cream });
+    // Count badge centred under the creature so neighbours' badges never touch.
+    const badge = this.add.rectangle(0, 17, 30, 16, hex(SIDE_COLORS[mine ? 0 : 1])).setStrokeStyle(2, hex(PALETTE.ink));
+    const n = text(this, 0, 17, `${s.count}`, { color: mine ? PALETTE.night : PALETTE.cream });
     c.add([img, badge, n]);
     c.img = img; c.badge = badge; c.n = n;
     c.setDepth(10 + s.y * 3 + 1);
@@ -162,7 +164,7 @@ export class Battle extends Phaser.Scene {
       c.setPosition(cx(s.x), cy(s.y));
       c.setDepth(10 + s.y * 3 + 1);
       c.n.setText(`${s.count}`);
-      c.badge.width = Math.max(26, c.n.width + 8);
+      c.badge.setSize(Math.max(26, c.n.width + 8), 16).setOrigin(0.5);
     }
     b.sides.forEach((sd) => { if (sd.hero) sd.manaText.setText(`Mana ${sd.hero.mana}${sd.cast ? ' (cast)' : ''}`); else sd.manaText.setText(''); });
     this.roundText.setText(`Round ${b.round}`);
@@ -289,6 +291,8 @@ export class Battle extends Phaser.Scene {
   tap(p) {
     if (this.busy || document.getElementById('howto')) return;
     if (this.children.list.some((c) => c.depth >= 100 && c.active)) return;
+    const hb = this.hintBox?.active ? this.hintBox.bounds : null;
+    if (hb && p.y >= hb.top && p.y <= hb.bottom) return;
     const x = Math.floor((p.x - OX) / CELL); const y = Math.floor((p.y - OY) / CELL);
     if (!C.inGrid(x, y)) return;
     const b = this.b;

@@ -3,7 +3,7 @@ import { PALETTE, hex } from '../../../shared/core/palette.js';
 import { text, button } from '../../../shared/core/ui.js';
 import { sfx, isMuted, setMuted } from '../../../shared/core/sfx.js';
 import {
-  WIDTH, HEIGHT, store, go, modal, toast, resourceBar, bar, setBackground, openHowTo,
+  WIDTH, HEIGHT, store, go, modal, toast, resourceBar, bar, setBackground, openHowTo, hint, hintSeen,
 } from './common.js';
 import { openHeroPanel, levelUpFlow, openExchange } from './heroPanel.js';
 import * as G from '../logic/game.js';
@@ -69,8 +69,8 @@ export class Adventure extends Phaser.Scene {
       modal(this, scn.name, [
         scn.mode === 'endless' ? 'Enemy waves arrive every week from the map edges. Hold on to your town!' : 'Capture every enemy town to win.',
         'Tap a tile to plan a route, tap it again to march. Open your town to build and recruit, then tap End Day.',
-      ], [['Begin', () => this.showNews()]]);
-    } else this.checkOver();
+      ], [['Begin', () => { this.showNews(); this.firstTips(); }]]);
+    } else if (!this.checkOver()) this.firstTips();
   }
 
   // ---------- Map drawing ----------
@@ -301,6 +301,8 @@ export class Adventure extends Phaser.Scene {
     let down = null;
     this.input.on('pointerdown', (p) => {
       if (p.y < MAP_TOP || p.y > MAP_BOTTOM || this.modalOpen()) { down = null; return; }
+      const hb = this.hintBox?.active ? this.hintBox.bounds : null;
+      if (hb && p.y >= hb.top && p.y <= hb.bottom) { down = null; return; }
       down = { x: p.x, y: p.y, sx: this.scroll.x, sy: this.scroll.y, drag: false };
     });
     this.input.on('pointermove', (p) => {
@@ -500,6 +502,7 @@ export class Adventure extends Phaser.Scene {
     if (!path) { this.plan = null; this.drawPath(); this.info(this.describe(o, tx, ty) || 'Can\'t get there'); sfx('error'); return; }
     this.plan = { path, tx, ty };
     this.drawPath();
+    if (!hintSeen('move')) { this.doneTip('move'); this.firstTips(); }
     const days = Math.ceil(Math.max(0, path[path.length - 1].cost - h.mp) / G.heroMaxMp(h));
     const desc = this.describe(o, tx, ty);
     this.info(`${desc ? `${desc}. ` : ''}${days ? `${days + 1} days away` : 'Tap again to go'}`);
@@ -527,6 +530,7 @@ export class Adventure extends Phaser.Scene {
     }
     this.drawPath();
     if (plan.trigger) await this.trigger(h, plan.trigger);
+    if (!hintSeen('go')) { this.doneTip('go'); this.firstTips(); }
     this.afterAction();
   }
 
@@ -726,7 +730,11 @@ export class Adventure extends Phaser.Scene {
     }
     if (!t || t.owner !== 0) return;
     this.busy = true;
-    store.townDone = () => { this.busy = false; this.afterAction(); };
+    store.townDone = () => {
+      this.busy = false;
+      if (!hintSeen('town')) { this.doneTip('town'); this.firstTips(); }
+      this.afterAction();
+    };
     this.scene.launch('Town', { townId: t.id });
     this.scene.sleep();
   }
@@ -742,6 +750,8 @@ export class Adventure extends Phaser.Scene {
   async endDay() {
     if (this.busy) return;
     this.busy = true;
+    if (!hintSeen('endday') && hintSeen('town')) this.doneTip('endday');
+    this.hintBox?.destroy(); this.hintBox = null;
     this.plan = null; this.drawPath();
     this.info('Enemy turn...');
     this.endBtn.setEnabled(false);
@@ -795,6 +805,25 @@ export class Adventure extends Phaser.Scene {
   }
 
   wait(ms) { return new Promise((r) => this.time.delayedCall(ms, r)); }
+
+  // ---------- First-time tips ----------
+
+  tip(key, msg) { if (!this.s.over) hint(this, key, msg); }
+
+  doneTip(key) {
+    if (hintSeen(key)) return;
+    const box = this.hintBox;
+    hint(this, key, '')?.close();
+    if (box?.active && box !== this.hintBox) box.destroy();
+  }
+
+  firstTips() {
+    if (!this.hero()) return;
+    if (!hintSeen('move')) this.tip('move', 'Tap a pile of gold or wood near your hero to plan a route there.');
+    else if (!hintSeen('go')) this.tip('go', 'Tap the same spot again to march. White dots: today. Orange: later days.');
+    else if (!hintSeen('town')) this.tip('town', 'Tap your town (or the Town button) to build and recruit troops.');
+    else if (!hintSeen('endday')) this.tip('endday', 'Out of moves? Tap End Day. Towns and mines pay you every morning.');
+  }
 
   /** Is the tile in the current sight of one of the human's heroes or towns? */
   humanSees(x, y) {

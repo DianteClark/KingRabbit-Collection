@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { PALETTE, hex } from '../../../shared/core/palette.js';
 import { text, button, panel } from '../../../shared/core/ui.js';
 import { sfx } from '../../../shared/core/sfx.js';
-import { WIDTH, HEIGHT, store, header, modal, toast, resourceBar, creatureSlot, setBackground, costText } from './common.js';
+import { WIDTH, HEIGHT, store, header, modal, toast, resourceBar, creatureSlot, setBackground, costText, hint } from './common.js';
 import { creatureInfo } from './heroPanel.js';
 import * as G from '../logic/game.js';
 import { BUILDINGS, CREATURES, FACTIONS, SPELLS, buildingName, buildingDesc } from '../logic/data.js';
@@ -32,6 +32,7 @@ export class Town extends Phaser.Scene {
     this.tabBtns = TABS.map(([id, label], i) => button(this, 46 + i * 89, 228, 84, 36, label, () => this.show(id)));
     this.content = this.add.container(0, 0);
     this.refresh();
+    hint(this, 'townscreen', 'Build one thing a day (gold cards are affordable). Recruit in the Recruit tab: troops join a hero standing in the gate, or stay to guard the town.', 140);
     window.__heroes = { ...(window.__heroes || {}), town: this };
   }
 

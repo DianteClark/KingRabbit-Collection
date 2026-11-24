@@ -4,6 +4,7 @@ import { WIDTH, HEIGHT } from '../../../shared/core/boot.js';
 import { showHowTo } from '../../../shared/core/howto.js';
 import { RULES } from '../rules.js';
 import { skillLabel } from '../adaptive.js';
+import { save } from '../save.js';
 import { sprite, RES_ICON, unitFrame } from '../frames.js';
 import { CREATURES } from '../logic/data.js';
 
@@ -135,3 +136,30 @@ export function bar(scene, x, y, w, h, frac, color) {
 export function fit(t, w) { if (t.width > w) t.setScale(w / t.width); return t; }
 
 export const costText = (cost, n = 1) => Object.entries(cost).filter(([, v]) => v).map(([k, v]) => `${v * n} ${k}`).join(', ') || 'free';
+
+/**
+ * One-time tip for new players: a small panel with an OK button, shown once ever per key.
+ * Returns the container (or null if already seen). Only one tip is on screen at a time.
+ */
+export function hint(scene, key, msg, y = 116) {
+  const seen = save.get('hints') || {};
+  if (seen[key]) return null;
+  scene.hintBox?.destroy();
+  const c = scene.add.container(0, 0).setDepth(95);
+  const t = text(scene, 22, 0, msg, { origin: [0, 0], align: 'left', wrap: WIDTH - 104, color: PALETTE.cream });
+  const h = Math.max(48, t.height + 20);
+  const top = Math.round(y - h / 2);
+  t.setY(top + 10);
+  const g = scene.add.graphics();
+  g.fillStyle(hex(PALETTE.ink)).fillRect(8, top - 3, WIDTH - 16, h + 6);
+  g.fillStyle(hex(PALETTE.gold)).fillRect(10, top - 1, WIDTH - 20, h + 2);
+  g.fillStyle(hex(PALETTE.indigo)).fillRect(12, top + 1, WIDTH - 24, h - 2);
+  c.add([g, t]);
+  const close = () => { save.set('hints', { ...(save.get('hints') || {}), [key]: true }); c.destroy(); if (scene.hintBox === c) scene.hintBox = null; };
+  c.add(button(scene, WIDTH - 46, top + h / 2, 56, 36, 'OK', close, { fill: PALETTE.gold }));
+  c.bounds = { top: top - 3, bottom: top + h + 3 };
+  c.close = close;
+  scene.hintBox = c;
+  return c;
+}
+export const hintSeen = (key) => !!(save.get('hints') || {})[key];
