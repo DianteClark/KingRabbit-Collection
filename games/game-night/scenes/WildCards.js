@@ -78,6 +78,11 @@ export class WildCards extends Phaser.Scene {
     cg.fillStyle(hex(r.color === null ? PALETTE.lavender : COLOR_HEX[r.color])).fillRect(WIDTH / 2 + 18, 204, 76, 116);
     this.layer.add(cg);
     this.layer.add(this.add.image(WIDTH / 2 + 56, 262, 'wild', frameOf(top(r))).setScale(4));
+    if (top(r).value === 'wild4' && top(r).color !== null) {
+      // A played +4 shows its chosen colour; keep the "+4" readable on it.
+      this.layer.add(text(this, WIDTH / 2 + 56 + 1, 262 + 2, '+4', { size: 32, color: PALETTE.ink }));
+      this.layer.add(text(this, WIDTH / 2 + 56, 262, '+4', { size: 32, color: PALETTE.cream }));
+    }
     this.layer.add(text(this, WIDTH / 2 + 56, 330, r.color === null ? 'Any' : COLORS[r.color], { color: PALETTE.cream }));
 
     const hand = r.hands[0];
@@ -119,6 +124,7 @@ export class WildCards extends Phaser.Scene {
 
   // ---------- flow ----------
   next() {
+    if (this.r.hands[0].length > 2) this.calledUno = false;   // drew back up: the old call no longer counts
     this.draw();
     const w = winner(this.r);
     if (w >= 0) { this.finishRound(w); return; }
@@ -232,6 +238,7 @@ export class WildCards extends Phaser.Scene {
         penalty(this.r, 0, 2);
         toast(this, "Caught! You didn't call UNO: +2", 430);
       }
+      this.calledUno = false;   // a new call is needed the next time you get down to two cards
       if (ev.effect === 'wild4') { this.handleWild4(ev); return; }
       this.next();
     };

@@ -11,8 +11,8 @@ import { sfx } from '../../../shared/core/sfx.js';
 
 const DIE_SCALE = 4;            // 12px dice -> 48px
 const DICE_Y = 108;
-const ROW_H = 22;
-const CARD_TOP = 252;
+const ROW_H = 23;            // scorecard rows are tap targets: keep them as tall as fits
+const CARD_TOP = 240;
 const CARD_LEFT = 20;
 const CARD_W = WIDTH - CARD_LEFT * 2;
 
@@ -28,6 +28,10 @@ export class Yacht extends Phaser.Scene {
   }
 
   create() {
+    // Scene objects are reused between visits: never carry a half-finished roll over.
+    this.rolling = false;
+    this.rolled = false;
+    this.pending = null;
     setBackground(this, PALETTE.indigo);
     header(this, 'Yacht', () => go(this, 'Menu'));
     this.dice = [];
@@ -41,7 +45,7 @@ export class Yacht extends Phaser.Scene {
     }
     this.hint = text(this, WIDTH / 2, 150, '', { color: PALETTE.lavender });
     this.turnText = text(this, WIDTH / 2, 72, '', { color: PALETTE.gold }).setVisible(this.players.length > 1);
-    this.rollBtn = button(this, WIDTH / 2, 192, 200, 44, 'Roll', () => this.roll(), { fill: PALETTE.gold });
+    this.rollBtn = button(this, WIDTH / 2, 182, 200, 40, 'Roll', () => this.roll(), { fill: PALETTE.gold });
     this.buildCard();
     this.newGame();
   }
@@ -61,7 +65,7 @@ export class Yacht extends Phaser.Scene {
 
     this.rows = CATEGORIES.map((cat, i) => {
       const y = CARD_TOP + 8 + i * ROW_H + (i >= 6 ? ROW_H : 0);
-      const bg = this.add.rectangle(WIDTH / 2, y, CARD_W - 8, ROW_H - 3, hex(PALETTE.lavender), 0).setInteractive({ useHandCursor: true });
+      const bg = this.add.rectangle(WIDTH / 2, y, CARD_W - 8, ROW_H - 1, hex(PALETTE.lavender), 0).setInteractive({ useHandCursor: true });
       bg.on('pointerup', () => this.pick(cat.id));
       const name = text(this, CARD_LEFT + 10, y, cat.name, { origin: [0, 0.5] });
       const vals = this.players.map((_, p) => text(this, this.colX(p), y, '', { origin: [1, 0.5] }));
@@ -106,6 +110,7 @@ export class Yacht extends Phaser.Scene {
     if (this.rollsLeft <= 0 || this.rolling || this.over) return;
     if (this.current.cpu && typeof done !== 'function') return;
     this.rolling = true;
+    this.pending = null;
     this.rollsLeft--;
     sfx('roll');
     const rolling = this.dice.filter((d) => !d.held);
@@ -153,7 +158,17 @@ export class Yacht extends Phaser.Scene {
   }
 
   pick(id) {
-    if (this.current.cpu) return;
+    if (this.current.cpu || !this.rolled || this.rolling || this.over) return;
+    const card = this.current.card;
+    const dice = this.dice.map((d) => d.value);
+    if (card[id] !== undefined || !allowed(card, dice).includes(id)) { this.score(id); return; }
+    // Scoring a zero throws a box away: ask for a second tap so a slip of the thumb can't do it.
+    if (scoreFor(id, dice, card) === 0 && this.pending !== id) {
+      this.pending = id;
+      sfx('error');
+      this.refresh();
+      return;
+    }
     this.score(id);
   }
 
@@ -166,6 +181,7 @@ export class Yacht extends Phaser.Scene {
       card.yachtBonus = (card.yachtBonus || 0) + 100;
       toast(this, 'Yacht bonus +100!', 220);
     }
+    this.pending = null;
     card[id] = scoreFor(id, dice, card);
     sfx(card[id] ? 'coin' : 'place');
     if (this.players.every((p) => isComplete(p.card))) { this.refresh(); this.finish(); return; }
@@ -185,6 +201,7 @@ export class Yacht extends Phaser.Scene {
     this.rollBtn.setLabel(left === 3 ? 'Roll' : `Roll again (${left})`).setEnabled(left > 0 && !this.rolling && !cpuTurn && !this.over);
     if (cpuTurn) this.hint.setText('CPU is playing...');
     else if (!this.rolled) this.hint.setText('Roll the dice to start');
+    else if (this.pending) this.hint.setText(`Score 0 in ${CATEGORIES.find((c) => c.id === this.pending).name}? Tap again`);
     else if (left > 0) this.hint.setText('Tap dice to hold, or pick a score');
     else this.hint.setText('Pick a score below');
 
@@ -192,7 +209,8 @@ export class Yacht extends Phaser.Scene {
     for (const r of this.rows) {
       const cur = this.current.card[r.cat.id];
       const can = cur === undefined && ok.includes(r.cat.id) && !cpuTurn;
-      r.bg.setFillStyle(hex(PALETTE.lavender), can ? 0.18 : 0);
+      if (can && this.pending === r.cat.id) r.bg.setFillStyle(hex(PALETTE.red), 0.6);
+      else r.bg.setFillStyle(hex(PALETTE.lavender), can ? 0.18 : 0);
       r.name.setColor(cur === undefined ? PALETTE.cream : PALETTE.lavender);
       this.players.forEach((pl, p) => {
         const v = pl.card[r.cat.id];
