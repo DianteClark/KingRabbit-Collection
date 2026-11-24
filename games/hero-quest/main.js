@@ -5,4 +5,5 @@ import { Play } from './scenes/Play.js';
 import { Hud } from './scenes/Hud.js';
 import { Ending } from './scenes/Ending.js';
 
-startGame({ scenes: [Boot, Title, Play, Hud, Ending] });
+// Landscape: the room fills the full height in the middle, controls sit in the side margins.
+startGame({ scenes: [Boot, Title, Play, Hud, Ending], orientation: 'landscape' });

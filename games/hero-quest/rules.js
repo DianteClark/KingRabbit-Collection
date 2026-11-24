@@ -6,9 +6,9 @@ export const RULES = {
     {
       heading: 'Controls',
       items: [
-        'Left side of the screen: put your thumb down anywhere and drag to walk. The stick appears where you touch.',
-        'SWORD (big button): swing your sword. Next to a person, sign or chest it becomes TALK, READ or OPEN.',
-        'ITEM: use the item shown on it (boomerang, bombs or a potion). SWAP picks a different item once you own two.',
+        'Hold your phone sideways. Left half of the screen: put your thumb down anywhere and drag to walk. The stick appears where you touch.',
+        'SWORD (big button, bottom right): swing your sword. Next to a person, sign or chest it becomes TALK, READ or OPEN.',
+        'ITEM (above SWORD): use the item shown on it (boomerang, bombs or a potion). SWAP picks a different item once you own two.',
         'Your shield is always up: face a thrown rock and it bounces off (not while swinging).',
         'Walk into a block for a moment to push it. Walk into a locked door with a key to open it.',
         'Keyboard: arrows or WASD to walk, Space or J for the sword, K or X for the item, Q to swap.',
