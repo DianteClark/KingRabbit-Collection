@@ -24,9 +24,11 @@ export function createBattle(side0, side1, opts = {}) {
       hero: s.hero ? { ...s.hero, spells: [...(s.hero.spells || [])], skills: { ...(s.hero.skills || {}) } } : null,
       ai: !!s.ai, owner: s.owner ?? null, cast: false, name: s.name || s.hero?.name || (i ? 'Defenders' : 'Attackers'),
       defBonus: i === 1 ? (opts.defBonus || 0) : 0,
+      // Fleeing: a hero may retreat (army lost); surrender needs gold and an enemy hero to pay.
+      canRetreat: !!s.hero && s.canRetreat !== false, gold: s.gold ?? null,
     })),
     stacks: [], obstacles: [], round: 1, queue: [], waitQueue: [], activeId: null,
-    over: false, winner: null, nextId: 1, terrain: opts.terrain || 'grass', log: [],
+    over: false, winner: null, fled: null, nextId: 1, terrain: opts.terrain || 'grass', log: [],
   };
   const rng = rngFrom(b.rng);
   [side0, side1].forEach((s, side) => {
@@ -328,6 +330,25 @@ function castSpell(b, side, id, target, events) {
   }
 }
 
+/** Gold it costs a side to surrender now: half the price of the troops it still has. */
+export function surrenderCost(b, side) {
+  let g = 0;
+  for (const s of alive(b, side)) g += (CREATURES[s.type].cost.gold || 0) * s.count;
+  return Math.max(100, Math.round(g / 2 / 10) * 10);
+}
+
+/** Which ways out does a side have? { retreat, surrender: cost|null } */
+export function fleeOptions(b, side) {
+  const sd = b.sides[side];
+  const foe = b.sides[1 - side];
+  const out = { retreat: !!sd.hero && sd.canRetreat, surrender: null };
+  if (sd.hero && foe.hero && sd.gold !== null) {
+    const cost = surrenderCost(b, side);
+    if (sd.gold >= cost) out.surrender = cost;
+  }
+  return out;
+}
+
 /**
  * Perform an action for the active stack (or a hero spell). Returns animation events.
  * action: {type:'move',x,y} | {type:'attack',target,x,y} | {type:'shoot',target} | {type:'wait'} | {type:'defend'}
@@ -342,6 +363,17 @@ export function act(b, action) {
     if (!castable(b, s.side).includes(action.spell)) return events;
     castSpell(b, s.side, action.spell, action.target, events);
     if (!s.alive || checkOver(b)) nextActive(b, events);
+    return events;
+  }
+  if (action.type === 'retreat' || action.type === 'surrender') {
+    const opt = fleeOptions(b, s.side);
+    if (action.type === 'retreat' && !opt.retreat) return events;
+    if (action.type === 'surrender' && opt.surrender === null) return events;
+    b.over = true;
+    b.winner = 1 - s.side;
+    b.activeId = null;
+    b.fled = { side: s.side, how: action.type, cost: action.type === 'surrender' ? opt.surrender : 0 };
+    events.push({ type: 'flee', side: s.side, how: action.type });
     return events;
   }
   if (action.type === 'move') {
@@ -397,9 +429,9 @@ export function act(b, action) {
  * hold: keep melee units back to guard own shooters.
  */
 export const TACTIC_PRESETS = {
-  easy: { noise: 0.6, retal: 0, focus: 0, spell: 0.35, hold: 0 },
-  normal: { noise: 0.2, retal: 0.6, focus: 0.5, spell: 0.8, hold: 0.5 },
-  hard: { noise: 0, retal: 1, focus: 1, spell: 1, hold: 1 },
+  easy: { noise: 0.6, retal: 0, focus: 0, spell: 0.35, hold: 0, flee: 0 },
+  normal: { noise: 0.2, retal: 0.6, focus: 0.5, spell: 0.8, hold: 0.5, flee: 0.22 },
+  hard: { noise: 0, retal: 1, focus: 1, spell: 1, hold: 1, flee: 0.3 },
 };
 
 const valueOfHp = (s, hp) => (hp / CREATURES[s.type].hp) * creatureValue(s.type);
@@ -458,6 +490,17 @@ export function chooseAction(b, p = TACTIC_PRESETS.normal) {
   if (!s) return null;
   const rng = rngFrom(b.rng);
   const jitter = (v) => v * (1 + p.noise * (rng() * 2 - 1));
+  // A hopeless fight: save the hero (and the army, if we can pay for it).
+  if (p.flee > 0 && b.round >= 2 && b.sides[s.side].hero) {
+    const mine = sideValue(b, s.side); const theirs = sideValue(b, 1 - s.side);
+    if (mine < theirs * p.flee) {
+      const opt = fleeOptions(b, s.side);
+      const gold = b.sides[s.side].gold ?? 0;
+      if (opt.surrender !== null && opt.surrender <= gold * 0.6) return { type: 'surrender' };
+      const h = b.sides[s.side].hero;
+      if (opt.retreat && ((h.level || 1) >= 3 || (h.artifacts || 0) > 0 || mine < theirs * p.flee * 0.5)) return { type: 'retreat' };
+    }
+  }
   // Hero spell first (once per round).
   if (!b.sides[s.side].cast && b.sides[s.side].hero && rng() < p.spell) {
     const sp = bestSpell(b, s.side, p, rng);
@@ -505,6 +548,8 @@ export function chooseAction(b, p = TACTIC_PRESETS.normal) {
   return { type: 'defend' };
 }
 
+const sideValue = (b, side) => alive(b, side).reduce((a, s) => a + valueOfHp(s, totalHp(s)), 0);
+
 /** Run the battle to the end with the computer playing both sides (auto-combat / quick battle). */
 export function autoResolve(b, p0 = TACTIC_PRESETS.normal, p1 = TACTIC_PRESETS.normal, maxSteps = 2000) {
   let steps = 0;
@@ -520,7 +565,7 @@ export function autoResolve(b, p0 = TACTIC_PRESETS.normal, p1 = TACTIC_PRESETS.n
 
 /** Battle outcome: survivors per original army slot, experience, losses. */
 export function result(b) {
-  const out = { winner: b.winner, sides: [] };
+  const out = { winner: b.winner, fled: b.fled, sides: [] };
   for (let side = 0; side < 2; side++) {
     const own = b.stacks.filter((s) => s.side === side);
     const foe = b.stacks.filter((s) => s.side !== side);

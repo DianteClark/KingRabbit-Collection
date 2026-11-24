@@ -225,7 +225,19 @@ export class Town extends Phaser.Scene {
   }
 
   hire() {
-    const h = G.hireHero(this.s, this.town);
+    const pool = G.retiredHeroes(this.s, 0);
+    if (pool.length) {
+      const btns = pool.slice(-3).reverse().map((r) => [`${r.name}, level ${r.level}`, () => this.doHire(r.id)]);
+      btns.push(['A new hero', () => this.doHire('new'), PALETTE.lavender]);
+      btns.push(['Cancel', null, PALETTE.cream]);
+      modal(this, 'Tavern', [`Hire for ${G.HERO_COST} gold. Heroes who fled are waiting here (with any army they kept).`], btns);
+      return;
+    }
+    this.doHire('new');
+  }
+
+  doHire(pick) {
+    const h = G.hireHero(this.s, this.town, pick);
     if (!h) return;
     sfx('power');
     saveGame(this.s);

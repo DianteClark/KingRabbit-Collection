@@ -64,11 +64,11 @@ export function newGame(scn, opts = {}) {
   const state = {
     v: 1, scenario: scn.id, name: scn.name, mode: scn.endless ? 'endless' : 'scenario', biome: scn.biome,
     w, h, terrain: [], objects: [], heroes: [], day: 1, rng: { s: seed }, seed, nextId: 1, over: null, news: [],
-    endless: null,
+    endless: null, grace: scn.grace || 0,
     players: scn.players.map((p, i) => ({
       id: i, human: i === 0, faction: i === 0 ? pf : (p.faction === 'enemy' ? ef : p.faction || ef),
       color: PLAYER_COLORS[i], res: { gold: 0, wood: 0, ore: 0, gems: 0, ...(p.res || scn.res || { gold: 7500, wood: 15, ore: 15, gems: 5 }) },
-      explored: [], noTownDays: 0, alive: true, waves: !!p.waves, heroesHired: 0,
+      explored: [], noTownDays: 0, alive: true, waves: !!p.waves, heroesHired: 0, retired: [],
     })),
   };
   const rng = rngOf(state);
@@ -115,7 +115,12 @@ export function newGame(scn, opts = {}) {
   for (const p of state.players) {
     for (const t of townsOf(state, p.id)) {
       if (heroesOf(state, p.id).length >= (scn.startHeroes || 1)) break;
-      createHero(state, p.id, t.x, t.y, rng, { main: true });
+      const h = createHero(state, p.id, t.x, t.y, rng, { main: true });
+      // Scenarios can give the human a stronger starting army (gentler first maps).
+      if (p.human && scn.startArmy) {
+        const cr = FACTIONS[p.faction].creatures;
+        h.army = scn.startArmy.map((x) => (x ? { type: cr[x[0]], count: x[1] } : null));
+      }
     }
     p.explored = new Array(w * h).fill(0);
   }
@@ -158,7 +163,7 @@ function addTown(state, x, y, owner, faction, rng, scn, letter) {
     g.forEach(([tier, n], i) => { t.garrison[i] = { type: f.creatures[tier], count: n }; });
   } else {
     // Every owned town starts with a small garrison so it can't be walked into on day 2.
-    (scn.garrison || [[0, 14], [1, 6], [2, 2]]).forEach(([tier, n], i) => { t.garrison[i] = { type: f.creatures[tier], count: n }; });
+    ((owner !== 0 && scn.enemyGarrison) || scn.garrison || [[0, 14], [1, 6], [2, 2]]).forEach(([tier, n], i) => { t.garrison[i] = { type: f.creatures[tier], count: n }; });
   }
   return t;
 }
@@ -171,7 +176,7 @@ function monsterCount(type, scale, rng) {
 export function createHero(state, pid, x, y, rng = rngOf(state), { main = false, level = 1, army } = {}) {
   const p = state.players[pid];
   const f = FACTIONS[p.faction];
-  const used = new Set(state.heroes.map((h) => h.name));
+  const used = new Set([...state.heroes, ...state.players.flatMap((pp) => pp.retired || [])].map((h) => h.name));
   const names = f.heroNames.filter((n) => !used.has(n));
   const cls = rng.pick(f.classes);
   const name = names.length ? rng.pick(names) : `${f.heroNames[0]} ${state.heroes.length}`;
@@ -215,6 +220,7 @@ export function battleHero(hero) {
   return {
     name: hero.name, atk: heroStat(hero, 'atk'), def: heroStat(hero, 'def'), pow: heroStat(hero, 'pow'),
     know: heroStat(hero, 'know'), mana: hero.mana, spells: hero.spells, skills: hero.skills, portrait: hero.portrait,
+    level: hero.level, artifacts: hero.artifacts.length,
   };
 }
 export const heroArmyValue = (hero) => armyValue(hero.army, { atk: heroStat(hero, 'atk'), def: heroStat(hero, 'def'), pow: heroStat(hero, 'pow'), spells: hero.spells });
@@ -633,16 +639,37 @@ export function canHire(state, town) {
   return { ok: true };
 }
 
-export function hireHero(state, town) {
+/** Heroes who retreated or surrendered and wait in the tavern. */
+export const retiredHeroes = (state, pid) => state.players[pid].retired || [];
+
+/**
+ * Hire a hero at a town's tavern. pick: 'new' for a fresh hero, or the id of a retired hero.
+ * Without a pick the computer takes its best retired hero, if any.
+ */
+export function hireHero(state, town, pick) {
   if (!canHire(state, town).ok) return null;
   const p = state.players[town.owner];
+  const pool = retiredHeroes(state, town.owner);
+  if (pick === undefined && !p.human && pool.length) pick = [...pool].sort((x, y) => y.level - x.level)[0].id;
+  const back = pick !== undefined && pick !== 'new' ? pool.find((x) => x.id === pick) : null;
+  if (pick !== undefined && pick !== 'new' && !back) return null;
   p.res.gold -= HERO_COST;
   p.heroesHired += 1;
   const rng = rngOf(state);
   const cr = FACTIONS[town.faction].creatures;
-  const h = createHero(state, town.owner, town.x, town.y, rng, {
-    army: [{ type: cr[0], count: rng.int(6, 10) }, null, null, null, null],
-  });
+  let h;
+  if (back) {
+    p.retired = pool.filter((x) => x !== back);
+    h = back;
+    h.x = town.x; h.y = town.y;
+    if (!h.army.some(Boolean)) h.army = [{ type: cr[0], count: rng.int(4, 7) }, null, null, null, null];
+    h.mana = Math.max(h.mana, 0);
+    state.heroes.push(h);
+  } else {
+    h = createHero(state, town.owner, town.x, town.y, rng, {
+      army: [{ type: cr[0], count: rng.int(6, 10) }, null, null, null, null],
+    });
+  }
   h.mp = heroMaxMp(h);
   enterTown(state, h, town);
   reveal(state, h.owner, h.x, h.y, heroSight(h));
@@ -722,11 +749,12 @@ export function defenderOwner(state, setup) {
 export function makeBattle(state, setup, { seed } = {}) {
   const a = getHero(state, setup.attacker);
   const dOwner = defenderOwner(state, setup);
-  const side0 = { hero: battleHero(a), army: a.army, ai: !state.players[a.owner].human, owner: a.owner };
+  const gold = (pid) => (state.players[pid].waves ? null : state.players[pid].res.gold);
+  const side0 = { hero: battleHero(a), army: a.army, ai: !state.players[a.owner].human, owner: a.owner, gold: gold(a.owner), canRetreat: !state.players[a.owner].waves };
   let side1;
   if (setup.kind === 'hero') {
     const d = getHero(state, setup.heroId);
-    side1 = { hero: battleHero(d), army: d.army, ai: !state.players[d.owner].human, owner: d.owner };
+    side1 = { hero: battleHero(d), army: d.army, ai: !state.players[d.owner].human, owner: d.owner, gold: gold(d.owner), canRetreat: !state.players[d.owner].waves };
   } else {
     side1 = { hero: null, army: setup.defArmy, ai: dOwner === null || !state.players[dOwner].human, owner: dOwner, name: setup.defName };
   }
@@ -764,8 +792,25 @@ export function applyBattle(state, setup, res) {
     if (m) m.count = left;
   }
   const winnerHero = out.won ? a : (setup.kind === 'hero' ? getHero(state, setup.heroId) : null);
-  const loserHero = out.won ? (setup.kind === 'hero' ? getHero(state, setup.heroId) : null) : a;
+  let loserHero = out.won ? (setup.kind === 'hero' ? getHero(state, setup.heroId) : null) : a;
   const winSide = out.won ? ra : rd;
+  if (res.fled && loserHero) {
+    // The loser ran: it lives on in the tavern instead of dying.
+    const p = state.players[loserHero.owner];
+    if (res.fled.how === 'surrender') {
+      const cost = Math.min(p.res.gold, res.fled.cost);
+      p.res.gold -= cost;
+      if (winnerHero) state.players[winnerHero.owner].res.gold += cost;
+      out.msgs.push(`${loserHero.name} surrendered for ${cost} gold`);
+    } else {
+      loserHero.army = loserHero.army.map(() => null);
+      out.msgs.push(`${loserHero.name} retreated; the army is lost`);
+    }
+    out.fled = res.fled.how;
+    out.retired = loserHero.id;
+    retireHero(state, loserHero);
+    loserHero = null;
+  }
   if (winnerHero) {
     let exp = winSide.killedHp + (loserHero ? 500 : 0);
     gainExp(state, winnerHero, exp);
@@ -798,6 +843,16 @@ export function applyBattle(state, setup, res) {
   }
   checkOver(state);
   return out;
+}
+
+/** Take a hero off the map into its owner's tavern pool, to be hired again later. */
+export function retireHero(state, hero) {
+  state.heroes = state.heroes.filter((h) => h !== hero);
+  const p = state.players[hero.owner];
+  p.retired = p.retired || [];
+  hero.x = -1; hero.y = -1; hero.mp = 0;
+  p.retired.push(hero);
+  if (p.retired.length > 4) p.retired.shift();
 }
 
 export function captureTown(state, hero, town) {

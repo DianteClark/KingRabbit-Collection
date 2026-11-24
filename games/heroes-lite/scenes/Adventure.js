@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { PALETTE, hex } from '../../../shared/core/palette.js';
 import { text, button } from '../../../shared/core/ui.js';
-import { sfx } from '../../../shared/core/sfx.js';
+import { sfx, isMuted, setMuted } from '../../../shared/core/sfx.js';
 import {
   WIDTH, HEIGHT, store, go, modal, toast, resourceBar, bar, setBackground, openHowTo,
 } from './common.js';
@@ -13,10 +13,10 @@ import {
   CREATURES, MINES, PILES, BOOSTS, MAP_DWELLINGS, ARTIFACTS, sizeWord, armyValue,
 } from '../logic/data.js';
 import {
-  frame, sprite, unitFrame, heroFrame, townFrame, groundFrame, DECOR, waterFrame, treeFrame, mountainFrame,
+  frame, sprite, unitFrame, heroFrame, townFrame, groundFrame, patchFrame, DECOR, waterFrame, treeFrame, mountainFrame,
   CHEST, CAMPFIRE, artifactFrame,
 } from '../frames.js';
-import { saveGame, clearGame, recordResult, submitEndless } from '../save.js';
+import { save, saveGame, clearGame, recordResult, submitEndless } from '../save.js';
 import { getSkill, reportResult, SKILL_ID } from '../adaptive.js';
 
 const T = 32;              // tile size on screen (16px art at 2x)
@@ -47,8 +47,8 @@ export class Adventure extends Phaser.Scene {
     this.objLayer = this.add.container(0, 0);
     this.heroLayer = this.add.container(0, 0);
     this.pathG = this.add.graphics();
-    this.fogG = this.add.graphics();
-    this.world.add([this.objLayer, this.heroLayer, this.pathG, this.fogG]);
+    this.fogTex = null;
+    this.world.add([this.objLayer, this.heroLayer, this.pathG]);
     this.refreshObjects();
     this.refreshHeroes();
     this.drawFog();
@@ -92,6 +92,35 @@ export class Adventure extends Phaser.Scene {
           continue;
         }
         draw(groundFrame(s.biome), x, y);
+      }
+    }
+    // Patches of rougher ground for variety: non-overlapping rectangles drawn as 3x3 nine-slices.
+    const patch = new Uint8Array(s.w * s.h);
+    const want = Math.round((s.w * s.h) / 55);
+    for (let n = 0, tries = 0; n < want && tries < want * 20; tries++) {
+      const pw = 2 + Math.floor(rnd() * 3); const ph = 2 + Math.floor(rnd() * 2);
+      const px = Math.floor(rnd() * (s.w - pw)); const py = Math.floor(rnd() * (s.h - ph));
+      let ok = true;
+      for (let y = py - 1; y <= py + ph && ok; y++) for (let x = px - 1; x <= px + pw; x++) {
+        if (!G.inMap(s, x, y)) continue;
+        if (patch[y * s.w + x] || (y >= py && y < py + ph && x >= px && x < px + pw && s.terrain[y][x] === '~')) { ok = false; break; }
+      }
+      if (!ok) continue;
+      for (let y = py; y < py + ph; y++) for (let x = px; x < px + pw; x++) patch[y * s.w + x] = 1;
+      n++;
+    }
+    const inPatch = (x, y) => G.inMap(s, x, y) && patch[y * s.w + x] === 1;
+    for (let y = 0; y < s.h; y++) {
+      for (let x = 0; x < s.w; x++) {
+        if (!inPatch(x, y)) continue;
+        const dx = !inPatch(x - 1, y) ? -1 : !inPatch(x + 1, y) ? 1 : 0;
+        const dy = !inPatch(x, y - 1) ? -1 : !inPatch(x, y + 1) ? 1 : 0;
+        draw(patchFrame(s.biome, dx, dy), x, y);
+      }
+    }
+    for (let y = 0; y < s.h; y++) {
+      for (let x = 0; x < s.w; x++) {
+        const ch = s.terrain[y][x];
         if (ch === ',' || (ch === '.' && rnd() < 0.07 && !G.objAt(s, x, y))) draw([groundFrame(s.biome)[0], ...DECOR[Math.floor(rnd() * DECOR.length)], 16, 16], x, y);
       }
     }
@@ -182,21 +211,33 @@ export class Adventure extends Phaser.Scene {
     this.heroLayer.sort('depth');
   }
 
+  /** Fog of war: one texel per tile, drawn 32x larger with smooth (linear) filtering for soft edges. */
   drawFog() {
-    const s = this.s; const g = this.fogG;
-    g.clear();
+    const s = this.s;
     const ex = s.players[0].explored;
-    for (let y = 0; y < s.h; y++) {
-      for (let x = 0; x < s.w; x++) {
-        if (ex[y * s.w + x]) continue;
-        let edge = false;
-        for (let dy = -1; dy <= 1 && !edge; dy++) for (let dx = -1; dx <= 1; dx++) {
-          const xx = x + dx; const yy = y + dy;
-          if (G.inMap(s, xx, yy) && ex[yy * s.w + xx]) { edge = true; break; }
-        }
-        g.fillStyle(hex(PALETTE.night), edge ? 0.78 : 1).fillRect(x * T, y * T, T, T);
+    if (!this.fogTex) {
+      if (this.textures.exists('fog')) this.textures.remove('fog');
+      // One extra texel all round so the map edge stays dark too.
+      this.fogTex = this.textures.createCanvas('fog', s.w + 2, s.h + 2);
+      this.fogTex.setFilter(Phaser.Textures.FilterMode.LINEAR);
+      this.fogImg = this.add.image(-T, -T, 'fog').setOrigin(0).setScale(T);
+      this.world.add(this.fogImg);
+    }
+    const ctx = this.fogTex.getContext();
+    const img = ctx.createImageData(s.w + 2, s.h + 2);
+    const [r, g, b] = [0x1c, 0x16, 0x18];
+    for (let y = 0; y < s.h + 2; y++) {
+      for (let x = 0; x < s.w + 2; x++) {
+        const i = (y * (s.w + 2) + x) * 4;
+        const mx = Math.min(s.w - 1, Math.max(0, x - 1)); const my = Math.min(s.h - 1, Math.max(0, y - 1));
+        const seen = ex[my * s.w + mx];
+        img.data[i] = r; img.data[i + 1] = g; img.data[i + 2] = b; img.data[i + 3] = seen ? 0 : 255;
       }
     }
+    ctx.putImageData(img, 0, 0);
+    this.fogTex.refresh();
+    // Re-uploading the canvas resets the filter, so set it again every time.
+    this.fogTex.setFilter(Phaser.Textures.FilterMode.LINEAR);
   }
 
   drawPath() {
@@ -372,8 +413,12 @@ export class Adventure extends Phaser.Scene {
   help() { openHowTo(this); }
 
   leave() {
-    modal(this, 'Leave game?', ['Your game is saved. Tap Continue on the menu to carry on.'], [
-      ['Main menu', () => { saveGame(this.s); go(this, 'Menu'); }], ['Stay', null],
+    const skip = !!save.get('skipMoves');
+    modal(this, 'Menu', ['Your game is saved after every move.'], [
+      ['Back to game', null],
+      [`Enemy moves: ${skip ? 'skip' : 'show'}`, () => { save.set('skipMoves', !skip); sfx('select'); this.leave(); }, PALETTE.lavender],
+      [`Sound: ${isMuted() ? 'off' : 'on'}`, () => { setMuted(!isMuted()); this.leave(); }, PALETTE.lavender],
+      ['Save and quit', () => { saveGame(this.s); go(this, 'Menu'); }, PALETTE.cream],
     ]);
   }
 
@@ -611,7 +656,7 @@ export class Adventure extends Phaser.Scene {
 
   quick(setup) {
     const b = G.makeBattle(this.s, setup);
-    return autoResolve(b, TACTIC_PRESETS.hard, TACTIC_PRESETS.normal);
+    return autoResolve(b, { ...TACTIC_PRESETS.hard, flee: 0 }, TACTIC_PRESETS.normal);
   }
 
   /** Run the Battle scene and resolve with the result. */
@@ -649,7 +694,8 @@ export class Adventure extends Phaser.Scene {
     const lines = [];
     lines.push({ text: lost.length ? `You lost: ${lost.join(', ')}` : 'No losses!', color: lost.length ? PALETTE.orange : PALETTE.leaf });
     for (const m of out.msgs) if (!m.includes('gains 0')) lines.push(m);
-    await this.say(humanWon ? 'Victory!' : 'Defeat', lines);
+    const title = humanWon ? 'Victory!' : res.fled ? (res.fled.how === 'retreat' ? 'Retreat' : 'Surrender') : 'Defeat';
+    await this.say(title, lines);
     saveGame(s);
     return out;
   }
@@ -711,14 +757,15 @@ export class Adventure extends Phaser.Scene {
         let answer;
         if (ev.type === 'move') {
           const h = G.getHero(s, ev.heroId);
-          const seen = ev.steps.some((st) => G.isExplored(s, 0, st.x, st.y));
+          // Only moves your heroes and towns can see right now are shown (and none at all on Skip).
+          const seen = !save.get('skipMoves') && ev.steps.some((st) => this.humanSees(st.x, st.y));
           if (h && seen) {
             if (!this.heroSprites.has(h.id)) this.refreshHeroes();
             const vis = this.heroSprites.get(h.id);
             if (vis) {
-              vis.setVisible(true);
-              this.centerOn(h.x, h.y); await this.wait(160);
-              await this.walk(h, ev.steps, 70);
+              vis.setVisible(true).setPosition(h.x * T + T / 2, h.y * T + T / 2);
+              if (!this.onScreen(h.x, h.y)) { this.centerOn(h.x, h.y); await this.wait(140); }
+              await this.walk(h, ev.steps, 55);
             }
           }
         } else if (ev.type === 'battle') {
@@ -748,6 +795,19 @@ export class Adventure extends Phaser.Scene {
   }
 
   wait(ms) { return new Promise((r) => this.time.delayedCall(ms, r)); }
+
+  /** Is the tile in the current sight of one of the human's heroes or towns? */
+  humanSees(x, y) {
+    const s = this.s;
+    for (const h of G.heroesOf(s, 0)) { const r = G.heroSight(h); if ((h.x - x) ** 2 + (h.y - y) ** 2 <= r * r + r) return true; }
+    for (const t of G.townsOf(s, 0)) if ((t.x - x) ** 2 + (t.y - 1 - y) ** 2 <= 42) return true;
+    return false;
+  }
+
+  onScreen(tx, ty) {
+    const px = tx * T + T / 2 - this.scroll.x; const py = ty * T + T / 2 - this.scroll.y;
+    return px > 40 && px < WIDTH - 40 && py > 40 && py < MAP_H - 40;
+  }
 
   dayBanner() {
     const s = this.s;
@@ -780,7 +840,7 @@ export class Adventure extends Phaser.Scene {
     let res;
     if (choice === 'auto') {
       const b = G.makeBattle(s, setup);
-      res = autoResolve(b, aiParams(getSkill(SKILL_ID)).tactics, TACTIC_PRESETS.hard);
+      res = autoResolve(b, aiParams(getSkill(SKILL_ID)).tactics, { ...TACTIC_PRESETS.hard, flee: 0 });
     } else res = await this.playBattle(setup);
     // Report and show the result (applyBattle itself is done by the AI generator).
     const humanWon = res.winner === 1;
@@ -788,8 +848,9 @@ export class Adventure extends Phaser.Scene {
     const lost = mine.lost.map((l) => `${l.lost} ${CREATURES[l.type].name}`);
     reportResult(SKILL_ID, humanWon ? 1 : 0, 0.5, 0.25);
     sfx(humanWon ? 'win' : 'lose');
-    await this.say(humanWon ? 'Victory!' : 'Defeat', [
-      humanWon ? `${a.name} is beaten back!` : `${what} has fallen.`,
+    const fledMsg = res.fled ? (res.fled.side === 1 ? `You ${res.fled.how === 'retreat' ? 'retreated' : 'surrendered'}.` : `${a.name} ran away!`) : null;
+    await this.say(humanWon ? 'Victory!' : res.fled ? 'Escaped' : 'Defeat', [
+      fledMsg || (humanWon ? `${a.name} is beaten back!` : `${what} has fallen.`),
       { text: lost.length ? `You lost: ${lost.join(', ')}` : 'No losses!', color: lost.length ? PALETTE.orange : PALETTE.leaf },
     ]);
     return res;

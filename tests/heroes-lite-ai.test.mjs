@@ -28,10 +28,11 @@ function simulate(id, seed, s0, s1, { days = 120, vision = false, onDay } = {}) 
 
 test('ai: makes progress in the first two weeks (mines, buildings, army, levels)', () => {
   let snap = null;
-  const st0 = G.newGame(scenarioById('valley'), { seed: 11 });
+  const st0 = G.newGame(scenarioById('desert'), { seed: 11 });
   const town0 = st0.objects.find((o) => o.kind === 'town' && o.owner === 1);
+  // (Green Valley gives the human a two-week truce, so the busier desert map is used here.)
   const builtAtStart = Object.keys(town0.built).length;
-  simulate('valley', 11, 0.5, 0.5, { days: 14, onDay: (st) => { if (st.day === 15 || st.over) snap ??= JSON.parse(JSON.stringify(st)); } });
+  simulate('desert', 11, 0.5, 0.5, { days: 14, onDay: (st) => { if (st.day === 15 || st.over) snap ??= JSON.parse(JSON.stringify(st)); } });
   assert.ok(snap, 'game still running at day 15 or ended');
   const st = snap;
   const mines = st.objects.filter((o) => o.kind === 'mine' && o.owner === 1).length;
@@ -54,14 +55,20 @@ test('ai: computer-vs-computer games end with a winner on every scenario', () =>
 
 test('ai: a hard computer beats an easy one most of the time', () => {
   let hardWins = 0; let n = 0;
-  for (const id of ['valley', 'desert', 'frontier']) {
-    for (let seed = 1; seed <= 6; seed++) {
+  for (const id of ['desert', 'frontier']) {
+    for (let seed = 1; seed <= 8; seed++) {
       const st = simulate(id, seed, 0.1, 0.9);
       n++;
       if (st.over?.winner === 'ai') hardWins++;
     }
   }
   assert.ok(hardWins >= Math.ceil(n * 0.65), `hard won ${hardWins}/${n}`);
+});
+
+test('ai: Green Valley is gentle: even a weak player usually wins it', () => {
+  let wins = 0;
+  for (let seed = 1; seed <= 6; seed++) if (simulate('valley', seed, 0.15, 0.35).over?.winner === 'human') wins++;
+  assert.ok(wins >= 4, `weak player won ${wins}/6`);
 });
 
 test('ai: every scenario is winnable by a strong player against the default enemy', () => {

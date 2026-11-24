@@ -10,12 +10,15 @@
 export const SCENARIOS = [
   {
     id: 'valley', name: 'Green Valley', biome: 'grass', size: 'Small', difficulty: 1,
-    desc: 'Your first realm. One enemy town lies across the river. Capture it to win.',
+    desc: 'Your first realm, and a good place to learn. The enemy keeps to itself for the first two weeks. Capture its town across the river to win.',
     goal: 'Capture the enemy town',
     players: [{ faction: 'castle' }, { faction: 'enemy' }],
     res: { gold: 7500, wood: 15, ore: 15, gems: 4 },
     dwellings: ['goblin', 'dwarf'],
     garrison: [[0, 18], [1, 8], [2, 3]],
+    enemyGarrison: [[0, 12], [1, 5], [2, 2]],
+    startArmy: [[0, 18], [1, 8], [2, 3], null, null],
+    grace: 14,
     townNames: { A: 'Brightwater', B: 'Duskhold' },
     map: [
     'TTTTTTTTTTTTTTTTTTTTTTTT',

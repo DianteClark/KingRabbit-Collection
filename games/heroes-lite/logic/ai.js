@@ -133,6 +133,8 @@ function chooseTarget(state, hero, paths, p, rng, pid, main) {
           const v = armyValue(o.garrison) - (hv + armyValue(o.garrison)) * (state.day < 15 ? 0.35 : 0.2);
           if (v > Math.max(150, hv * 0.2)) consider(o.x, o.y, v * 15 * (main ? 1 : 0.3), 'home');
         } else {
+          // Some scenarios give the human a quiet first stretch before the computer comes for them.
+          if (o.owner !== null && state.players[o.owner].human && state.day <= (state.grace || 0)) break;
           const dv = townDefense(state, o);
           // Early on, only an overwhelming army goes for a town.
           const early = state.day < 8 ? 2.5 : state.day < 15 ? 1.4 : 1;
@@ -163,6 +165,7 @@ function chooseTarget(state, hero, paths, p, rng, pid, main) {
     if (e.owner === pid) continue;
     // A hero standing in its town is attacked as part of the town (handled above).
     if (state.objects.some((o) => o.kind === 'town' && o.x === e.x && o.y === e.y)) continue;
+    if (state.players[e.owner].human && state.day <= (state.grace || 0)) continue;
     const ev = heroArmyValue(e);
     if (hv >= ev * p.attackRatio) consider(e.x, e.y, (5000 + ev * 10) * p.aggression, 'hero');
   }

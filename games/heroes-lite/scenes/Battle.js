@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { PALETTE, hex } from '../../../shared/core/palette.js';
 import { text, button, panel } from '../../../shared/core/ui.js';
 import { sfx } from '../../../shared/core/sfx.js';
-import { WIDTH, HEIGHT, store, toast, setBackground, openHowTo } from './common.js';
+import { WIDTH, HEIGHT, store, toast, setBackground, openHowTo, modal } from './common.js';
 import { creatureInfo } from './heroPanel.js';
 import * as C from '../logic/combat.js';
 import { CREATURES, SPELLS } from '../logic/data.js';
@@ -114,6 +114,7 @@ export class Battle extends Phaser.Scene {
     const b = this.b;
     this.roundText = text(this, WIDTH / 2, 20, 'Round 1', { color: PALETTE.cream }).setDepth(30);
     button(this, WIDTH - 26, 20, 40, 32, '?', () => openHowTo(this), { fill: PALETTE.gold }).setDepth(30);
+    this.btnFlee = button(this, 34, 20, 60, 32, 'Flee', () => this.openFlee(), { fill: PALETTE.cream }).setDepth(30);
     // Banners for both sides.
     b.sides.forEach((sd, i) => {
       const x = i === 0 ? 10 : WIDTH - 10;
@@ -197,6 +198,24 @@ export class Battle extends Phaser.Scene {
     this.btnSpell.setEnabled(mine && C.castable(this.b, this.human).length > 0);
     this.btnWait.setEnabled(mine);
     this.btnDef.setEnabled(mine);
+    this.btnFlee.setEnabled(mine && C.fleeOptions(this.b, this.human).retreat);
+  }
+
+  openFlee() {
+    if (!this.myTurn() || this.busy) return;
+    const opt = C.fleeOptions(this.b, this.human);
+    if (!opt.retreat) return;
+    const foeHero = !!this.b.sides[1 - this.human].hero;
+    const lines = ['Retreat: your hero escapes, but the whole army is lost. Hire the hero again at any Tavern.'];
+    const btns = [['Retreat', () => this.humanAct({ type: 'retreat' }), PALETTE.orange]];
+    if (opt.surrender !== null) {
+      lines.push(`Surrender: pay ${opt.surrender} gold and leave with your army. The hero waits at the Tavern.`);
+      btns.push([`Surrender (${opt.surrender}g)`, () => this.humanAct({ type: 'surrender' }), PALETTE.gold]);
+    } else {
+      lines.push({ text: foeHero ? 'Not enough gold to surrender.' : 'Monsters don\'t accept surrender.', color: PALETTE.lavender });
+    }
+    btns.push(['Keep fighting', null, PALETTE.lavender]);
+    modal(this, 'Flee?', lines, btns);
   }
 
   highlight() {
@@ -247,7 +266,8 @@ export class Battle extends Phaser.Scene {
       this.busy = true;
       this.syncButtons();
       this.time.delayedCall(this.auto ? 200 : 380, () => {
-        const params = sd.ai ? (sd.owner === null ? C.TACTIC_PRESETS.normal : this.aiTactics) : C.TACTIC_PRESETS.hard;
+        // On auto, your side fights to the end (fleeing is always your own call).
+        const params = sd.ai ? (sd.owner === null ? C.TACTIC_PRESETS.normal : this.aiTactics) : { ...C.TACTIC_PRESETS.hard, flee: 0 };
         let a = C.chooseAction(b, params);
         let ev = C.act(b, a);
         if (!ev.length) { a = { type: 'defend' }; ev = C.act(b, a); }
@@ -408,6 +428,17 @@ export class Battle extends Phaser.Scene {
         }
         break;
       }
+      case 'flee': {
+        const side = b.sides[ev.side];
+        sfx('lose');
+        this.float(WIDTH / 2, OY + 14, `${side.name} ${ev.how === 'retreat' ? 'retreats' : 'surrenders'}!`, PALETTE.orange);
+        for (const st2 of b.stacks) {
+          const c2 = this.sprites.get(st2.id);
+          if (st2.side === ev.side && st2.alive && c2) this.tweens.add({ targets: c2, alpha: 0, x: ev.side === 0 ? -40 : WIDTH + 40, duration: 500 });
+        }
+        await this.wait(600);
+        break;
+      }
       case 'round': {
         const t = text(this, WIDTH / 2, OY + C.GRID_H * CELL / 2, `Round ${ev.round}`, { size: 32, color: PALETTE.gold }).setDepth(70);
         this.tweens.add({ targets: t, alpha: 0, delay: 400, duration: 300, onComplete: () => t.destroy() });
@@ -445,7 +476,8 @@ export class Battle extends Phaser.Scene {
     const res = C.result(this.b);
     const won = res.winner === this.human;
     sfx(won ? 'win' : 'lose');
-    const t = text(this, WIDTH / 2, OY + 190, won ? 'Victory!' : 'Defeat', { size: 32, color: won ? PALETTE.gold : PALETTE.orange }).setDepth(80);
+    const label = won ? (res.fled ? 'They fled!' : 'Victory!') : (res.fled ? (res.fled.how === 'retreat' ? 'Retreat' : 'Surrender') : 'Defeat');
+    const t = text(this, WIDTH / 2, OY + 190, label, { size: 32, color: won ? PALETTE.gold : PALETTE.orange }).setDepth(80);
     const bg = this.add.rectangle(WIDTH / 2, OY + 190, WIDTH, 60, hex(PALETTE.ink), 0.7).setDepth(79);
     void t; void bg;
     this.time.delayedCall(1100, () => {
