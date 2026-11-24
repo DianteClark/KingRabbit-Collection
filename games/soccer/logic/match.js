@@ -550,7 +550,7 @@ export class Match {
       this.checkOut();
       return;
     }
-    const px = b.x; const py = b.y; const pz = b.z;
+    const px = b.x; const py = b.y;
     if (b.z > 0 || b.vz > 0) {
       b.vz -= G * dt;
       b.z += b.vz * dt;
@@ -568,8 +568,8 @@ export class Match {
       }
     }
     b.x += b.vx * dt; b.y += b.vy * dt;
-    this.posts(px, py);
-    this.crossLine(px, py, pz);
+    this.posts();
+    this.crossLine(px, py);
   }
 
   posts() {
@@ -594,14 +594,13 @@ export class Match {
   }
 
   /** Goal, crossbar, or the ball going out over a line. */
-  crossLine(px, py, pz) {
+  crossLine(px, py) {
     const b = this.ball;
     for (const [gy, defSide] of [[0, 1], [L, 0]]) {
       const crossed = gy === 0 ? (py >= 0 && b.y < 0) : (py <= L && b.y > L);
       if (!crossed) continue;
       const inMouth = Math.abs(b.x - W / 2) < GOAL_W / 2 - BALL_R + 0.5;
       if (!inMouth) continue;
-      const z = Math.max(b.z, pz);
       if (b.z < BAR - 1.5) { this.goal(1 - defSide); return; }
       if (b.z < BAR + 2.5) {
         // Off the crossbar.
@@ -611,7 +610,6 @@ export class Match {
         this.emit('bar');
         return;
       }
-      void z;
     }
     this.checkOut();
   }
@@ -843,8 +841,7 @@ function tickTimers(p, dt) {
 }
 
 /** Set a player's desired velocity toward (tx, ty) at up to `speed`, slowing on arrival. */
-export function steer(p, tx, ty, speed, dt) {
-  void dt;
+export function steer(p, tx, ty, speed) {
   // Behind a goal with somewhere to be on the pitch: go round the net, not into it.
   const span = GOAL_W / 2 + PLAYER_R + 2;
   for (const gy of [0, L]) {
