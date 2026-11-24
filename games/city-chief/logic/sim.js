@@ -181,7 +181,7 @@ export function spawnIncident(s, rng, type, district, extra = {}) {
   const inc = {
     id: s.seq++, type, name: c.name, d: c.d(n), n, district, lot: lot.id, door: lot.door, text: c.text(ctx),
     t0: s.minute, expires: s.minute + c.patience, status: 'new', units: [], arrived: 0, sceneEnd: 0,
-    autoAt: s.minute + (c.d(n) >= 2 ? 22 : 3), log: [], outcome: null, groupId: group?.id ?? null, ...extra,
+    autoAt: s.minute + (c.d(n) >= 2 ? 10 : 3), log: [], outcome: null, groupId: group?.id ?? null, ...extra,
   };
   incLog(s, inc, `Call: ${inc.text}`);
   s.incidents.push(inc);
@@ -190,7 +190,7 @@ export function spawnIncident(s, rng, type, district, extra = {}) {
 }
 
 /** Send `count` more of the nearest free units to an incident. Returns how many went. */
-export function dispatch(s, incId, count) {
+export function dispatch(s, incId, count, byChief = false) {
   const inc = s.incidents.find((i) => i.id === incId);
   if (!inc || inc.status === 'done') return 0;
   const free = freeUnits(s).sort((a, b) => Math.hypot(a.x - inc.door.x, a.y - inc.door.y) - Math.hypot(b.x - inc.door.x, b.y - inc.door.y));
@@ -205,6 +205,7 @@ export function dispatch(s, incId, count) {
   }
   if (go.length && (inc.status === 'new')) inc.status = 'enroute';
   if (go.length) inc.chosen = true;
+  if (go.length && byChief) inc.chief = true;
   return go.length;
 }
 

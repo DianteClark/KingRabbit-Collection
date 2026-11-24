@@ -10,7 +10,7 @@ function play(mode, seed, days, smart) {
     while (!s.dayOver && !s.over) {
       S.tick(s, 5);
       if (s.pendingMajor) S.resolveMajor(s, 0);
-      if (smart) for (const inc of s.incidents) if (!inc.chosen && inc.status === 'new' && inc.d >= 2) S.dispatch(s, inc.id, Math.ceil(inc.d));
+      if (smart) for (const inc of s.incidents) if (!inc.chief && inc.status !== 'done' && inc.status !== 'chase' && inc.d >= 2) S.dispatch(s, inc.id, Math.max(1, Math.ceil(inc.d) - inc.units.length), true);
     }
     if (s.over) break;
     const r = S.endDay(s);

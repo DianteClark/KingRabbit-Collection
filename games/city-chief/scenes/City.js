@@ -13,7 +13,7 @@ import * as P from './panels.js';
 
 const VIEW = { y: 78, h: 456 };
 const MW = W * TILE; const MH = H * TILE;
-const MS_PER_MIN = 250;
+const MS_PER_MIN = 350;
 const SPEEDS = [[0, '||'], [1, '>'], [3, '>>'], [8, '>>>']];
 const ICON = { noise: 35, shoplift: 28, vandal: 54, breakin: 31, accident: 58, burglary: 12, assault: 40, domestic: 12, cartheft: 31, drugdeal: 7, robbery: 44, gangfight: 40, shooting: 49 };
 const CIV_SMALL = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13];
@@ -250,6 +250,10 @@ export class City extends Phaser.Scene {
     [['Force', () => P.showForce(this)], ['Cases', () => P.showCases(this)], ['Budget', () => P.showBudget(this)], ['Paper', () => P.showPaper(this)]]
       .forEach(([l, fn], i) => d(button(this, 46 + i * 89, by, 84, 40, l, fn, { fill: i === 1 && this.s.groups.length ? PALETTE.orange : PALETTE.lavender })));
     this.casesBtnIdx = 1;
+    // Calls waiting for the chief's decision: tap to jump to the oldest one.
+    this.waitBtn = d(button(this, WIDTH - 66, VIEW.y + VIEW.h - 24, 116, 32, '', () => this.nextWaiting(), { fill: PALETTE.orange }));
+    this.waitBtn.setVisible(false);
+    this.pauseTag = d(text(this, 66, VIEW.y + VIEW.h - 24, 'PAUSED', { color: PALETTE.gold }));
   }
 
   refreshHud() {
@@ -264,6 +268,10 @@ export class City extends Phaser.Scene {
     });
     this.moneyText.setText(`$${Math.round(s.money).toLocaleString('en-US')}`);
     this.moneyText.setColor(s.money < 0 ? '#f3b0a8' : PALETTE.gold);
+    const waiting = this.waitingCalls().length;
+    this.waitBtn.setVisible(waiting > 0);
+    if (waiting) this.waitBtn.setLabel(`${waiting} big call${waiting > 1 ? 's' : ''}`);
+    this.pauseTag.setVisible(this.speed === 0 && Math.floor(this.time.now / 500) % 2 === 0);
     this.clockText.setText(`Day ${s.day}  ${S.clock(s.minute)}${s.mode === 'endless' ? '  Endless' : ''}`);
     const last = s.log.at(-1);
     const tickerStr = last ? `${S.clock(last.t)} ${last.text}` : 'All quiet. Tap a marker to see a call.';
@@ -271,6 +279,18 @@ export class City extends Phaser.Scene {
       this.ticker.setText(tickerStr);
       this.ticker.setColor({ bad: '#f3b0a8', good: '#c9e6a8', alert: PALETTE.orange }[last?.tone] || PALETTE.cream);
     }
+  }
+
+  /** Big calls the chief hasn't looked at yet (the dispatcher may have sent one car already). */
+  waitingCalls() { return this.s.incidents.filter((i) => !i.chief && !i.special && i.d >= 2 && (i.status === 'new' || i.status === 'enroute' || i.status === 'scene')).sort((a, b) => a.t0 - b.t0); }
+
+  nextWaiting() {
+    const inc = this.waitingCalls()[0];
+    if (!inc) return;
+    const lot = S.city().lots[inc.lot];
+    this.zoom = Math.max(this.zoom, 2.4);
+    this.centerOn((lot.x + lot.w / 2) * TILE, lot.y * TILE + 60 / this.zoom);
+    P.showIncident(this, inc.id);
   }
 
   cycleSpeed() {
@@ -431,7 +451,7 @@ export class City extends Phaser.Scene {
       else if (inc.status === 'chase') col = Math.floor(t * 6) % 2 ? 0xa13d3b : 0xf9f5ef;
       else if (inc.status === 'done') col = inc.outcome === 'solved' ? 0x6c8c50 : 0x7a6060;
       else col = 0x8a8fc4;
-      const urgent = inc.status === 'new' && !inc.chosen;
+      const urgent = !inc.chief && !inc.special && inc.d >= 2 && inc.status !== 'done' && inc.status !== 'chase';
       if (m.col !== col) {
         m.col = col;
         m.badge.clear().fillStyle(0x040303).fillCircle(0, -10, 11).fillStyle(col).fillCircle(0, -10, 9)

@@ -68,10 +68,11 @@ function incidentParts(g, inc) {
   const free = S.freeUnits(s).length;
   const outcome = inc.outcome ? `<span class="cc-tag ${inc.outcome === 'solved' ? 'good' : 'bad'}">${inc.outcome === 'solved' ? 'Solved' : 'Failed'}</span>` : '';
   const sub = `${esc(S.streetAt(inc.door))}, ${esc(S.districtName(inc.district))} &middot; ${STATUS[inc.status]} ${outcome}`;
+  const auto = inc.units.length && !inc.chief ? '<p class="cc-p" style="color:var(--orange)">The dispatcher sent one car. Is that enough?</p>' : '';
   const log = inc.log.slice().reverse().map((l) => `<li><b>${S.clock(l.t)}</b>${esc(l.text)}</li>`).join('');
   const html = `
     <p class="cc-p">${esc(inc.text)}</p>
-    <p class="cc-p" style="color:var(--lavender)">${crews.length ? `Responding: ${crews.join(', ')}` : 'No cars assigned yet.'}</p>
+    ${auto}<p class="cc-p" style="color:var(--lavender)">${crews.length ? `Responding: ${crews.join(', ')}` : 'No cars assigned yet.'}</p>
     <ul class="cc-log">${log}</ul>`;
   const done = inc.status === 'done';
   const first = !inc.units.length;
@@ -85,7 +86,7 @@ export function showIncident(g, incId) {
   const inc = () => g.s.incidents.find((i) => i.id === incId);
   const first = inc();
   if (!first) return;
-  const waiting = !first.chosen && first.status === 'new';
+  const waiting = !first.chief && first.status !== 'done' && first.status !== 'chase';
   if (waiting) g.hold('incident');
   const parts = incidentParts(g, first);
   const p = sheet({
@@ -93,7 +94,7 @@ export function showIncident(g, incId) {
     onClose: () => g.release('incident'),
     handlers: {
       send: ({ n }) => {
-        const sent = S.dispatch(g.s, incId, +n);
+        const sent = S.dispatch(g.s, incId, +n, true);
         if (sent) sfx('select');
         g.release('incident');
         g.save();
