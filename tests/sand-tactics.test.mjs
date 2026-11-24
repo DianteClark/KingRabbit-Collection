@@ -190,6 +190,10 @@ test('economy: income per building, building units, repairs', () => {
   assert.ok(u.done, 'new units wait a turn');
   assert.throws(() => G.build(s, 2, 0, 'inf'), /build/);
   assert.throws(() => G.build(s, 0, 0, 'inf'), /build/, 'not on the HQ');
+  // The unit limit.
+  const s3 = mk(['F....', '.....', 'h....'], ['.....', '.....', '..i..'], { funds: [99000, 0] });
+  for (let i = 0; i < G.UNIT_CAP; i++) G.addUnit(s3, 'inf', 0, 1 + (i % 4), 1 + Math.floor(i / 4) % 1);
+  assert.throws(() => G.build(s3, 0, 0, 'inf'), /limit/);
   G.endTurn(s);
   assert.equal(s.turn, 1);
   assert.equal(s.funds[1], 1000);

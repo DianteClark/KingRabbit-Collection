@@ -486,7 +486,8 @@ export class Battle extends Phaser.Scene {
     const s = this.s;
     const u = G.unitAt(s, x, y);
     this.clearHighlights();
-    if (u) this.showRanges(u, u.side !== s.turn || !this.isHumanTurn() || u.done);
+    const ownDone = u && u.done && u.side === s.turn && this.isHumanTurn();
+    if (u && !ownDone) this.showRanges(u, u.side !== s.turn || !this.isHumanTurn());
     else this.showCursor(x, y);
     this.lastTap = [x, y];
     this.showIdlePanel(this.tileInfo(x, y));
@@ -663,12 +664,13 @@ export class Battle extends Phaser.Scene {
     const h = 64 + UNIT_ORDER.length * rowH + 62;
     c.add(panel(this, 8, top, WIDTH - 16, h, { fill: PALETTE.night, inner: PALETTE.sand }));
     c.add(text(this, WIDTH / 2, top + 22, 'Build', { size: 32, color: PALETTE.gold }));
-    c.add(text(this, WIDTH / 2, top + 48, `Funds ${money(s.funds[side])}`, { color: PALETTE.cream }));
+    const full = G.unitsOf(s, side).length >= G.UNIT_CAP;
+    c.add(text(this, WIDTH / 2, top + 48, full ? `Unit limit reached (${G.UNIT_CAP})` : `Funds ${money(s.funds[side])}`, { color: full ? PALETTE.orange : PALETTE.cream }));
     const close = () => { if (c.active) c.destroy(); this.showIdlePanel(); this.clearHighlights(); };
     UNIT_ORDER.forEach((t, i) => {
       const d = UNITS[t];
       const y = top + 64 + i * rowH;
-      const ok = s.funds[side] >= d.cost;
+      const ok = s.funds[side] >= d.cost && !full;
       const row = this.add.container(0, 0).setAlpha(ok ? 1 : 0.45);
       row.add(this.add.rectangle(20, y + 2, WIDTH - 40, rowH - 4, i % 2 ? hex(PALETTE.indigo) : 0x3a3456, 1).setOrigin(0));
       const art = d.art;
@@ -680,7 +682,7 @@ export class Battle extends Phaser.Scene {
       row.add(fit(text(this, 74, y + 35, `Move ${d.move}${d.range[1] > 1 ? `  Range ${d.range[0]}-${d.range[1]}` : ''}  ${shortRole(t)}`, { origin: [0, 0.5], color: PALETTE.lavender }), WIDTH - 104));
       const z = this.add.zone(20, y + 2, WIDTH - 40, rowH - 4).setOrigin(0).setInteractive({ useHandCursor: true });
       z.on('pointerup', () => {
-        if (!ok) { sfx('error'); toast(this, 'Not enough funds', 600, PALETTE.orange, 700, 120); return; }
+        if (!ok) { sfx('error'); toast(this, full ? 'Unit limit reached' : 'Not enough funds', 600, PALETTE.orange, 700, 120); return; }
         c.destroy();
         this.doBuild(p, t);
       });
@@ -785,6 +787,7 @@ export class Battle extends Phaser.Scene {
     let guard = 0;
     while (!s.over && s.turn === side && guard++ < 300) {
       if (!this.scene.isActive()) return;
+      while (this.modalOpen() && this.scene.isActive()) await new Promise((r) => setTimeout(r, 150));
       const step = aiStep(s, side, P);
       if (!step) break;
       if (step.kind === 'build') {

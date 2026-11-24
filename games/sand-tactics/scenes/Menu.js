@@ -3,11 +3,11 @@ import { PALETTE, hex } from '../../../shared/core/palette.js';
 import { text, button, panel } from '../../../shared/core/ui.js';
 import { isMuted, setMuted, sfx } from '../../../shared/core/sfx.js';
 import {
-  WIDTH, HEIGHT, go, modal, shadowTitle, setBackground, store, openHowTo, header, fit,
+  WIDTH, go, modal, shadowTitle, setBackground, store, openHowTo, header, fit,
 } from './common.js';
-import { save, loadBattle, clearBattle, campaign, getRecord, saveBattle } from '../save.js';
+import { loadBattle, clearBattle, campaign, getRecord, saveBattle } from '../save.js';
 import { skillLabel, resetSkill } from '../adaptive.js';
-import { CAMPAIGN, SKIRMISH, mapById } from '../logic/maps.js';
+import { CAMPAIGN, SKIRMISH } from '../logic/maps.js';
 import { parseMap, newGame } from '../logic/game.js';
 import { frame, sprite, unitRef, buildingRef, TILE, setRef } from '../frames.js';
 
@@ -202,4 +202,3 @@ export class Menu extends Phaser.Scene {
   }
 }
 
-export { mapById };

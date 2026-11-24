@@ -319,6 +319,9 @@ function fight(s, u, v) {
   return events;
 }
 
+/** Most units one side may have on the map (keeps big battles quick on a phone). */
+export const UNIT_CAP = 30;
+
 /** Units a factory can build right now (affordable or not). */
 export function canBuildAt(s, x, y) {
   const p = propAt(s, x, y);
@@ -327,6 +330,7 @@ export function canBuildAt(s, x, y) {
 
 export function build(s, x, y, type) {
   if (!canBuildAt(s, x, y)) fail('can\'t build here');
+  if (unitsOf(s, s.turn).length >= UNIT_CAP) fail('unit limit reached');
   const cost = UNITS[type].cost;
   if (s.funds[s.turn] < cost) fail('not enough funds');
   s.funds[s.turn] -= cost;

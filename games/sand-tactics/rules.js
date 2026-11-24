@@ -37,7 +37,7 @@ export const RULES = {
       items: [
         'Every building you own pays 1000 funds at the start of your turn.',
         'Infantry, Scouts and Lancers can capture buildings. Capturing takes 20 points; each turn removes the squad\'s health (1-10). Moving away resets it.',
-        'Tap one of your empty factories to build a unit. New units can move next turn.',
+        'Tap one of your empty factories to build a unit. New units can move next turn. Each side can field up to 30 units.',
         'Units starting their turn on one of your buildings repair 2 health (paid from your funds).',
       ],
     },

@@ -407,7 +407,7 @@ function buildStep(ctx) {
   const facs = s.props.filter((p) => p.kind === 'factory' && p.owner === side && !G.unitAt(s, p.x, p.y));
   if (!facs.length) return null;
   const funds = s.funds[side];
-  if (funds < 1000) return null;
+  if (funds < 1000 || ctx.own.length >= G.UNIT_CAP) return null;
   // Spread the money over the free factories; the first gets a bit more.
   const budget = Math.max(Math.floor(funds / facs.length), funds - 1500 * (facs.length - 1));
   // Nearest factory to the front first.

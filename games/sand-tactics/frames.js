@@ -107,7 +107,7 @@ export function makeNeutralSheet(scene) {
   const src = scene.textures.get('bRed').getSourceImage();
   const c = document.createElement('canvas');
   c.width = src.width; c.height = src.height;
-  const g = c.getContext('2d');
+  const g = c.getContext('2d', { willReadFrequently: true });
   g.drawImage(src, 0, 0);
   const img = g.getImageData(0, 0, c.width, c.height);
   const d = img.data;
