@@ -19,6 +19,7 @@ Aleksandr Makarov's (iknowkingrabbit) pixel-art packs.
 | Pangea: Civilization-lite 4X (see docs/games/pangea.md) | Playable | [/pangea/](https://dianteclark.github.io/KingRabbit-Collection/pangea/) |
 | MegaBoy Run: action platformer, landscape (see docs/games/megaboy.md) | Playable | [/megaboy/](https://dianteclark.github.io/KingRabbit-Collection/megaboy/) |
 | Darkhold: torchlit roguelike dungeon crawl (see docs/games/darkhold.md) | Playable | [/darkhold/](https://dianteclark.github.io/KingRabbit-Collection/darkhold/) |
+| Tiny Town Builder: calm city builder (see docs/games/town-builder.md) | Playable | [/town-builder/](https://dianteclark.github.io/KingRabbit-Collection/town-builder/) |
 | City Chief: run the police force of Tiny Town (see docs/games/city-chief.md) | Playable | [/city-chief/](https://dianteclark.github.io/KingRabbit-Collection/city-chief/) |
 | Pocket Soccer: 5-a-side arcade football (see docs/games/soccer.md) | Playable | [/soccer/](https://dianteclark.github.io/KingRabbit-Collection/soccer/) |
 
