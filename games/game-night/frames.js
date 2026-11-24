@@ -59,14 +59,26 @@ export const FRAMES = {
     back: [16, 16, 16, 24],
     spade: [16, 104, 8, 8], heart: [32, 104, 8, 8], club: [16, 120, 8, 8], diamond: [32, 120, 8, 8],
   },
-  wild: { icon: [64, 112, 16, 24] },
+  wild: (() => {
+    // 16x24 cards. Colours: 0 red, 1 orange, 2 blue, 3 green.
+    const f = { back: [64, 136, 16, 24], wild: [64, 160, 16, 24], wild4: [64, 184, 16, 24], icon: [64, 160, 16, 24] };
+    for (let c = 0; c < 4; c++) {
+      for (let n = 0; n <= 5; n++) f[`c${c}_${n}`] = [n * 16, 16 + c * 24, 16, 24];
+      for (let n = 6; n <= 9; n++) f[`c${c}_${n}`] = [(n - 6) * 16, 112 + c * 24, 16, 24];
+      f[`c${c}_skip`] = [80, 112 + c * 24, 16, 24];
+      f[`c${c}_reverse`] = [0, 208 + c * 24, 16, 24];
+      f[`c${c}_draw2`] = [16, 208 + c * 24, 16, 24];
+      f[`c${c}_wild`] = [80, 208 + c * 24, 16, 24];   // a wild after its colour is chosen
+    }
+    return f;
+  })(),
   airhockey: { puck: [32, 56, 8, 8], blue: [40, 56, 8, 8], red: [40, 64, 8, 8] },
   blocks: { ball: [8, 32, 8, 8] },
   rocks: { ship: [32, 16, 8, 8] },
   bowling: { pin: [24, 24, 8, 8], ball: [40, 24, 8, 8] },
   pool: { b8: [32, 56, 8, 8] },
   tanks: { icon: [0, 16, 8, 8] },
-  boxbox: { box: [32, 16, 8, 8] },
-  sixball: { g1: [0, 40, 8, 8] },
+  boxbox: { wall: [24, 16, 8, 8], box: [32, 16, 8, 8], goal: [40, 16, 8, 8], player: [24, 24, 8, 8] },
+  sixball: { g1: [0, 40, 8, 8], g2: [8, 40, 8, 8], g3: [16, 40, 8, 8], g4: [24, 40, 8, 8], g5: [32, 40, 8, 8], g6: [40, 40, 8, 8] },
   mole: { gem: [32, 16, 8, 8] },
 };

@@ -22,8 +22,8 @@ export const TABLES = [
   { id: 'seabattle', scene: 'SeaBattle', name: 'Sea Battle', cat: 'board', modes: ['cpu'], score: 'record', icon: ['seabattle:boom', 4] },
   // Cards & dice
   { id: 'yacht', scene: 'Yacht', name: 'Yacht Dice', cat: 'cards', modes: ['solo'], score: 'best', icon: ['yacht:d5', 2.5] },
-  { id: 'solitaire', scene: null, name: 'Solitaire', cat: 'cards', modes: ['solo'], score: 'record', icon: ['cards:back', 1.5] },
-  { id: 'wildcards', scene: null, name: 'Wild Cards', cat: 'cards', modes: ['cpu'], score: 'record', icon: ['wild:icon', 1] },
+  { id: 'solitaire', scene: 'Solitaire', name: 'Solitaire', cat: 'cards', modes: ['solo'], score: 'record', icon: ['cards:back', 1.5] },
+  { id: 'wildcards', scene: 'WildCards', name: 'Wild Cards', cat: 'cards', modes: ['cpu'], score: 'record', icon: ['wild:icon', 1] },
   // Arcade
   { id: 'airhockey', scene: null, name: 'Air Hockey', cat: 'arcade', modes: ['cpu'], score: 'record', icon: ['airhockey:red', 4] },
   { id: 'blockbreaker', scene: null, name: 'Block Breaker', cat: 'arcade', modes: ['solo'], score: 'best', icon: ['blocks:ball', 4] },
@@ -32,8 +32,8 @@ export const TABLES = [
   { id: 'pool', scene: null, name: 'Pool', cat: 'arcade', modes: ['cpu', 'pvp'], score: 'record', icon: ['pool:b8', 4] },
   { id: 'tanks', scene: null, name: 'Tank Battle', cat: 'arcade', modes: ['solo'], score: 'best', icon: ['tanks:icon', 4] },
   // Puzzle
-  { id: 'boxbox', scene: null, name: 'Box Box', cat: 'puzzle', modes: ['solo'], score: 'best', icon: ['boxbox:box', 4] },
-  { id: 'sixball', scene: null, name: 'Six Ball', cat: 'puzzle', modes: ['solo'], score: 'best', icon: ['sixball:g1', 4] },
+  { id: 'boxbox', scene: 'BoxBox', name: 'Box Box', cat: 'puzzle', modes: ['solo'], score: 'best', icon: ['boxbox:box', 4] },
+  { id: 'sixball', scene: 'SixBall', name: 'Six Ball', cat: 'puzzle', modes: ['solo'], score: 'best', icon: ['sixball:g1', 4] },
   { id: 'molerunner', scene: null, name: 'Mole Runner', cat: 'puzzle', modes: ['solo'], score: 'best', icon: ['mole:gem', 4] },
 ];
 

@@ -10,7 +10,12 @@ import { Tables } from './scenes/Tables.js';
 import { Dominoes } from './scenes/Dominoes.js';
 import { SeaBattle } from './scenes/SeaBattle.js';
 import { Yacht } from './scenes/Yacht.js';
+import { Solitaire } from './scenes/Solitaire.js';
+import { WildCards } from './scenes/WildCards.js';
+import { BoxBox } from './scenes/BoxBox.js';
+import { SixBall } from './scenes/SixBall.js';
 
 startGame({
-  scenes: [Boot, Menu, TicTacToe, Reversi, Checkers, Chess, Go, Tables, Dominoes, SeaBattle, Yacht],
+  scenes: [Boot, Menu, TicTacToe, Reversi, Checkers, Chess, Go, Tables, Dominoes, SeaBattle, Yacht,
+    Solitaire, WildCards, BoxBox, SixBall],
 });

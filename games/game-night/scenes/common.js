@@ -33,9 +33,9 @@ export function modal(scene, title, lines, buttons) {
   c.add([dim, box]);
   c.add(text(scene, WIDTH / 2, top + 40, title, { size: 32, color: PALETTE.gold }));
   lines.forEach((l, i) => c.add(text(scene, WIDTH / 2, top + 80 + i * 24, l, { color: PALETTE.cream })));
-  buttons.forEach(([label, fn], i) => {
+  buttons.forEach(([label, fn, fill, color], i) => {
     c.add(button(scene, WIDTH / 2, top + 80 + lines.length * 24 + 24 + i * 64, 220, 48, label, fn, {
-      fill: i === 0 ? PALETTE.gold : PALETTE.lavender,
+      fill: fill ?? (i === 0 ? PALETTE.gold : PALETTE.lavender), color: color ?? PALETTE.night,
     }));
   });
   c.setAlpha(0);
@@ -59,4 +59,31 @@ export function popIn(scene, obj, scale) {
 export function setBackground(scene, color) {
   scene.cameras.main.setBackgroundColor(color).fadeIn(150);
   document.body.style.background = color;
+}
+
+/** On-screen arrow pad. onDir('up'|'down'|'left'|'right'). Returns the container. */
+export function dpad(scene, x, y, onDir, { size = 56, gap = 4 } = {}) {
+  const c = scene.add.container(0, 0);
+  const s = size + gap;
+  const spec = [['up', 0, -s, '^'], ['down', 0, s, 'v'], ['left', -s, 0, '<'], ['right', s, 0, '>']];
+  for (const [dir, dx, dy, label] of spec) {
+    c.add(button(scene, x + dx, y + dy, size, size, label, () => onDir(dir), { size: 32 }));
+  }
+  return c;
+}
+
+/** Swipe detection inside an area. onSwipe('up'|'down'|'left'|'right'); onTap(x, y) for short taps. */
+export function swipeArea(scene, rect, { onSwipe, onTap, min = 24 }) {
+  let start = null;
+  scene.input.on('pointerdown', (p) => {
+    if (p.x >= rect.x && p.x < rect.x + rect.w && p.y >= rect.y && p.y < rect.y + rect.h) start = { x: p.x, y: p.y };
+  });
+  scene.input.on('pointerup', (p) => {
+    if (!start) return;
+    const dx = p.x - start.x; const dy = p.y - start.y;
+    start = null;
+    if (Math.max(Math.abs(dx), Math.abs(dy)) < min) { onTap?.(p.x, p.y); return; }
+    if (Math.abs(dx) > Math.abs(dy)) onSwipe?.(dx > 0 ? 'right' : 'left');
+    else onSwipe?.(dy > 0 ? 'down' : 'up');
+  });
 }
