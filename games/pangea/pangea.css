@@ -1,0 +1,90 @@
+/* Pangea panels: HTML sheets over the game canvas (lists and text read better as HTML).
+   Text is 16px everywhere, titles 32px, to match the pixel font's sharp sizes. */
+.pg-wrap {
+  position: fixed; inset: 0; z-index: 80;
+  background: rgba(4, 3, 3, 0.6);
+  display: flex; align-items: flex-end; justify-content: center;
+  padding: max(8px, env(safe-area-inset-top)) 6px max(8px, env(safe-area-inset-bottom));
+  touch-action: auto;
+}
+.pg-wrap.center { align-items: center; }
+.pg-wrap.top { z-index: 85; }
+.pg-sheet {
+  width: 100%; max-width: 420px; max-height: 100%;
+  display: flex; flex-direction: column;
+  background: var(--indigo); color: var(--cream);
+  border: 4px solid var(--ink);
+  box-shadow: inset 0 0 0 3px var(--lavender), 0 6px 0 var(--ink);
+  font-size: 16px; line-height: 1.35;
+}
+.pg-sheet.tall { height: 100%; }
+.pg-head { padding: 10px 10px 4px 14px; display: flex; align-items: center; gap: 10px; min-height: 54px; }
+.pg-head h2 { margin: 0; font-weight: normal; font-size: 32px; color: var(--gold); flex: 1; line-height: 1.05; overflow-wrap: anywhere; min-width: 0; }
+.pg-head h2.small { font-size: 16px; }
+.pg-head .x { font: inherit; font-size: 32px; line-height: 1; width: 44px; height: 44px; flex: 0 0 44px; background: var(--cream); color: var(--night); border: 3px solid var(--ink); box-shadow: 0 3px 0 var(--ink); cursor: pointer; padding: 0; }
+.pg-head .x:active { transform: translateY(3px); box-shadow: none; }
+.pg-sub { padding: 0 14px 6px; color: var(--lavender); }
+.pg-sub:empty { display: none; }
+.pg-scroll { overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 4px 12px 10px; touch-action: pan-y; flex: 1 1 auto; min-height: 0; }
+.pg-foot { display: flex; gap: 8px; padding: 8px 12px 12px; flex-wrap: wrap; }
+.pg-foot:empty { display: none; }
+.pg-btn {
+  font: inherit; font-size: 16px; flex: 1; min-width: 72px; min-height: 44px; padding: 8px 8px;
+  background: var(--lavender); color: var(--night);
+  border: 3px solid var(--ink); box-shadow: 0 4px 0 var(--ink); cursor: pointer; text-align: center; line-height: 1.2;
+}
+.pg-btn.gold { background: var(--gold); }
+.pg-btn.red { background: var(--red); color: var(--cream); }
+.pg-btn.green { background: var(--leaf); color: var(--cream); }
+.pg-btn.dark { background: var(--night); color: var(--cream); }
+.pg-btn:disabled { opacity: 0.45; cursor: default; }
+.pg-btn:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 1px 0 var(--ink); }
+.pg-btn small { display: block; font-size: 16px; color: var(--wine); }
+.pg-btn.red small, .pg-btn.green small, .pg-btn.dark small { color: var(--sand); }
+.pg-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 2px solid rgba(4, 3, 3, 0.35); }
+.pg-row:last-child { border-bottom: 0; }
+.pg-row .grow { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.pg-row .name { color: var(--cream); }
+.pg-row .meta { color: var(--lavender); }
+.pg-row .pg-btn { flex: 0 0 auto; min-width: 64px; }
+.pg-row.tap { cursor: pointer; }
+.pg-row.tap:active { background: rgba(4, 3, 3, 0.25); }
+.pg-tag { display: inline-block; padding: 0 5px; margin-right: 4px; background: var(--night); color: var(--sand); }
+.pg-tag.bad { color: var(--cream); background: var(--red); }
+.pg-tag.good { color: var(--cream); background: var(--leaf); }
+.pg-tag.alert { color: var(--night); background: var(--orange); }
+.pg-tag.gold { color: var(--night); background: var(--gold); }
+.pg-bar { height: 10px; background: var(--night); border: 2px solid var(--ink); margin-top: 3px; }
+.pg-bar i { display: block; height: 100%; background: var(--gold); }
+.pg-bar.food i { background: var(--leaf); }
+.pg-bar.sci i { background: var(--lavender); }
+.pg-p { margin: 0 0 8px; }
+.pg-h3 { margin: 10px 0 4px; font-weight: normal; color: var(--sand); }
+.pg-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 12px; margin-bottom: 6px; }
+.pg-stats span { color: var(--lavender); }
+.pg-icon { width: 32px; height: 32px; image-rendering: pixelated; flex: 0 0 32px; }
+.pg-icon.big { width: 48px; height: 48px; flex-basis: 48px; }
+.pg-face { width: 64px; height: 64px; flex: 0 0 64px; image-rendering: pixelated; background-repeat: no-repeat; background-size: 960px 64px; border: 3px solid var(--ink); }
+.pg-face.small { width: 48px; height: 48px; flex-basis: 48px; background-size: 720px 48px; }
+.pg-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 8px; }
+.pg-chips .pg-btn { flex: 1 1 30%; min-width: 0; padding: 6px 4px; }
+.pg-chips.two .pg-btn { flex: 1 1 45%; }
+.pg-chips .pg-btn.on { background: var(--gold); }
+.pg-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.pg-grid .pick { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 2px; background: var(--night); border: 3px solid var(--ink); color: var(--cream); font: inherit; cursor: pointer; min-height: 44px; }
+.pg-grid .pick.on { border-color: var(--gold); background: var(--wine); }
+.pg-grid .pick span { text-align: center; line-height: 1.1; overflow-wrap: anywhere; }
+.pg-era { margin: 10px 0 4px; color: var(--sand); }
+.pg-tech { display: flex; align-items: center; gap: 8px; padding: 6px; margin-bottom: 6px; background: var(--night); border: 3px solid var(--ink); cursor: pointer; min-height: 44px; }
+.pg-tech.have { background: #2f4a2a; }
+.pg-tech.now { border-color: var(--gold); }
+.pg-tech.goal { border-color: var(--orange); }
+.pg-tech.locked { opacity: 0.7; }
+.pg-tech .grow { flex: 1; min-width: 0; }
+.pg-tech .name { color: var(--cream); }
+.pg-tech .meta { color: var(--lavender); }
+.pg-coach { background: var(--wine); color: var(--cream); padding: 8px 10px; margin: 0 12px 6px; border: 3px solid var(--gold); }
+.pg-big { font-size: 32px; line-height: 1.1; color: var(--gold); text-align: center; margin: 6px 0 10px; }
+.pg-center { text-align: center; }
+.pg-cover { position: fixed; inset: 0; z-index: 88; background: var(--night); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 24px; text-align: center; touch-action: none; }
+.pg-cover .pg-btn { flex: 0 0 auto; min-width: 220px; }
