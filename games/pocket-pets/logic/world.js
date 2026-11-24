@@ -9,7 +9,7 @@
 export const WALKABLE = new Set(['.', ',', '=', 'f', ':', ';', 'o', 'b']);
 export const GRASS = new Set([',', ':']);
 
-const SP = { prof: 7, rival: 6, nurse: 9, clerk: 0, kid: 8, lass: 9, hiker: 3, punk: 5, mage: 7, knight: 2, bard: 4, guard: 1, king: 10, girl: 6 };
+const SP = { prof: 7, rival: 6, nurse: 9, clerk: 0, kid: 0, lass: 9, hiker: 3, punk: 5, mage: 7, knight: 2, bard: 4, guard: 1, king: 10, girl: 6 };
 
 /** Rival's pet is the starter that does best against yours. */
 export const RIVAL_PICK = { embit: 'dribbit', dribbit: 'sprigling', sprigling: 'embit' };

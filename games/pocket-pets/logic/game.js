@@ -255,6 +255,7 @@ const trainerReady = (state, n) => (n.kind === 'trainer' || n.kind === 'leader')
 
 /** A trainer who can see the player (in a straight line, nothing in between). */
 export function spottedBy(state) {
+  if (!canFight(state)) return null;
   for (const n of npcsOn(state)) {
     if (!trainerReady(state, n) || !n.sight) continue;
     const [dx, dy] = DIRS[n.face || 'down'];

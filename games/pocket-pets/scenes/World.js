@@ -535,7 +535,7 @@ export class World extends Phaser.Scene {
     sfx('strike');
     const st = this.state;
     const c = this.add.container(0, 0).setScrollFactor(0).setDepth(7600);
-    c.add(this.add.rectangle(0, 0, WIDTH, HEIGHT, hex(PALETTE.night), 0.96).setOrigin(0).setInteractive());
+    c.add(this.add.rectangle(0, 0, WIDTH, HEIGHT, hex(PALETTE.night), 1).setOrigin(0).setInteractive());
     c.add(text(this, WIDTH / 2, 80, 'HALL OF FAME', { size: 32, color: PALETTE.gold }));
     c.add(text(this, WIDTH / 2, 116, 'You are the new Champion!', { color: PALETTE.cream }));
     st.party.forEach((p, i) => {
