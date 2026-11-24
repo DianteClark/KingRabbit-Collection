@@ -38,7 +38,7 @@ function summary(card, combat) {
   const parts = [];
   if (v.dmg !== undefined) {
     const real = combat ? combat.attackDamage(v.dmg, null, v.strMult || 1) : v.dmg;
-    const times = v.m && /times/.test(d.text) ? `x${v.m}` : /twice/.test(d.text) ? 'x2' : d.cost === 'X' ? 'xX' : '';
+    const times = d.hits === 'm' ? `x${v.m}` : d.hits ? `x${d.hits}` : '';
     parts.push(['ui:3,2', `${real}${times}`, real > v.dmg ? '#9be36b' : real < v.dmg ? '#ff8f6b' : PALETTE.cream]);
   }
   if (v.block !== undefined) {

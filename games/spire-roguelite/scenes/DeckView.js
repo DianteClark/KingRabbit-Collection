@@ -50,7 +50,7 @@ export class DeckView extends Phaser.Scene {
     sfx('select');
     const after = o.pick.preview ? o.pick.preview(card) : null;
     const c = this.add.container(0, 0).setDepth(100);
-    c.add(this.add.rectangle(0, 0, WIDTH, HEIGHT, hex(PALETTE.ink), 0.8).setOrigin(0).setInteractive());
+    c.add(this.add.rectangle(0, 0, WIDTH, HEIGHT, hex(PALETTE.night), 0.96).setOrigin(0).setInteractive());
     let y = 120;
     const a = wideCard(this, card, WIDTH - 24).setPosition(12, y);
     c.add(a);

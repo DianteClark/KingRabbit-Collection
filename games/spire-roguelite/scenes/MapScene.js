@@ -41,7 +41,7 @@ export class MapScene extends Phaser.Scene {
     this.add.rectangle(0, 44, WIDTH, VIEW_TOP - 44, hex(PALETTE.night), 0.95).setOrigin(0).setDepth(39);
     this.bar = topBar(this, run, { onDeck: () => this.showDeck(), onMenu: () => runMenu(this, run, { onAbandon: () => this.abandon() }) });
     const many = run.relics.length > 10;
-    relicRow(this, run, 20, 66, many ? { scale: 1, gap: 20 } : { scale: 2, gap: 34 });
+    relicRow(this, run, 20, 66, many ? { scale: 1, gap: 20, maxW: WIDTH - 24 } : { scale: 2, gap: 34 });
 
     const scroller = dragScroll(this, this.content, VIEW_TOP, HEIGHT, contentH);
     this.scroller = scroller;

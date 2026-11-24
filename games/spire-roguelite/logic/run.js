@@ -54,7 +54,7 @@ export function newRun({ hero = 'knight', mode = 'normal', seed = Date.now() } =
   run.relics.push(STARTER_RELIC[hero]);
   if (mode === 'endless') {
     // Endless is a little gentler at the start: a bit more HP and a potion to begin with.
-    run.maxHp += 10; run.hp += 10;
+    run.maxHp += 6; run.hp += 6;
     run.potions[0] = 'heal';
   }
   startAct(run);
@@ -90,7 +90,7 @@ export function api(run) {
     healPct: (p) => { run.hp = Math.min(run.maxHp, run.hp + Math.floor(run.maxHp * p)); },
     gainMaxHp: (n) => { run.maxHp = Math.max(1, run.maxHp + n); run.hp = Math.max(1, Math.min(run.maxHp, run.hp + Math.max(0, n))); },
     addCard: (id) => addCard(run, id),
-    giveRelic: (rarity) => RELICS[giveRelic(run, rarity)]?.name ?? 'nothing',
+    giveRelic: (rarity) => RELICS[giveRelic(run, rarity)]?.name ?? 'pouch of 50 gold',
     givePotion: () => POTIONS[givePotion(run)]?.name ?? 'nothing',
     canGetPotion: () => canGetPotion(run),
     upgradeRandom: (n) => upgradeRandom(run, n),
@@ -196,7 +196,10 @@ function makeRewards(run, kind) {
   }
   if (kind === 'elite') {
     const n = relicFlag(run, 'eliteRelics') ? 2 : 1;
-    for (let i = 0; i < n; i++) rw.relics.push(rollRelic(run, weighted(run.rng, [['common', 50], ['uncommon', 33], ['rare', 17]]), rw.relics));
+    for (let i = 0; i < n; i++) {
+      const id = rollRelic(run, weighted(run.rng, [['common', 50], ['uncommon', 33], ['rare', 17]]), rw.relics);
+      if (id) rw.relics.push(id); else rw.gold += 40; // every relic found already: gold instead
+    }
   }
   return rw;
 }
@@ -303,7 +306,8 @@ function maybeUpgraded(run) {
 
 /** Leave the reward screen: back to the map, on to the boss relic, or the end of the run. */
 export function leaveRewards(run) {
-  const wasBoss = run.rewards?.boss;
+  if (run.screen !== 'reward' || !run.rewards) return;
+  const wasBoss = run.rewards.boss;
   run.rewards = null;
   if (!wasBoss) { run.screen = 'map'; return; }
   if (run.mode === 'normal' && run.act === 3) { run.screen = 'victory'; return; }
@@ -313,6 +317,7 @@ export function leaveRewards(run) {
 }
 
 export function chooseBossRelic(run, id) {
+  if (run.screen !== 'bossRelic') return;
   if (id && run.bossRelics?.includes(id)) giveRelic(run, id);
   run.bossRelics = null;
   nextAct(run);
@@ -397,6 +402,7 @@ export function smith(run, uid) {
 // ------------------------------------------------------------------ treasure
 
 export function openTreasure(run) {
+  if (run.screen !== 'treasure') return;
   const t = run.treasure;
   if (!t || t.opened) return;
   t.opened = true;
@@ -406,6 +412,7 @@ export function openTreasure(run) {
 }
 
 export function leaveRoom(run) {
+  if (!['treasure', 'shop', 'event', 'rest'].includes(run.screen)) return;
   run.treasure = null;
   run.shop = null;
   run.event = null;
@@ -511,7 +518,8 @@ export function eventTakeOffer(run, id) {
 }
 
 export function eventContinue(run) {
-  const out = run.event?.outcome;
+  if (run.screen !== 'event' || !run.event) return;
+  const out = run.event.outcome;
   if (out?.fight) { const f = out.fight; run.event = null; startFight(run, f, 'normal'); return; }
   leaveRoom(run);
 }

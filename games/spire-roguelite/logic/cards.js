@@ -44,6 +44,7 @@ card('ironWave', {
   play: (c, v, t) => { c.block(v.block); c.attack(t, v.dmg); },
 });
 card('twinStrike', {
+  hits: 2,
   name: 'Twin Strike', cls: 'knight', type: 'attack', rarity: 'common', cost: 1, target: 'enemy', art: 'sk:14,1',
   text: 'Deal {dmg} damage twice.', v: { dmg: 5 }, up: { dmg: 7 },
   play: (c, v, t) => c.attack(t, v.dmg, 2),
@@ -104,6 +105,7 @@ card('ironSkin', {
   play: (c, v) => c.applySelf('plate', v.n),
 });
 card('whirlwind', {
+  hits: 'X',
   name: 'Cyclone', cls: 'knight', type: 'attack', rarity: 'uncommon', cost: 'X', art: 'sp:0,3',
   text: 'Deal {dmg} damage to ALL enemies X times.', v: { dmg: 5 }, up: { dmg: 8 },
   play: (c, v) => { for (let i = 0; i < v.X; i++) c.attackAll(v.dmg); },
@@ -171,6 +173,7 @@ card('frostShard', {
   play: (c, v, t) => { c.attack(t, v.dmg); c.apply(t, 'weak', v.n); },
 });
 card('chainLightning', {
+  hits: 'm',
   name: 'Chain Bolt', cls: 'mage', type: 'attack', rarity: 'common', cost: 1, art: 'sp:5,4',
   text: 'Deal {dmg} damage to a random enemy {m} times.', v: { dmg: 3, m: 3 }, up: { dmg: 3, m: 4 },
   play: (c, v) => { for (let i = 0; i < v.m; i++) c.attackRandom(v.dmg); },
@@ -241,6 +244,7 @@ card('hex', {
   play: (c, v, t) => { c.apply(t, 'weak', v.n); c.apply(t, 'vuln', v.n); },
 });
 card('firestorm', {
+  hits: 'm',
   name: 'Fire Storm', cls: 'mage', type: 'attack', rarity: 'rare', cost: 3, art: 'sp:7,0',
   text: 'Deal {dmg} damage to ALL enemies {m} times.', v: { dmg: 7, m: 3 }, up: { dmg: 7, m: 4 },
   play: (c, v) => { for (let i = 0; i < v.m; i++) c.attackAll(v.dmg); },
@@ -278,6 +282,7 @@ card('quickShot', {
   play: (c, v, t) => { c.attack(t, v.dmg); c.draw(1); },
 });
 card('twinArrows', {
+  hits: 2,
   name: 'Arrow Spray', cls: 'ranger', type: 'attack', rarity: 'common', cost: 1, art: 'sk:4,4',
   text: 'Deal {dmg} damage to ALL enemies twice.', v: { dmg: 4 }, up: { dmg: 6 },
   play: (c, v) => { c.attackAll(v.dmg); c.attackAll(v.dmg); },
@@ -298,6 +303,7 @@ card('huntersMark', {
   play: (c, v, t) => { c.apply(t, 'vuln', v.n); c.draw(1); },
 });
 card('flurry', {
+  hits: 'm',
   name: 'Flurry', cls: 'ranger', type: 'attack', rarity: 'common', cost: 1, target: 'enemy', art: 'sk:11,6',
   text: 'Deal {dmg} damage {m} times.', v: { dmg: 2, m: 4 }, up: { dmg: 2, m: 6 },
   play: (c, v, t) => c.attack(t, v.dmg, v.m),
@@ -333,6 +339,7 @@ card('bouncingFlask', {
   play: (c, v) => { for (let i = 0; i < v.m; i++) c.applyRandom('poison', 3); },
 });
 card('rainOfArrows', {
+  hits: 'm',
   name: 'Rain of Arrows', cls: 'ranger', type: 'attack', rarity: 'uncommon', cost: 2, art: 'sk:3,4',
   text: 'Deal {dmg} damage to a random enemy {m} times.', v: { dmg: 4, m: 5 }, up: { dmg: 4, m: 7 },
   play: (c, v) => { for (let i = 0; i < v.m; i++) c.attackRandom(v.dmg); },
@@ -416,7 +423,7 @@ card('apotheosis', {
 });
 card('panacea', {
   name: 'Panacea', cls: 'neutral', type: 'skill', rarity: 'uncommon', cost: 0, art: 'sp:4,5',
-  text: 'Remove Weak, Vulnerable and Frail from yourself. Exhaust.', v: {}, flags: { exhaust: true },
+  text: 'Remove Weak, Vulnerable and Frail from yourself. Exhaust.', upText: 'Remove Weak, Vulnerable and Frail from yourself.', v: {}, flags: { exhaust: true }, upFlags: {},
   play: (c) => c.cleanse(),
 });
 

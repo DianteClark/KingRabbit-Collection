@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import {
   PALETTE, hex, text, button, WIDTH, HEIGHT, route, go, setBackground, icon, unit, playOnce, outlined, floatText,
-  toast, sfx, topBar, runMenu, modal, info, showCards, relicInfo,
+  toast, sfx, topBar, runMenu, modal, info, showCards, relicInfo, relicRow,
 } from './common.js';
 import { handCard, wideCard } from './cardview.js';
 import { ACT_COLORS } from './MapScene.js';
@@ -91,12 +91,7 @@ export class Battle extends Phaser.Scene {
   }
 
   drawRelics() {
-    this.relicIcons = this.run.relics.map((id, i) => {
-      const r = RELICS[id];
-      const img = icon(this, 14 + i * 20, 56, r.art, 1).setDepth(41).setInteractive({ useHandCursor: true });
-      img.on('pointerup', () => relicInfo(this, id));
-      return img;
-    });
+    relicRow(this, this.run, 14, 56, { scale: 1, gap: 20, maxW: WIDTH - 76, depth: 41 });
   }
 
   enemyPositions(n) {

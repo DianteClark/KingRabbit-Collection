@@ -67,7 +67,7 @@ export const RULES = {
     },
     {
       heading: 'Endless mode',
-      text: 'A slightly easier start (+10 Max HP, a healing potion, gentler enemies), but the acts keep looping. Every loop enemies get tougher. How high can you climb? Your best floor and score are saved.',
+      text: 'A slightly easier start (+6 Max HP, a healing potion, slightly weaker enemies), but the acts keep looping. Every loop enemies get tougher. How high can you climb? Your best floor and score are saved.',
     },
     { heading: 'Saving', text: 'Your run is saved after every step. Close the page any time and tap Continue to carry on.' },
     { heading: 'Art', text: 'Pixel art: HAS Heroic Fantasy by Aleksandr Makarov (iknowkingrabbit). Font: BoldPixels.' },

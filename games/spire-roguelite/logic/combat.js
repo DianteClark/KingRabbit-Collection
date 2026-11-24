@@ -19,7 +19,7 @@ const MAX_ENEMIES = 4;
 /** Enemy scaling for the act / Endless loop. */
 export function scaling(run) {
   const loop = run.loop || 0;
-  const easy = run.mode === 'endless' ? 0.9 : 1;
+  const easy = run.mode === 'endless' ? 0.95 : 1;
   return { hp: easy * (1 + 0.35 * loop), dmg: easy * (1 + 0.2 * loop) };
 }
 

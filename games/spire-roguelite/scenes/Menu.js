@@ -27,7 +27,7 @@ export class Menu extends Phaser.Scene {
     const run = loadRun();
     let y = 396;
     if (run) {
-      const label = `Continue: ${HEROES[run.hero].name}, floor ${run.floor}`;
+      const label = `Continue: ${HEROES[run.hero].name}${run.mode === 'endless' ? ' (Endless)' : ''}, floor ${run.floor}`;
       button(this, WIDTH / 2, y, 300, 46, label, () => route(this, run), { fill: PALETTE.gold });
       y += 56;
     }

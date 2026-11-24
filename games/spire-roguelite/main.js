@@ -10,6 +10,7 @@ import { RunEnd } from './scenes/RunEnd.js';
 import { DeckView } from './scenes/DeckView.js';
 import { Gallery } from './scenes/Gallery.js';
 import * as R from './logic/run.js';
+import * as B from './logic/bot.js';
 import { saveRun, loadRun } from './save.js';
 
 startGame({
@@ -17,4 +18,4 @@ startGame({
 });
 
 // Test hooks (used by the automated browser checks).
-window.__spire = { R, saveRun, loadRun };
+window.__spire = { R, B, saveRun, loadRun };

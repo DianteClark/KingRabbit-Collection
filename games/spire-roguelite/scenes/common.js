@@ -21,11 +21,16 @@ const SCREEN_SCENES = {
 
 /** Go to another scene with a quick fade. */
 export function go(scene, key, data) {
+  // Ignore double taps: only the first scene change from a screen counts.
+  if (scene._leaving) return;
+  scene._leaving = true;
+  scene.events.once('shutdown', () => { scene._leaving = false; });
   fadeTo(scene, () => scene.scene.start(key, data));
 }
 
 /** Save the run and show whatever screen it is on now. */
 export function route(scene, run) {
+  if (scene._leaving) return;
   saveRun(run);
   go(scene, SCREEN_SCENES[run.screen] || 'Map', { run });
 }
@@ -208,17 +213,57 @@ function mapPotionMenu(scene, run, slot, done) {
   modal(scene, p.name, `${p.text}${p.anytime ? '' : '\nOnly usable in a fight.'}`, buttons, { art: { ref: 'ar:6,8', scale: 3, tint: p.tint } });
 }
 
-/** A row of relic icons (tap for details). Returns the container. */
-export function relicRow(scene, run, x, y, { scale = 2, gap = 34, maxW = WIDTH - 16 } = {}) {
-  const c = scene.add.container(0, 0).setDepth(40).setScrollFactor(0);
-  const perRow = Math.max(1, Math.floor(maxW / gap));
-  run.relics.forEach((id, i) => {
+/**
+ * A row of relic icons (tap one for details). When there are too many to fit, the last slot
+ * becomes a "+N" button that lists them all.
+ */
+export function relicRow(scene, run, x, y, { scale = 2, gap = 34, maxW = WIDTH - 16, depth = 40 } = {}) {
+  const c = scene.add.container(0, 0).setDepth(depth).setScrollFactor(0);
+  const fit = Math.max(1, Math.floor(maxW / gap));
+  const many = run.relics.length > fit;
+  const shown = many ? run.relics.slice(0, fit - 1) : run.relics;
+  shown.forEach((id, i) => {
     const r = RELICS[id];
     if (!r) return;
-    const img = icon(scene, x + (i % perRow) * gap, y + Math.floor(i / perRow) * gap, r.art, scale).setInteractive({ useHandCursor: true });
+    const img = icon(scene, x + i * gap, y, r.art, scale).setInteractive({ useHandCursor: true });
     img.on('pointerup', () => { sfx('select'); relicInfo(scene, id); });
     c.add(img);
   });
+  if (many) {
+    const more = outlined(scene, x + (fit - 1) * gap, y, `+${run.relics.length - shown.length}`, { color: PALETTE.gold })
+      .setInteractive({ useHandCursor: true });
+    more.on('pointerup', () => { sfx('select'); relicList(scene, run); });
+    c.add(more);
+  }
+  return c;
+}
+
+/** Scrollable list of every relic the hero carries. */
+export function relicList(scene, run) {
+  const c = scene.add.container(0, 0).setDepth(110).setScrollFactor(0);
+  c.add(scene.add.rectangle(0, 0, WIDTH, HEIGHT, hex(PALETTE.night), 0.97).setOrigin(0).setInteractive());
+  c.add(text(scene, WIDTH / 2, 24, `Relics (${run.relics.length})`, { color: PALETTE.gold }));
+  const list = scene.add.container(0, 0);
+  let y = 50;
+  for (const id of run.relics) {
+    const r = RELICS[id];
+    const body = text(scene, 52, y + 22, r.text, { origin: [0, 0], wrap: WIDTH - 64, align: 'left' });
+    list.add([icon(scene, 26, y + 18, r.art, 2), text(scene, 52, y + 2, r.name, { origin: [0, 0], color: PALETTE.sand }), body]);
+    y += Math.max(44, body.height + 30);
+  }
+  const top = 44;
+  const bottom = HEIGHT - 60;
+  list.setMask(scene.make.graphics().fillRect(0, top, WIDTH, bottom - top).createGeometryMask());
+  c.add(list);
+  // Simple drag to scroll, scoped to this overlay.
+  const minY = Math.min(0, bottom - y - 8);
+  let start = null;
+  const hit = scene.add.zone(0, top, WIDTH, bottom - top).setOrigin(0).setInteractive();
+  hit.on('pointerdown', (p) => { start = { y: p.y, c: list.y }; });
+  hit.on('pointermove', (p) => { if (start && p.isDown) list.y = Math.max(minY, Math.min(0, start.c + p.y - start.y)); });
+  hit.on('pointerup', () => { start = null; });
+  c.add(hit);
+  c.add(button(scene, WIDTH / 2, HEIGHT - 30, 200, 40, 'Close', () => c.destroy(), { fill: PALETTE.lavender }));
   return c;
 }
 
