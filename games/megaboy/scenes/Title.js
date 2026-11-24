@@ -49,7 +49,7 @@ export class Title extends Phaser.Scene {
     button(this, R - 56, 284, 138, 42, '< All Games', () => { window.location.href = '../'; }, { fill: PALETTE.indigo, color: PALETTE.cream });
     this.soundBtn = button(this, R + 76, 284, 110, 42, '', () => { setMuted(!isMuted()); this.syncSound(); });
     this.syncSound();
-    this.input.keyboard?.on('keydown-ENTER', () => (p ? this.cont() : this.newGame()));
+    this.input.keyboard?.on('keydown-ENTER', () => { if (!this.modalOpen) { if (p) this.cont(); else this.newGame(); } });
   }
 
   syncSound() { this.soundBtn.setLabel(isMuted() ? 'Sound off' : 'Sound on'); }

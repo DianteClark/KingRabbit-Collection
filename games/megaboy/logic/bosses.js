@@ -5,7 +5,7 @@ import { TILE, BOSS_HP } from './constants.js';
 import { moveX, moveY } from './level.js';
 
 export const BOSSES = {
-  ember: { name: 'EMBER', weapon: 'ember', weak: 'ice', stage: 'foundry' },
+  ember: { name: 'EMBER', weapon: 'ember', weak: 'ice', stage: 'foundry', dmg: 3 },
   glacia: { name: 'GLACIA', weapon: 'ice', weak: 'gale', stage: 'cryo' },
   thorn: { name: 'THORN', weapon: 'thorn', weak: 'ember', stage: 'jungle' },
   volt: { name: 'VOLT', weapon: 'volt', weak: 'drill', stage: 'power' },
@@ -92,11 +92,11 @@ export const BOSS_STEP = {
         b.anim = 'shoot'; b.tell = null;
         if (b.shots < 3 && b.t < 0.8 - b.shots * 0.25) {
           const tx = pcx(w) + [-18, 0, 18][b.shots];
-          w.bullet({ kind: 'bomb', ...lob(b, w, tx, b.floorY - 3, 0.8, 400), dmg: 3, r: 3 });
+          w.bullet({ kind: 'bomb', ...lob(b, w, tx, b.floorY - 3, 0.8, 400), dmg: 2, r: 3 });
           w.emit('bossShot');
           b.shots++;
         }
-        if (b.t <= 0) { b.state = 'idle'; b.t = rest(w, 0.6); }
+        if (b.t <= 0) { b.state = 'idle'; b.t = rest(w, 0.8); }
         break;
       default: b.state = 'idle';
     }

@@ -595,7 +595,7 @@ export class World {
       }
       if (b.kind === 'bomb' && b.vy > 0 && lv.solid(Math.floor(b.x / TILE), Math.floor((b.y + b.r) / TILE), this.time)) {
         const top = Math.floor((b.y + b.r) / TILE) * TILE;
-        Object.assign(b, { kind: 'flame', y: top - 4, vx: 0, vy: 0, g: 0, ttl: 0.75, persist: true, r: 4, h: 4 });
+        Object.assign(b, { kind: 'flame', y: top - 4, vx: 0, vy: 0, g: 0, ttl: 0.75, persist: true, r: 4, h: 4, dmg: 2 });
         this.emit('flame', { x: b.x, y: top });
       } else if (b.solid && lv.solid(Math.floor(b.x / TILE), Math.floor(b.y / TILE), this.time)) {
         b.dead = true;
@@ -640,6 +640,8 @@ export class World {
 
   collect(d) {
     if (d.dead) return;
+    // a fifth Energy Tank stays where it is until you have room for it
+    if (d.kind === 'etank' && this.etanks >= MAX_ETANKS) return;
     d.dead = true;
     const p = this.p;
     switch (d.kind) {

@@ -51,8 +51,8 @@ export class BossBot {
     const bv = this.prevBoss ? { x: (b.x - this.prevBoss.x) / DT, y: (b.y - this.prevBoss.y) / DT } : { x: 0, y: 0 };
     this.prevBoss = { x: b.x, y: b.y };
 
-    // choose a plan (looked at every other frame; switch when the current one gets worse)
-    if (this.t % 2 === 0 || this.planT <= 0) {
+    // choose a plan (switch when the current one gets clearly worse)
+    {
       const scores = PLANS.map((pl) => this.score(pl, bv));
       let best = 0;
       for (let i = 1; i < PLANS.length; i++) if (scores[i] > scores[best] + 1e-6) best = i;

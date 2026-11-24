@@ -54,6 +54,12 @@ export class Hud extends Phaser.Scene {
     this.setupInput();
     this.ready = true;
     this.refresh();
+    // once you own a second weapon, point at the weapon button
+    const seen = save.get('seen') || [];
+    if (this.w.weapons.length > 1 && !seen.includes('wpn')) {
+      save.set('seen', [...seen, 'wpn']);
+      this.time.delayedCall(1600, () => this.toast('Tap WPN to switch weapons, or pick one in the pause menu.'));
+    }
     if (!save.get('seenHelp')) {
       save.set('seenHelp', true);
       this.time.delayedCall(300, () => this.help(() => this.coach()));
@@ -70,9 +76,9 @@ export class Hud extends Phaser.Scene {
       const bg = this.add.rectangle(x, y, t.width + 14, t.height + 8, hex(PALETTE.gold)).setDepth(44).setStrokeStyle(2, hex(PALETTE.ink));
       items.push(t, bg);
     };
-    tag(DPAD.x + 20, DPAD.y - 92, 'Run and climb');
-    tag(JUMP.x - 10, JUMP.y - 70, 'Jump');
-    tag(SHOOT.x - 40, SHOOT.y - 66, 'Shoot (hold)');
+    tag(DPAD.x + 6, DPAD.y - DPAD.r - 14, 'Run and climb');
+    tag(JUMP.x - 6, JUMP.y - JUMP.r - 14, 'Jump');
+    tag(SHOOT.x - 30, SHOOT.y - SHOOT.r - 14, 'Shoot (hold)');
     this.tweens.add({ targets: items, y: '-=4', yoyo: true, repeat: 7, duration: 380 });
     this.time.delayedCall(6500, () => this.tweens.add({ targets: items, alpha: 0, duration: 400, onComplete: () => items.forEach((o) => o.destroy()) }));
   }

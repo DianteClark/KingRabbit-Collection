@@ -52,7 +52,8 @@ export class Stage extends Phaser.Scene {
 
     this.scene.launch('Hud', { stage: this });
     this.hud = this.scene.get('Hud');
-    const flush = () => this.saveFinds();
+    // leaving the app: keep finds, and come back to the pause menu rather than straight into danger
+    const flush = () => { this.saveFinds(); if (document.hidden) this.hud?.pauseMenu(); };
     window.addEventListener('pagehide', flush);
     document.addEventListener('visibilitychange', flush);
     this.events.once('shutdown', () => {
@@ -439,7 +440,9 @@ export class Stage extends Phaser.Scene {
     const seen = save.get('seen') || [];
     if (seen.includes(ev.id)) return;
     save.set('seen', [...seen, ev.id]);
-    this.hud.toast(ev.text);
+    // wait for READY and the stage name to clear before the first tip
+    const wait = Math.max(0, 2600 - this.w.clock * 1000);
+    this.time.delayedCall(wait, () => this.hud?.toast(ev.text));
   }
 
   /** E-tanks found and lives are kept even if the stage is not finished. */
