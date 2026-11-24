@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { PALETTE, hex } from './palette.js';
+import { sfx } from './sfx.js';
 
 // BoldPixels is drawn at 16px or multiples of it, which keeps every glyph pixel-sharp.
 export const FONT = 'BoldPixels';
@@ -46,6 +47,7 @@ export function button(scene, x, y, w, h, label, onTap, {
   c.on('pointerup', () => {
     if (!enabled || face.y === 0) return;
     face.y = 0;
+    sfx('tap');
     onTap?.();
   });
   c.setLabel = (s) => { lbl.setText(s); return c; };

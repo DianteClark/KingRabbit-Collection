@@ -3,7 +3,8 @@ import { PALETTE, hex } from '../../../shared/core/palette.js';
 import { text, button } from '../../../shared/core/ui.js';
 import { WIDTH } from '../../../shared/core/boot.js';
 import { go, modal, shadowTitle, setBackground } from './common.js';
-import { save, getRecord, getBest } from '../save.js';
+import { save, getRecord, getBest, getLevel, setLevel, LEVEL_NAMES } from '../save.js';
+import { isMuted, setMuted } from '../../../shared/core/sfx.js';
 import { CATEGORIES, TABLES } from '../tables.js';
 import { frameRef } from './Boot.js';
 
@@ -28,6 +29,14 @@ export class Menu extends Phaser.Scene {
     button(this, WIDTH / 2, 612, 200, 40, '< All Games', () => { window.location.href = '../'; }, {
       fill: PALETTE.indigo, color: PALETTE.cream,
     });
+    this.soundBtn = button(this, WIDTH - 40, 612, 64, 40, '', () => { setMuted(!isMuted()); this.syncSound(); });
+    this.syncSound();
+  }
+
+  syncSound() {
+    this.soundBtn.setLabel(isMuted() ? 'Mute' : 'Sound');
+    this.soundBtn.body.setFillStyle(hex(isMuted() ? PALETTE.indigo : PALETTE.leaf));
+    this.soundBtn.label.setColor(PALETTE.cream);
   }
 
   showTab(id) {
@@ -71,10 +80,25 @@ export class Menu extends Phaser.Scene {
 
   open(t) {
     if (!t.scene) return;
-    if (t.modes.length === 1) { go(this, t.scene, { mode: t.modes[0] }); return; }
+    const start = (mode) => {
+      if (mode === 'pvp' || !t.levels) { go(this, t.scene, { mode }); return; }
+      this.pickLevel(t, (level) => go(this, t.scene, { mode, level }));
+    };
+    if (t.modes.length === 1) { start(t.modes[0]); return; }
     const m = modal(this, t.name, [], [
-      ['vs Computer', () => go(this, t.scene, { mode: 'cpu' })],
-      ['2 Players', () => go(this, t.scene, { mode: 'pvp' })],
+      ['vs Computer', () => { m.destroy(); start('cpu'); }],
+      ['2 Players', () => start('pvp')],
+      ['Cancel', () => m.destroy()],
+    ]);
+  }
+
+  pickLevel(t, done) {
+    const last = getLevel(t.id);
+    const choose = (lv) => { setLevel(t.id, lv); done(lv); };
+    const m = modal(this, 'Difficulty', [`${t.name}  (last: ${LEVEL_NAMES[last]})`], [
+      ['Easy', () => choose('easy'), PALETTE.leaf, PALETTE.cream],
+      ['Normal', () => choose('normal'), PALETTE.gold],
+      ['Hard', () => choose('hard'), PALETTE.red, PALETTE.cream],
       ['Cancel', () => m.destroy()],
     ]);
   }

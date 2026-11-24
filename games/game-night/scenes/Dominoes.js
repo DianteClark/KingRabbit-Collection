@@ -4,6 +4,7 @@ import { text, button } from '../../../shared/core/ui.js';
 import { WIDTH } from '../../../shared/core/boot.js';
 import { header, go, setBackground, toast, modal } from './common.js';
 import { record } from '../save.js';
+import { sfx } from '../../../shared/core/sfx.js';
 import { TARGET, SIDES, newRound, ends, playable, playTile, draw, passTurn, roundResult, cpuChoice, pips } from '../logic/dominoes.js';
 
 const PIPS = {
@@ -83,7 +84,7 @@ const HAND_H = 26;
 export class Dominoes extends Phaser.Scene {
   constructor() { super('Dominoes'); }
 
-  init() { this.mode = 'cpu'; }
+  init(data) { this.mode = 'cpu'; this.level = data.level || 'normal'; }
 
   create() {
     setBackground(this, PALETTE.leaf);
@@ -103,6 +104,7 @@ export class Dominoes extends Phaser.Scene {
 
   newRound() {
     this.r = newRound();
+    this.voids = new Set();   // numbers you've shown you don't have (the CPU remembers on Hard)
     this.over = false;
     this.busy = false;
     this.selected = -1;
@@ -199,9 +201,10 @@ export class Dominoes extends Phaser.Scene {
   }
 
   cpuStep() {
-    const c = cpuChoice(this.r, 1);
+    const c = cpuChoice(this.r, 1, { level: this.level, voids: this.voids });
     if (c) {
       this.r = playTile(this.r, 1, c.i, c.side);
+      sfx('place');
       this.busy = false;
       this.next();
     } else if (this.r.boneyard.length) {
@@ -231,12 +234,14 @@ export class Dominoes extends Phaser.Scene {
   commit(i, side) {
     this.selected = -1;
     this.r = playTile(this.r, 0, i, side);
+    sfx('place');
     this.next();
   }
 
   humanDraw() {
     if (this.over || this.busy || this.r.turn !== 0) return;
-    if (this.r.boneyard.length) { this.r = draw(this.r, 0); toast(this, 'You draw a tile', 560); }
+    ends(this.r).forEach((e) => this.voids.add(e.value));
+    if (this.r.boneyard.length) { this.r = draw(this.r, 0); sfx('card'); toast(this, 'You draw a tile', 560); }
     else { this.r = passTurn(this.r); toast(this, 'You pass', 560); }
     this.next();
   }
@@ -245,6 +250,7 @@ export class Dominoes extends Phaser.Scene {
     this.over = true;
     this.refresh();
     if (res.winner !== null) this.scores[res.winner] += res.points;
+    sfx(res.winner === 0 ? 'win' : res.winner === 1 ? 'lose' : 'place');
     const matchOver = this.scores.some((s) => s >= TARGET);
     const blocked = !this.r.hands[0].length || !this.r.hands[1].length ? '' : 'Blocked! ';
     const who = res.winner === null ? 'Blocked - tie' : `${blocked}${res.winner === 0 ? 'You win the round' : 'CPU wins the round'}`;

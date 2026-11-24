@@ -3,7 +3,8 @@ import { PALETTE } from '../../../shared/core/palette.js';
 import { text } from '../../../shared/core/ui.js';
 import { WIDTH } from '../../../shared/core/boot.js';
 import { header, go, setBackground, toast, modal } from './common.js';
-import { checkerboard, highlighter, endGame, think } from './boardkit.js';
+import { checkerboard, highlighter, endGame } from './boardkit.js';
+import { sfx } from '../../../shared/core/sfx.js';
 import { newGame, legalMoves, makeMove, status, inCheck, cpuMove, positionKey } from '../logic/chess.js';
 
 const CELL = 40;
@@ -15,7 +16,25 @@ const VAL = { P: 1, N: 3, B: 3, R: 5, Q: 9, K: 0 };
 export class Chess extends Phaser.Scene {
   constructor() { super('Chess'); }
 
-  init(data) { this.mode = data.mode ?? 'cpu'; }
+  init(data) {
+    this.mode = data.mode ?? 'cpu';
+    this.level = data.level || 'normal';
+  }
+
+  /** Ask the background engine for a move; falls back to thinking on the main thread. */
+  askEngine(done) {
+    const id = (this.engineId = (this.engineId || 0) + 1);
+    try {
+      if (!this.worker) {
+        this.worker = new Worker(new URL('../logic/chessWorker.js', import.meta.url), { type: 'module' });
+        this.events.once('shutdown', () => { this.worker?.terminate(); this.worker = null; });
+      }
+      this.worker.onmessage = (e) => { if (e.data.id === this.engineId) done(e.data.move); };
+      this.worker.postMessage({ state: this.s, level: this.level, id });
+    } catch {
+      this.time.delayedCall(50, () => done(cpuMove(this.s, { level: this.level })));
+    }
+  }
 
   create() {
     setBackground(this, PALETTE.night);
@@ -30,6 +49,7 @@ export class Chess extends Phaser.Scene {
   }
 
   restart() {
+    this.engineId = (this.engineId || 0) + 1;   // ignore any answer still coming from the last game
     this.s = newGame();
     this.history = new Map([[positionKey(this.s), 1]]);
     this.selected = -1;
@@ -73,12 +93,17 @@ export class Chess extends Phaser.Scene {
     if (st) { this.finish(st); return; }
     const check = inCheck(this.s) ? ' - check!' : '';
     if (this.isCpu()) {
-      this.status.setText(`CPU is thinking...${check}`);
+      this.status.setText(`CPU (${this.level}) is thinking...${check}`);
       this.busy = true;
-      think(this, () => this.apply(cpuMove(this.s)));
+      const started = this.time.now;
+      this.askEngine((m) => {
+        if (!m || this.over) return;
+        // Small pause so instant replies don't feel abrupt.
+        this.time.delayedCall(Math.max(0, 350 - (this.time.now - started)), () => this.apply(m));
+      });
     } else {
       this.status.setText(`${this.name(this.s.turn)} to move${check}`);
-      if (check) toast(this, 'Check!', 150);
+      if (check) { toast(this, 'Check!', 150); sfx('error'); }
     }
   }
 
@@ -118,7 +143,17 @@ export class Chess extends Phaser.Scene {
     if (!sprite) { done(); return; }
     sprite.setDepth(20);
     this.pieces.bringToTop(sprite);
-    this.tweens.add({ targets: sprite, x: to.x, y: to.y, duration: 180, ease: 'Quad.easeOut', onComplete: done });
+    const target = this.s.board[m.to];
+    this.tweens.add({
+      targets: sprite, x: to.x, y: to.y, duration: 180, ease: 'Quad.easeOut',
+      onComplete: () => {
+        if (target || m.enPassant) {
+          sfx('capture');
+          this.pieces.list.filter((o) => o !== sprite && o.x === to.x && o.y === to.y).forEach((o) => o.destroy());
+        } else sfx('move');
+        done();
+      },
+    });
   }
 
   finish(st) {
@@ -132,6 +167,7 @@ export class Chess extends Phaser.Scene {
       outcome = 'd';
     }
     this.status.setText(title);
+    sfx(outcome === 'w' || (this.mode === 'pvp' && st.result === 'checkmate') ? 'win' : outcome === 'l' ? 'lose' : 'place');
     const why = {
       checkmate: 'Checkmate', stalemate: 'Stalemate - no legal moves', material: 'Not enough pieces to mate',
       fifty: '50 moves without a capture or pawn move', repetition: 'Same position three times',

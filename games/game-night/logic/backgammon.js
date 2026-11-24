@@ -151,14 +151,105 @@ function hasOppBehind(s, i, opp) {
   return false;
 }
 
-export function cpuTurn(s, dice) {
-  const seqs = turnSequences(s, dice);
-  let best = -Infinity; let pick = null;
-  for (const r of seqs) {
-    const v = evaluate(r.state, s.turn) + (winner(r.state) === s.turn ? 10000 : 0);
+// How many of the 36 rolls hit a blot at each distance (direct and combination shots, no blocking).
+const SHOTS = [0, 11, 12, 14, 15, 15, 17, 6, 6, 5, 3, 2, 3, 0, 0, 1, 0, 1, 0, 1, 0, 0, 0, 1, 1];
+
+function contact(s) {
+  // Is any checker of player 0 still behind any checker of player 1 (in movement terms)?
+  let max0 = 0; let min1 = 25;
+  for (let i = 1; i <= 24; i++) {
+    if (s.pts[i].owner === 0 && s.pts[i].n) max0 = Math.max(max0, i);
+    if (s.pts[i].owner === 1 && s.pts[i].n) min1 = Math.min(min1, i);
+  }
+  if (s.bar[0]) max0 = 25;
+  if (s.bar[1]) min1 = 0;
+  return max0 > min1;
+}
+
+/** Stronger evaluation for Hard: shot counting, primes, anchors, home board, pure race mode. */
+export const HARD_W = { pip: 1, bar: 12, home: 5, outer: 3, anchor: 4, blot: 0.5, blotBase: 4, prime: 1.5 };
+
+function evaluateHard(s, me, W = HARD_W) {
+  const opp = other(me);
+  const dirMe = me === 0 ? -1 : 1;
+  if (!contact(s)) {
+    // Pure race: fewer pips and more borne off is all that matters.
+    return (pipCount(s, opp) - pipCount(s, me)) * 2 + (s.off[me] - s.off[opp]) * 6;
+  }
+  let v = (pipCount(s, opp) - pipCount(s, me)) * W.pip;
+  v += s.bar[opp] * W.bar - s.bar[me] * W.bar + (s.off[me] - s.off[opp]) * 8;
+  let run = 0; let bestRun = 0;
+  for (let k = 1; k <= 24; k++) {
+    const i = me === 0 ? k : 25 - k;               // walk from my home outward
+    const pt = s.pts[i];
+    const made = pt.owner === me && pt.n >= 2;
+    run = made ? run + 1 : 0;
+    bestRun = Math.max(bestRun, run);
+    if (made) {
+      v += inHome(me, i) ? W.home : W.outer;
+      if (inHome(opp, i)) v += W.anchor;                  // an anchor in their home board
+    }
+    if (pt.owner === me && pt.n === 1) {
+      // Blot: penalise by the chance the opponent can hit it and how far back it would go.
+      let shots = 0;
+      if (s.bar[opp]) shots = 20;
+      for (let j = 1; j <= 24; j++) {
+        if (s.pts[j].owner !== opp || !s.pts[j].n) continue;
+        const d = (j - i) * dirMe;                  // opponent moves the other way
+        if (d > 0 && d <= 24) shots = Math.max(shots, SHOTS[d]);
+      }
+      const loss = me === 0 ? 25 - i : i;           // pips lost if hit
+      v -= (shots / 36) * (loss * W.blot + W.blotBase);
+    }
+  }
+  v += bestRun * bestRun * W.prime;                       // primes trap the opponent
+  return v;
+}
+
+export const LEVELS = { easy: 'easy', normal: 'normal', hard: 'hard' };
+
+// The 21 distinct rolls with their odds out of 36.
+const ROLLS = [];
+for (let a = 1; a <= 6; a++) for (let b = a; b <= 6; b++) ROLLS.push({ dice: a === b ? [a, a, a, a] : [a, b], w: a === b ? 1 : 2 });
+
+/** Hard: take the best few moves, then average over every reply roll the opponent could get. */
+function lookahead(s, seqs, keep = 6) {
+  const me = s.turn; const opp = other(me);
+  const ranked = seqs.map((r) => ({ r, v: evaluateHard(r.state, me) + (winner(r.state) === me ? 10000 : 0) }))
+    .sort((a, b) => b.v - a.v).slice(0, keep);
+  if (ranked[0].v > 5000) return ranked[0].r;
+  let best = -Infinity; let pick = ranked[0].r;
+  for (const { r } of ranked) {
+    const after = { ...r.state, turn: opp };
+    let total = 0;
+    for (const roll of ROLLS) {
+      const replies = turnSequences(after, roll.dice);
+      let oppBest = -Infinity;
+      for (const rep of replies) {
+        const v = winner(rep.state) === opp ? 10000 : evaluateHard(rep.state, opp);
+        if (v > oppBest) oppBest = v;
+      }
+      if (oppBest === -Infinity) oppBest = evaluateHard(after, opp);
+      total += -oppBest * roll.w;
+    }
+    const v = total / 36;
     if (v > best) { best = v; pick = r; }
   }
-  return pick; // null when no move is possible
+  return pick;
+}
+
+export function cpuTurn(s, dice, { level = 'normal', rng = Math.random } = {}) {
+  const seqs = turnSequences(s, dice);
+  if (!seqs.length || !seqs[0].moves.length) return seqs[0] && seqs[0].moves.length ? seqs[0] : null;
+  if (level === 'easy' && rng() < 0.5) return seqs[Math.floor(rng() * seqs.length)];
+  if (level === 'hard') return lookahead(s, seqs);
+  let best = -Infinity; let pick = null;
+  for (const r of seqs) {
+    const base = evaluate(r.state, s.turn);
+    const v = base + (winner(r.state) === s.turn ? 10000 : 0) + (level === 'easy' ? rng() * 15 : 0);
+    if (v > best) { best = v; pick = r; }
+  }
+  return pick;
 }
 
 /** 1 single, 2 gammon (loser bore off nothing), 3 backgammon (also still on the bar or in the winner's home). */

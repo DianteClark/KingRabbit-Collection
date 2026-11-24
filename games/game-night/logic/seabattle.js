@@ -48,9 +48,20 @@ export const allSunk = (fleet) => fleet.every((s) => s.hits === s.cells.length);
  * pattern, preferring cells where the longest remaining ship could fit.
  * `sunkCells` are cells of ships already sunk (their hits are no longer chased).
  */
-export function cpuTarget(shots, sunkCells, remaining, rng = Math.random) {
+export function cpuTarget(shots, sunkCells, remaining, rng = Math.random, level = 'hard') {
   const free = (i) => i >= 0 && i < N * N && !shots.has(i);
   const openHits = [...shots].filter(([i, v]) => v === 'hit' && !sunkCells.has(i)).map(([i]) => i);
+  const unshot = [];
+  for (let i = 0; i < N * N; i++) if (!shots.has(i)) unshot.push(i);
+  // Easy: random shots; only follows up on a hit half the time and never reads a ship's direction.
+  if (level === 'easy') {
+    if (openHits.length && rng() < 0.5) {
+      const h = openHits[Math.floor(rng() * openHits.length)];
+      const around = [h - N, h + N, h % N > 0 ? h - 1 : -1, h % N < N - 1 ? h + 1 : -1].filter(free);
+      if (around.length) return around[Math.floor(rng() * around.length)];
+    }
+    return unshot[Math.floor(rng() * unshot.length)];
+  }
   if (openHits.length) {
     const cands = [];
     if (openHits.length >= 2) {
@@ -72,7 +83,13 @@ export function cpuTarget(shots, sunkCells, remaining, rng = Math.random) {
     }
     if (cands.length) return cands[Math.floor(rng() * cands.length)];
   }
-  // Hunt: score each free cell by how many placements of the remaining ships cover it.
+  // Normal: hunt on a checkerboard pattern (every ship must cover one of these squares).
+  if (level === 'normal') {
+    const checker = unshot.filter((i) => (Math.floor(i / N) + (i % N)) % 2 === 0);
+    const pool = checker.length ? checker : unshot;
+    return pool[Math.floor(rng() * pool.length)];
+  }
+  // Hard hunt: score each free cell by how many placements of the remaining ships cover it.
   const longest = Math.max(...remaining, 2);
   const scores = new Array(N * N).fill(0);
   for (const len of remaining) {

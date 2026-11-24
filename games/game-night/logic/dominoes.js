@@ -109,23 +109,47 @@ export function roundResult(r) {
   return null;
 }
 
-/** CPU: heaviest playable tile (doubles first), on the end that leaves it the most options. */
-export function cpuChoice(r, p) {
+/**
+ * CPU choice. level: 'easy' (any legal tile), 'normal' (heaviest, keeps options),
+ * 'hard' (also uses `voids`: numbers the opponent showed it lacks by drawing or passing,
+ * and blocks harder when the opponent is close to going out).
+ */
+export function cpuChoice(r, p, { level = 'normal', voids = new Set(), rng = Math.random } = {}) {
   const opts = playable(r, p);
   if (!opts.length) return null;
+  if (level === 'easy') {
+    const o = opts[Math.floor(rng() * opts.length)];
+    return { i: o.i, side: o.sides[Math.floor(rng() * o.sides.length)] };
+  }
+  const oppCount = r.hands[1 - p].length;
   let best = -Infinity; let pick = null;
   for (const o of opts) {
     const t = r.hands[p][o.i];
     for (const side of o.sides) {
       let v = t[0] + t[1] + (isDouble(t) ? 4 : 0);
       if (side !== 'center') {
-        // Prefer leaving an end value the CPU still holds.
         const next = playTile(r, p, o.i, side);
-        const own = ends(next).filter((e) => next.hands[p].some((h) => h[0] === e.value || h[1] === e.value)).length;
+        const openEnds = ends(next);
+        const own = openEnds.filter((e) => next.hands[p].some((h) => h[0] === e.value || h[1] === e.value)).length;
         v += own * 1.5;
+        if (level === 'hard') {
+          const blocked = openEnds.filter((e) => voids.has(e.value)).length;
+          v += blocked * (oppCount <= 2 ? 9 : 4);
+          // Count how many tiles of each end value are already out of play (on the table or in hand).
+          const seen = (val) => tilesShowing(next, p).filter((x) => x[0] === val || x[1] === val).length;
+          v += openEnds.reduce((acc, e) => acc + (seen(e.value) >= 6 ? 3 : 0), 0);
+        }
       }
       if (v > best) { best = v; pick = { i: o.i, side }; }
     }
   }
   return pick;
+}
+
+/** Every tile p can see: the layout plus their own hand. */
+function tilesShowing(r, p) {
+  const out = [...r.hands[p]];
+  if (r.center) out.push(r.center);
+  for (const side of SIDES) out.push(...r.arms[side]);
+  return out;
 }

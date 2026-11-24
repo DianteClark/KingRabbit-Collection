@@ -65,14 +65,40 @@ const WEIGHTS = [
   100, -20, 10, 5, 5, 10, -20, 100,
 ];
 
+const CORNERS = [0, 7, 56, 63];
+// X-squares (diagonal to a corner) and C-squares (beside a corner) are only bad while that corner is empty.
+const NEAR = { 0: [9, 1, 8], 7: [14, 6, 15], 56: [49, 57, 48], 63: [54, 62, 55] };
+
 function evaluate(board, me) {
+  const opp = other(me);
+  const empties = board.filter((c) => !c).length;
   let s = 0;
-  for (let i = 0; i < 64; i++) {
-    if (board[i] === me) s += WEIGHTS[i];
-    else if (board[i] === other(me)) s -= WEIGHTS[i];
+  // Corners and the squares next to them.
+  for (const c of CORNERS) {
+    if (board[c] === me) s += 30; else if (board[c] === opp) s -= 30;
+    else for (const [k, n] of NEAR[c].entries()) {
+      const w = k === 0 ? 12 : 5;
+      if (board[n] === me) s -= w; else if (board[n] === opp) s += w;
+    }
   }
-  // Mobility: having more options than the opponent is good.
-  s += 5 * (legalMoves(board, me).length - legalMoves(board, other(me)).length);
+  // Mobility: having choices (and denying them) matters most in the middle game.
+  const mm = legalMoves(board, me).length; const om = legalMoves(board, opp).length;
+  s += 14 * (mm - om) / (mm + om + 1);
+  // Frontier discs (touching an empty square) give the opponent moves.
+  let front = 0;
+  for (let i = 0; i < 64; i++) {
+    if (!board[i]) continue;
+    const r = i >> 3; const c = i & 7;
+    let edge = false;
+    for (let dr = -1; dr <= 1 && !edge; dr++) for (let dc = -1; dc <= 1; dc++) {
+      const rr = r + dr; const cc = c + dc;
+      if ((dr || dc) && rr >= 0 && rr < 8 && cc >= 0 && cc < 8 && !board[rr * 8 + cc]) { edge = true; break; }
+    }
+    if (edge) front += board[i] === me ? -1 : 1;
+  }
+  s += front * 1.5;
+  // Disc count only matters near the end.
+  if (empties < 16) { const { dark, light } = count(board); s += (me === 1 ? dark - light : light - dark) * (16 - empties) * 0.3; }
   return s;
 }
 
@@ -106,13 +132,20 @@ function search(board, toMove, me, depth, alpha, beta) {
 }
 
 /** CPU move for `me` with a short look-ahead. Returns -1 if it must pass. */
-export function cpuMove(board, me, { depth = 3, rng = Math.random } = {}) {
+export const LEVELS = { easy: { depth: 1, noise: 60 }, normal: { depth: 2, noise: 8 }, hard: { depth: 4, noise: 0, endgame: 9 } };
+
+export function cpuMove(board, me, { depth, level = 'normal', rng = Math.random } = {}) {
+  const cfg = LEVELS[level];
+  depth ??= cfg.depth;
+  const empties = board.filter((c) => !c).length;
+  if (cfg.endgame && empties <= cfg.endgame) depth = empties;   // play the ending perfectly
+  const noise = depth === empties ? 0 : cfg.noise;
   const moves = legalMoves(board, me);
   if (!moves.length) return -1;
   let best = -Infinity;
   let picks = [];
   for (const m of moves) {
-    const s = search(play(board, m, me).board, other(me), me, depth - 1, -Infinity, Infinity);
+    const s = search(play(board, m, me).board, other(me), me, depth - 1, -Infinity, Infinity) + rng() * noise;
     if (s > best) { best = s; picks = [m]; } else if (s === best) picks.push(m);
   }
   return picks[Math.floor(rng() * picks.length)];

@@ -221,7 +221,10 @@ function quiesce(s, alpha, beta, depth) {
   return alpha;
 }
 
-function negamax(s, depth, alpha, beta, ply) {
+class Timeout extends Error {}
+
+function negamax(s, depth, alpha, beta, ply, clock) {
+  if (clock && (++clock.nodes & 1023) === 0 && Date.now() > clock.deadline) throw new Timeout();
   if (depth === 0) return quiesce(s, alpha, beta, 4);
   let best = -Infinity;
   let legal = 0;
@@ -229,7 +232,7 @@ function negamax(s, depth, alpha, beta, ply) {
     const next = makeMove(s, m);
     if (inCheck(next, s.turn)) continue;   // illegal: leaves own king in check
     legal++;
-    const v = -negamax(next, depth - 1, -beta, -alpha, ply + 1);
+    const v = -negamax(next, depth - 1, -beta, -alpha, ply + 1, clock);
     if (v > best) best = v;
     if (v > alpha) alpha = v;
     if (alpha >= beta) break;
@@ -238,17 +241,46 @@ function negamax(s, depth, alpha, beta, ply) {
   return best;
 }
 
-/** Best move for the side to move. */
-export function cpuMove(s, { depth = 2, rng = Math.random } = {}) {
-  const moves = order(legalMoves(s));
-  let best = -Infinity;
-  let pick = null;
-  let alpha = -Infinity;
+function searchRoot(s, moves, depth, noise, rng, clock) {
+  let best = -Infinity; let pick = null; let alpha = -Infinity;
+  const scored = [];
   for (const m of moves) {
-    const jitter = rng() * 6; // a little variety between games
-    const v = -negamax(makeMove(s, m), depth, -Infinity, -alpha + 6, 1) + jitter;
+    const v = -negamax(makeMove(s, m), depth, -Infinity, -alpha + noise, 1, clock) + rng() * noise;
+    scored.push({ m, v });
     if (v > best) { best = v; pick = m; }
-    if (v - 6 > alpha) alpha = v - 6;
+    if (v - noise > alpha) alpha = v - noise;
+  }
+  return { pick, scored };
+}
+
+export const LEVELS = {
+  easy: { depth: 0, noise: 140, timeMs: 400 },      // looks one move ahead, often misjudges
+  normal: { depth: 2, noise: 6, timeMs: 1500 },
+  hard: { depth: 4, noise: 2, timeMs: 2200 },       // iterative deepening up to 5 ply + captures
+};
+
+/**
+ * Best move for the side to move. Iterative deepening: searches 1, 2, ... levels deeper until the
+ * level's depth or time budget runs out, keeping the best move from the last finished pass.
+ */
+export function cpuMove(s, { depth, level = 'normal', rng = Math.random, timeMs } = {}) {
+  const cfg = LEVELS[level];
+  const maxDepth = depth ?? cfg.depth;
+  const clock = { deadline: Date.now() + (timeMs ?? cfg.timeMs), nodes: 0 };
+  let moves = order(legalMoves(s));
+  if (!moves.length) return null;
+  let pick = moves[0];
+  for (let d = 0; d <= maxDepth; d++) {
+    try {
+      const r = searchRoot(s, moves, d, cfg.noise, rng, d === 0 ? null : clock);
+      pick = r.pick;
+      // Search the best moves first next time (better pruning).
+      moves = r.scored.sort((a, b) => b.v - a.v).map((x) => x.m);
+      if (Date.now() > clock.deadline) break;
+    } catch (e) {
+      if (!(e instanceof Timeout)) throw e;
+      break;
+    }
   }
   return pick;
 }

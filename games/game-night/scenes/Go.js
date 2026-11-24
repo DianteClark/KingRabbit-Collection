@@ -4,6 +4,7 @@ import { text, button } from '../../../shared/core/ui.js';
 import { WIDTH } from '../../../shared/core/boot.js';
 import { header, go, setBackground, toast, popIn } from './common.js';
 import { grid, endGame, think } from './boardkit.js';
+import { sfx } from '../../../shared/core/sfx.js';
 import { N, newGame, play, pass, isOver, cpuMove, tryMove, suggestDead, toggleDead, finalScore } from '../logic/go.js';
 
 const CELL = 32;
@@ -14,7 +15,7 @@ const FRAME = { 1: 'dark', 2: 'light' };
 export class Go extends Phaser.Scene {
   constructor() { super('Go'); }
 
-  init(data) { this.mode = data.mode ?? 'cpu'; }
+  init(data) { this.mode = data.mode ?? 'cpu'; this.level = data.level || 'normal'; }
 
   create() {
     setBackground(this, PALETTE.wine);
@@ -91,7 +92,7 @@ export class Go extends Phaser.Scene {
       this.status.setText('CPU is thinking...');
       this.busy = true;
       think(this, () => {
-        const m = cpuMove(this.game);
+        const m = cpuMove(this.game, { level: this.level });
         this.busy = false;
         if (m < 0) { toast(this, 'CPU passes', 600); this.game = pass(this.game); this.lastMove = -1; this.draw(); this.next(); }
         else this.place(m);
@@ -118,7 +119,7 @@ export class Go extends Phaser.Scene {
     if (!next) return;
     this.game = next;
     this.lastMove = i;
-    if (next.lastCaptured) this.cameras.main.shake(80, 0.004);
+    if (next.lastCaptured) { this.cameras.main.shake(80, 0.004); sfx('capture'); } else sfx('place');
     this.draw();
     this.next();
   }

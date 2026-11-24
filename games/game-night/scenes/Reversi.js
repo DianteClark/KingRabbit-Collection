@@ -5,6 +5,7 @@ import { WIDTH } from '../../../shared/core/boot.js';
 import { header, go, modal, toast, setBackground } from './common.js';
 import { SIZE, newBoard, legalMoves, play, count, isOver, cpuMove, other } from '../logic/reversi.js';
 import { record } from '../save.js';
+import { sfx } from '../../../shared/core/sfx.js';
 
 const CELL = 40;
 const BOARD = CELL * SIZE;
@@ -16,7 +17,7 @@ const FRAME = { 1: 'dark', 2: 'light' };
 export class Reversi extends Phaser.Scene {
   constructor() { super('Reversi'); }
 
-  init(data) { this.mode = data.mode ?? 'cpu'; }
+  init(data) { this.mode = data.mode ?? 'cpu'; this.level = data.level || 'normal'; }
 
   create() {
     setBackground(this, PALETTE.wine);
@@ -105,7 +106,7 @@ export class Reversi extends Phaser.Scene {
   }
 
   cpuTurn() {
-    const m = cpuMove(this.board, 2);
+    const m = cpuMove(this.board, 2, { level: this.level });
     this.busy = false;
     if (m >= 0) this.apply(m);
   }
@@ -116,6 +117,8 @@ export class Reversi extends Phaser.Scene {
     const { x, y } = this.pos(i);
     const d = this.add.image(x, y, 'reversi', FRAME[this.turn]).setScale(0);
     this.tweens.add({ targets: d, scale: SCALE, duration: 150, ease: 'Back.easeOut' });
+    sfx('place');
+    if (flips.length) this.time.delayedCall(90, () => sfx('flip'));
     this.discs[i] = d;
 
     // Flip animation: squash, swap colour, unsquash — staggered so you can see the capture.
@@ -153,6 +156,7 @@ export class Reversi extends Phaser.Scene {
     else if (this.mode === 'cpu') title = dark > light ? 'You win!' : 'CPU wins';
     else title = `${dark > light ? 'Dark' : 'Light'} wins!`;
     if (this.mode === 'cpu') record('reversi', dark === light ? 'd' : (dark > light ? 'w' : 'l'));
+    sfx(this.mode === 'pvp' || dark > light ? 'win' : dark === light ? 'place' : 'lose');
     this.status.setText(title);
     this.time.delayedCall(800, () => {
       const m = modal(this, title, [`${this.name(1)} ${dark}  -  ${light} ${this.name(2)}`], [

@@ -2,7 +2,7 @@ import { createSave } from '../../shared/core/save.js';
 
 // records: { tableId: { w, d, l } }  (only games vs the computer count)
 // best:    { tableId: number }        (high score, or lowest for 'low' tables)
-export const save = createSave('game-night', { records: {}, best: {}, tab: 'board' });
+export const save = createSave('game-night', { records: {}, best: {}, tab: 'board', levels: {} });
 
 // Move v0.1 saves (ttt / reversi / yachtBest keys) into the new shape once.
 (() => {
@@ -42,3 +42,8 @@ export function submitBest(id, value, lower = false) {
   save.set('best', { ...save.get('best'), [id]: value });
   return true;
 }
+
+export const LEVELS = ['easy', 'normal', 'hard'];
+export const LEVEL_NAMES = { easy: 'Easy', normal: 'Normal', hard: 'Hard' };
+export const getLevel = (id) => (save.get('levels') || {})[id] || 'normal';
+export function setLevel(id, level) { save.set('levels', { ...(save.get('levels') || {}), [id]: level }); }

@@ -4,6 +4,7 @@ import { text, button } from '../../../shared/core/ui.js';
 import { WIDTH } from '../../../shared/core/boot.js';
 import { header, go, setBackground, toast } from './common.js';
 import { endGame } from './boardkit.js';
+import { sfx } from '../../../shared/core/sfx.js';
 import { N, randomFleet, fire, allSunk, cpuTarget, shipCells, fits } from '../logic/seabattle.js';
 
 const BIG = 32;      // enemy grid cell
@@ -16,7 +17,7 @@ const SMALL_TOP = 472;
 export class SeaBattle extends Phaser.Scene {
   constructor() { super('SeaBattle'); }
 
-  init() { this.mode = 'cpu'; }
+  init(data) { this.mode = 'cpu'; this.level = data.level || 'normal'; }
 
   create() {
     setBackground(this, PALETTE.indigo);
@@ -139,6 +140,7 @@ export class SeaBattle extends Phaser.Scene {
     if (this.myShots.has(cell)) return;
     const res = fire(this.enemyFleet, this.myShots, cell);
     this.redraw();
+    sfx(res.result === 'miss' ? 'thud' : 'boom');
     if (res.result !== 'miss') { this.boom(BIG_LEFT + c * BIG + BIG / 2, BIG_TOP + r * BIG + BIG / 2, 4); this.cameras.main.shake(90, 0.004); }
     this.status.setText(res.result === 'sunk' ? `You sank their ${res.ship.name}!` : res.result === 'hit' ? 'Hit!' : 'Miss');
     if (res.result === 'sunk') toast(this, `${res.ship.name} sunk!`, 440);
@@ -149,10 +151,11 @@ export class SeaBattle extends Phaser.Scene {
 
   cpuFire() {
     const remaining = this.myFleet.filter((s) => s.hits < s.cells.length).map((s) => s.cells.length);
-    const cell = cpuTarget(this.cpuShots, this.cpuSunk, remaining);
+    const cell = cpuTarget(this.cpuShots, this.cpuSunk, remaining, Math.random, this.level);
     const res = fire(this.myFleet, this.cpuShots, cell);
     if (res.result === 'sunk') res.ship.cells.forEach((c) => this.cpuSunk.add(c));
     this.redraw();
+    sfx(res.result === 'miss' ? 'thud' : 'smallBoom');
     if (res.result !== 'miss') this.boom(SMALL_LEFT + (cell % N) * SMALL + SMALL / 2, SMALL_TOP + Math.floor(cell / N) * SMALL + SMALL / 2, 2);
     const msg = { miss: 'CPU missed. Your turn', hit: 'CPU hit your ship! Your turn', sunk: `CPU sank your ${res.ship?.name}!` }[res.result];
     this.status.setText(msg);
@@ -167,6 +170,7 @@ export class SeaBattle extends Phaser.Scene {
     this.drawGrid(BIG_LEFT, BIG_TOP, BIG, this.enemyFleet, this.myShots, true, 'red');
     this.drawGrid(SMALL_LEFT, SMALL_TOP, SMALL, this.myFleet, this.cpuShots, true, 'grey');
     if (won) toast(this, 'Enemy fleet destroyed!', 440);
+    sfx(won ? 'win' : 'lose');
     endGame(this, {
       id: 'seabattle', mode: 'cpu', title: won ? 'Victory!' : 'Fleet lost',
       lines: [`You fired ${this.myShots.size} shots`], outcome: won ? 'w' : 'l', onAgain: () => this.setup(),

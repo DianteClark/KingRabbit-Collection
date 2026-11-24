@@ -105,8 +105,55 @@ function isOwnEye(board, i, me) {
   return neighbors(i).every((n) => board[n] === me);
 }
 
-export function cpuMove(g, { rng = Math.random } = {}) {
+/** Rough territory estimate: each stone spreads influence that fades with distance. */
+export function influence(board) {
+  const inf = new Array(N * N).fill(0);
+  for (let i = 0; i < N * N; i++) {
+    if (!board[i]) continue;
+    const sign = board[i] === 1 ? 1 : -1;
+    const r0 = Math.floor(i / N); const c0 = i % N;
+    for (let r = Math.max(0, r0 - 3); r <= Math.min(N - 1, r0 + 3); r++) {
+      for (let c = Math.max(0, c0 - 3); c <= Math.min(N - 1, c0 + 3); c++) {
+        const d = Math.abs(r - r0) + Math.abs(c - c0);
+        if (d <= 3) inf[r * N + c] += sign * [8, 4, 2, 1][d];
+      }
+    }
+  }
+  return inf;
+}
+
+/** Estimated (my area - their area) from influence, for player `me`. */
+function areaEstimate(board, me) {
+  const inf = influence(board);
+  let s = 0;
+  for (let i = 0; i < N * N; i++) {
+    const v = board[i] ? (board[i] === 1 ? 6 : -6) : inf[i];
+    if (v > 2) s += 1; else if (v < -2) s -= 1;
+  }
+  return me === 1 ? s : -s;
+}
+
+export const LEVELS = {
+  easy: { noise: 6, area: 0, lookahead: false, wild: 0.35 },
+  normal: { noise: 2.5, area: 0.3, lookahead: false },
+  hard: { noise: 0.4, area: 0.6, lookahead: false },
+};
+
+export function cpuMove(g, { level = 'normal', rng = Math.random } = {}) {
+  const cfg = LEVELS[level];
+  const { best, list } = scoredMoves(g, cfg, rng);
+  // Easy sometimes just plays somewhere reasonable-looking at random.
+  if (cfg.wild && best >= 0 && rng() < cfg.wild) {
+    const ok = list.filter((m) => m.v > -5);
+    if (ok.length) return ok[Math.floor(rng() * ok.length)].i;
+  }
+  return best;
+}
+
+function scoredMoves(g, cfg, rng) {
+  const list = [];
   const me = g.turn; const opp = other(me);
+  const baseArea = cfg.area ? areaEstimate(g.board, me) : 0;
   let best = -Infinity; let pick = -1;
   const stones = g.board.filter(Boolean).length;
   for (let i = 0; i < N * N; i++) {
@@ -115,29 +162,43 @@ export function cpuMove(g, { rng = Math.random } = {}) {
     if (!r) continue;
     let v = r.captured * 12;
     const mine = group(r.board, i);
-    if (mine.libs.length === 1) v -= 14;            // don't walk into atari
+    if (mine.libs.length === 1) v -= 14 + mine.stones.length * 3;   // don't walk into atari
     v += Math.min(mine.libs.length, 4);
     for (const n of neighbors(i)) {
-      if (g.board[n] === me && group(g.board, n).libs.length === 1) v += 10;   // rescue
+      if (g.board[n] === me) {
+        const before = group(g.board, n);
+        if (before.libs.length === 1) v += 8 + before.stones.length * 3;   // rescue
+      }
       if (r.board[n] === opp) {
         const og = group(r.board, n);
-        if (og.libs.length === 1) v += 5;                                        // atari
+        if (og.libs.length === 1) v += 5 + og.stones.length;              // atari
         else if (og.libs.length === 2) v += 1.5;
       }
     }
-    // Opening: prefer the 3-3 / 3-4 area and the centre over edges.
     const rr = Math.floor(i / N); const cc = i % N;
     const edge = Math.min(rr, cc, N - 1 - rr, N - 1 - cc);
     if (stones < 10) v += edge === 2 ? 3 : edge === 0 ? -3 : edge === 1 ? -1 : 1;
     else if (edge === 0) v -= 1;
-    // Claim empty space: count nearby empty points not already owned by the opponent.
     v += neighbors(i).filter((n) => r.board[n] === 0).length * 0.5;
-    v += rng() * 1.5;
+    // Territory: how much does this move change the estimated balance of the board?
+    if (cfg.area) v += (areaEstimate(r.board, me) - baseArea) * cfg.area;
+    // Look one move ahead: can the opponent immediately capture a big group in reply?
+    if (cfg.lookahead) {
+      let worst = 0;
+      const after = { ...g, board: r.board, turn: opp, prev: g.board };
+      for (const n of new Set(mine.libs)) {
+        const rep = tryMove(after, n);
+        if (rep) worst = Math.max(worst, rep.captured);
+      }
+      v -= worst * 10;
+    }
+    v += rng() * cfg.noise;
+    list.push({ i, v });
     if (v > best) { best = v; pick = i; }
   }
   // Late in the game with nothing useful to do: pass.
-  if (pick < 0 || (stones > 40 && best < 2)) return -1;
-  return pick;
+  if (pick < 0 || (stones > 40 && best < 2)) return { best: -1, list };
+  return { best: pick, list };
 }
 
 /**

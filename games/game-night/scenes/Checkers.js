@@ -5,6 +5,7 @@ import { WIDTH } from '../../../shared/core/boot.js';
 import { header, go, setBackground } from './common.js';
 import { checkerboard, highlighter, endGame, think } from './boardkit.js';
 import { newBoard, legalMoves, play, other, side, winnerIfStuck, cpuMove } from '../logic/checkers.js';
+import { sfx } from '../../../shared/core/sfx.js';
 
 const CELL = 40;
 const LEFT = (WIDTH - CELL * 8) / 2;
@@ -13,7 +14,7 @@ const TOP = 168;
 export class Checkers extends Phaser.Scene {
   constructor() { super('Checkers'); }
 
-  init(data) { this.mode = data.mode ?? 'cpu'; }
+  init(data) { this.mode = data.mode ?? 'cpu'; this.level = data.level || 'normal'; }
 
   create() {
     setBackground(this, PALETTE.wine);
@@ -75,7 +76,7 @@ export class Checkers extends Phaser.Scene {
     if (this.isCpu()) {
       this.status.setText('CPU is thinking...');
       this.busy = true;
-      think(this, () => this.apply(cpuMove(this.board, 'l')));
+      think(this, () => this.apply(cpuMove(this.board, 'l', { level: this.level })));
     } else {
       this.status.setText(`${this.name(this.turn)} to move${this.moves[0]?.captured.length ? ' - capture!' : ''}`);
     }
@@ -106,6 +107,7 @@ export class Checkers extends Phaser.Scene {
       this.board = play(this.board, m);
       const crowned = before !== this.board[m.to];
       this.quiet = m.captured.length || crowned ? 0 : this.quiet + 1;
+      sfx(m.captured.length ? 'capture' : crowned ? 'power' : 'move');
       this.last = { from: m.from, to: m.to };
       this.turn = other(this.turn);
       this.busy = false;
@@ -134,6 +136,7 @@ export class Checkers extends Phaser.Scene {
     this.over = true;
     const title = this.mode === 'cpu' ? (winner === 'd' ? 'You win!' : 'CPU wins') : `${this.name(winner)} wins!`;
     this.status.setText(title);
+    sfx(this.mode === 'pvp' || winner === 'd' ? 'win' : 'lose');
     endGame(this, {
       id: 'checkers', mode: this.mode, title, lines: ['The other side has no moves left'],
       outcome: winner === 'd' ? 'w' : 'l', onAgain: () => this.restart(),

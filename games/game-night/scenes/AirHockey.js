@@ -4,6 +4,7 @@ import { text } from '../../../shared/core/ui.js';
 import { WIDTH } from '../../../shared/core/boot.js';
 import { header, go, setBackground, toast } from './common.js';
 import { endGame } from './boardkit.js';
+import { sfx } from '../../../shared/core/sfx.js';
 
 // Portrait rink. You defend the bottom goal (blue), the CPU the top (red).
 const R = { x: 24, y: 96, w: WIDTH - 48, h: 512 };
@@ -17,7 +18,16 @@ const WIN_SCORE = 7;
 export class AirHockey extends Phaser.Scene {
   constructor() { super('AirHockey'); }
 
-  init() { this.mode = 'cpu'; }
+  init(data) {
+    this.mode = 'cpu';
+    this.level = data.level || 'normal';
+    // speed: CPU mallet top speed. read: how far ahead it predicts bounces. aim: shot accuracy.
+    this.ai = {
+      easy: { speed: 300, read: 0.3, aim: 0.45, react: 0.35 },
+      normal: { speed: 460, read: 0.7, aim: 0.2, react: 0.18 },
+      hard: { speed: 680, read: 1, aim: 0.06, react: 0.05 },
+    }[this.level];
+  }
 
   create() {
     setBackground(this, PALETTE.night);
@@ -35,6 +45,10 @@ export class AirHockey extends Phaser.Scene {
 
     this.scores = [0, 0];
     this.over = false;
+    this.stuckT = 0;       // how long the puck has sat still against a wall on the CPU side
+    this.backOffT = 0;     // CPU retreating to let a pinned puck go
+    this.thinkT = 0;
+    this.aimOffset = 0;
     this.serve(1);
     this.updateScore();
   }
@@ -57,7 +71,7 @@ export class AirHockey extends Phaser.Scene {
   }
 
   updateScore() {
-    this.scoreText.setText(`You ${this.scores[0]}  -  ${this.scores[1]} CPU    (first to ${WIN_SCORE})`);
+    this.scoreText.setText(`You ${this.scores[0]}  -  ${this.scores[1]} CPU   first to ${WIN_SCORE}  (${this.level})`);
   }
 
   serve(toward) {
@@ -85,6 +99,7 @@ export class AirHockey extends Phaser.Scene {
     if (d >= min || d === 0) return;
     const nx = dx / d; const ny = dy / d;
     p.x = m.x + nx * min; p.y = m.y + ny * min;
+    if (Math.hypot(m.vx, m.vy) > 60) sfx('hit');
     // Relative velocity along the normal, bounce off the moving mallet.
     const rvx = p.vx - m.vx; const rvy = p.vy - m.vy;
     const along = rvx * nx + rvy * ny;
@@ -96,20 +111,81 @@ export class AirHockey extends Phaser.Scene {
     if (sp > MAX_PUCK) { p.vx *= MAX_PUCK / sp; p.vy *= MAX_PUCK / sp; }
   }
 
+  /** Where will the puck cross row y (following side-wall bounces)? null if moving away. */
+  predictX(y) {
+    const p = this.puck;
+    if (p.vy >= -5) return null;
+    const t = (y - p.y) / p.vy;
+    if (t < 0 || t > 3) return null;
+    let x = p.x + p.vx * t * this.ai.read;
+    const lo = R.x + PUCK_R; const hi = R.x + R.w - PUCK_R; const span = hi - lo;
+    // Reflect off the side walls.
+    let u = (x - lo) % (2 * span);
+    if (u < 0) u += 2 * span;
+    x = lo + (u > span ? 2 * span - u : u);
+    return x;
+  }
+
   cpuThink(dt) {
     const p = this.puck; const c = this.cpu;
+    const homeY = R.y + 56;
+    const minY = R.y + MALLET_R; const maxY = MID_Y - MALLET_R;
     let tx; let ty;
-    const homeY = R.y + 60;
-    if (p.y < MID_Y + 20 && (p.vy < 120 || p.y < c.y)) {
-      // Attack: get behind the puck (above it) and drive it toward your goal.
-      tx = p.x + (WIDTH / 2 - p.x) * 0.15;
-      ty = p.y < c.y ? p.y - 40 : p.y - 6;
+    // Re-decide the aim now and then (where in your goal it shoots).
+    this.thinkT -= dt;
+    if (this.thinkT <= 0) {
+      this.thinkT = 0.6 + this.ai.react * 3;
+      this.aimOffset = (Math.random() - 0.5) * GOAL_W * (0.4 + this.ai.aim * 3);
+    }
+    const inMyHalf = p.y < MID_Y - 4;
+    if (this.backOffT > 0) {
+      this.backOffT -= dt;
+      tx = WIDTH / 2; ty = homeY;
+    } else if (inMyHalf && p.vy < 260) {
+      // Attack: line up behind the puck relative to the shot, then drive through it.
+      const goal = { x: WIDTH / 2 + this.aimOffset, y: R.y + R.h + 40 };
+      const reach = MALLET_R + PUCK_R + 6;
+      let dir = norm(goal.x - p.x, goal.y - p.y);
+      // Ideal spot is behind the puck; if that's off the table, use the nearest spot that is and
+      // shoot from there at an angle (never toward our own back wall).
+      const ax = Phaser.Math.Clamp(p.x - dir.x * reach, R.x + MALLET_R, R.x + R.w - MALLET_R);
+      const ay = Phaser.Math.Clamp(p.y - dir.y * reach, minY, maxY);
+      dir = norm(p.x - ax, p.y - ay);
+      if (dir.y < 0.15) dir = norm(dir.x, 0.15);          // always push it forward a little
+      const behind = (p.x - c.x) * dir.x + (p.y - c.y) * dir.y;
+      const across = Math.abs((p.x - c.x) * dir.y - (p.y - c.y) * dir.x);
+      const dist = Math.hypot(c.x - ax, c.y - ay);
+      if (dist < 12 || (behind > 0 && across < PUCK_R)) {
+        tx = p.x + dir.x * 40; ty = p.y + dir.y * 40;          // strike through it
+      } else if (behind < 0 && across < MALLET_R + PUCK_R) {
+        // We're on the wrong side of the puck: go around it, not through it.
+        const side = c.x < p.x ? -1 : 1;
+        tx = p.x + side * (reach + 6); ty = p.y - 10;
+      } else { tx = ax; ty = ay; }
     } else {
-      // Defend: shadow the puck along the goal line.
-      tx = WIDTH / 2 + (p.x - WIDTH / 2) * 0.55;
+      // Defend: stand between the puck and the goal, predicting where it will arrive.
+      const px = this.predictX(homeY);
+      tx = px === null ? WIDTH / 2 + (p.x - WIDTH / 2) * 0.35 : WIDTH / 2 + (px - WIDTH / 2) * 0.9;
       ty = homeY;
     }
-    this.moveMallet(c, tx, ty, 430, dt, R.y + MALLET_R, MID_Y - MALLET_R);
+    this.moveMallet(c, tx, ty, this.ai.speed, dt, minY, maxY);
+  }
+
+  /** A puck sitting still against a wall gets a puff of table air; the CPU backs off if it pinned it. */
+  unstick(dt) {
+    const p = this.puck;
+    const nearWall = p.x < R.x + PUCK_R + 4 || p.x > R.x + R.w - PUCK_R - 4 || p.y < R.y + PUCK_R + 4 || p.y > R.y + R.h - PUCK_R - 4;
+    const slow = Math.hypot(p.vx, p.vy) < 40;
+    const pinned = nearWall || Math.hypot(p.x - this.cpu.x, p.y - this.cpu.y) < PUCK_R + MALLET_R + 3;
+    // Pinned on any wall: free it quickly. Idle anywhere on the CPU's side: the CPU has 2s to play it.
+    if (slow && (pinned || p.y < MID_Y)) this.stuckT += dt * (pinned ? 1 : 0.6);
+    else this.stuckT = 0;
+    if (this.stuckT > 1.2) {
+      this.stuckT = 0;
+      if (p.y < MID_Y) this.backOffT = 0.7;
+      const d = norm(WIDTH / 2 - p.x, MID_Y - p.y);
+      p.vx += d.x * 140; p.vy += d.y * 140;
+    }
   }
 
   update(_, deltaMs) {
@@ -117,6 +193,7 @@ export class AirHockey extends Phaser.Scene {
     const dt = Math.min(deltaMs / 1000, 1 / 30);
     this.moveMallet(this.me, this.target.x, this.target.y, 1600, dt, MID_Y + MALLET_R, R.y + R.h - MALLET_R);
     this.cpuThink(dt);
+    this.unstick(dt);
 
     if (this.frozen > 0) this.frozen -= dt;
     else {
@@ -126,8 +203,8 @@ export class AirHockey extends Phaser.Scene {
         const p = this.puck;
         p.x += p.vx * dt / steps; p.y += p.vy * dt / steps;
         this.collide(this.me); this.collide(this.cpu);
-        if (p.x < R.x + PUCK_R) { p.x = R.x + PUCK_R; p.vx = Math.abs(p.vx) * 0.9; }
-        if (p.x > R.x + R.w - PUCK_R) { p.x = R.x + R.w - PUCK_R; p.vx = -Math.abs(p.vx) * 0.9; }
+        if (p.x < R.x + PUCK_R) { p.x = R.x + PUCK_R; if (p.vx < -80) sfx('bounce'); p.vx = Math.abs(p.vx) * 0.9; }
+        if (p.x > R.x + R.w - PUCK_R) { p.x = R.x + R.w - PUCK_R; if (p.vx > 80) sfx('bounce'); p.vx = -Math.abs(p.vx) * 0.9; }
         const inMouth = Math.abs(p.x - WIDTH / 2) < GOAL_W / 2 - 4;
         if (p.y < R.y + PUCK_R) {
           if (inMouth) { this.goal(0); return; }
@@ -146,6 +223,7 @@ export class AirHockey extends Phaser.Scene {
 
   goal(scorer) {
     this.scores[scorer]++;
+    sfx(scorer === 0 ? 'goal' : 'lose');
     this.updateScore();
     this.cameras.main.flash(150, scorer === 0 ? 90 : 161, scorer === 0 ? 90 : 61, scorer === 0 ? 150 : 59);
     toast(this, scorer === 0 ? 'GOAL!' : 'CPU scores', MID_Y);
@@ -155,10 +233,12 @@ export class AirHockey extends Phaser.Scene {
       endGame(this, {
         id: 'airhockey', mode: 'cpu', title: won ? 'You win!' : 'CPU wins',
         lines: [`${this.scores[0]} - ${this.scores[1]}`], outcome: won ? 'w' : 'l',
-        onAgain: () => this.scene.restart(),
+        onAgain: () => this.scene.restart({ level: this.level }),
       });
       return;
     }
     this.serve(scorer === 0 ? 1 : 0);
   }
 }
+
+function norm(x, y) { const d = Math.hypot(x, y) || 1; return { x: x / d, y: y / d }; }

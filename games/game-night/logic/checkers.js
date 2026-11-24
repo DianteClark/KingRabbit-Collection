@@ -80,7 +80,8 @@ export function play(board, m) {
 export const winnerIfStuck = (board, turn) => (legalMoves(board, turn).length ? null : other(turn));
 
 function evaluate(board, me) {
-  let s = 0;
+  let s = 0; let mine = 0; let theirs = 0;
+  const myKings = []; const theirPieces = [];
   for (let i = 0; i < 64; i++) {
     const p = board[i];
     if (!p) continue;
@@ -89,7 +90,17 @@ function evaluate(board, me) {
     if (!isKing(p)) v += (side(p) === 'd' ? 7 - r : r) * 4;          // advance
     if (c === 0 || c === 7) v += 4;                                      // edges are safe
     if (!isKing(p) && (side(p) === 'd' ? r === 7 : r === 0)) v += 8;    // guard the back row
-    s += side(p) === me ? v : -v;
+    if (isKing(p) && r > 1 && r < 6 && c > 1 && c < 6) v += 6;          // kings like the centre
+    if (side(p) === me) { s += v; mine += v; if (isKing(p)) myKings.push([r, c]); }
+    else { s -= v; theirs += v; theirPieces.push([r, c]); }
+  }
+  // Ahead on material: trade down and chase the remaining pieces so the game actually ends.
+  if (mine > theirs + 60 && theirPieces.length) {
+    s += (1 - (mine + theirs) / 2400) * 120;
+    for (const [kr, kc] of myKings) {
+      const d = Math.min(...theirPieces.map(([r, c]) => Math.max(Math.abs(r - kr), Math.abs(c - kc))));
+      s -= d * 6;
+    }
   }
   return s;
 }
@@ -116,12 +127,17 @@ function search(board, turn, me, depth, alpha, beta) {
   return v;
 }
 
-export function cpuMove(board, me, { depth = 5, rng = Math.random } = {}) {
+export const LEVELS = { easy: { depth: 2, noise: 70 }, normal: { depth: 4, noise: 10 }, hard: { depth: 7, noise: 0 } };
+
+export function cpuMove(board, me, { depth, level = 'normal', rng = Math.random } = {}) {
+  const cfg = LEVELS[level];
+  depth ??= cfg.depth;
+  const noise = cfg.noise;
   const moves = legalMoves(board, me);
   let best = -Infinity;
   let picks = [];
   for (const m of moves) {
-    const v = search(play(board, m), other(me), me, depth - 1, -Infinity, Infinity);
+    const v = search(play(board, m), other(me), me, depth - 1, -Infinity, Infinity) + rng() * noise;
     if (v > best) { best = v; picks = [m]; } else if (v === best) picks.push(m);
   }
   return picks[Math.floor(rng() * picks.length)] ?? null;

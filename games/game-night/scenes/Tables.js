@@ -4,6 +4,7 @@ import { text, button } from '../../../shared/core/ui.js';
 import { WIDTH } from '../../../shared/core/boot.js';
 import { header, go, setBackground, toast } from './common.js';
 import { endGame } from './boardkit.js';
+import { sfx } from '../../../shared/core/sfx.js';
 import { newGame, turnSequences, apply, rollDice, winner, other, cpuTurn, pipCount, winType, openingRoll } from '../logic/backgammon.js';
 
 // Layout: 12 points per row, 6 | bar | 6. Light (player 0) moves 24 -> 1, home bottom-right.
@@ -26,7 +27,7 @@ const isTop = (i) => i >= 13;
 export class Tables extends Phaser.Scene {
   constructor() { super('Tables'); }
 
-  init(data) { this.mode = data.mode ?? 'cpu'; }
+  init(data) { this.mode = data.mode ?? 'cpu'; this.level = data.level || 'normal'; }
 
   create() {
     setBackground(this, PALETTE.wine);
@@ -114,6 +115,7 @@ export class Tables extends Phaser.Scene {
   humanRoll(preset) {
     if (this.over || this.dice.length || this.isCpu()) return;
     this.dice = Array.isArray(preset) ? preset.slice() : rollDice();
+    sfx('roll');
     this.used = [];
     this.turnStart = { s: this.s, dice: this.dice.slice() };
     this.rollBtn.setEnabled(false);
@@ -162,6 +164,7 @@ export class Tables extends Phaser.Scene {
 
   doStep(m) {
     this.s = apply(this.s, m);
+    sfx(m.hit ? 'capture' : 'move');
     if (m.hit) toast(this, 'Hit!', 600);
     const k = this.dice.indexOf(m.die);
     this.dice.splice(k, 1);
@@ -186,9 +189,10 @@ export class Tables extends Phaser.Scene {
 
   cpuPlay(preset) {
     this.dice = preset ? preset.slice() : rollDice();
+    sfx('roll');
     this.status.setText(`CPU rolled ${this.dice.slice(0, 2).join(' ')}${this.dice.length === 4 ? ' (double)' : ''}`);
     this.draw();
-    const pick = cpuTurn(this.s, this.dice);
+    const pick = cpuTurn(this.s, this.dice, { level: this.level });
     if (!pick || !pick.moves.length) {
       toast(this, 'CPU has no moves', 600);
       this.time.delayedCall(1000, () => this.endTurn());
@@ -200,6 +204,7 @@ export class Tables extends Phaser.Scene {
       if (!steps.length) { this.time.delayedCall(400, () => this.endTurn()); return; }
       const m = steps.shift();
       this.s = apply(this.s, m);
+      sfx(m.hit ? 'capture' : 'move');
       this.dice.splice(this.dice.indexOf(m.die), 1);
       this.lastCpu = m;
       this.draw();

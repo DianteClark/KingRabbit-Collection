@@ -3,7 +3,8 @@ import { PALETTE, hex } from '../../../shared/core/palette.js';
 import { text } from '../../../shared/core/ui.js';
 import { WIDTH } from '../../../shared/core/boot.js';
 import { header, go, modal, popIn, setBackground } from './common.js';
-import { result, cpuMove } from '../logic/tictactoe.js';
+import { result, cpuMove, MISTAKES } from '../logic/tictactoe.js';
+import { sfx } from '../../../shared/core/sfx.js';
 import { record } from '../save.js';
 
 const BOARD = 312;
@@ -17,6 +18,7 @@ export class TicTacToe extends Phaser.Scene {
 
   init(data) {
     this.mode = data.mode ?? 'cpu';
+    this.level = data.level || 'normal';
     this.firstPlayer = 'X';
     this.tally = { X: 0, O: 0, draw: 0 };
   }
@@ -83,6 +85,7 @@ export class TicTacToe extends Phaser.Scene {
     this.board[i] = this.turn;
     const piece = this.add.image(this.cells[i].x, this.cells[i].y, 'ttt', this.turn.toLowerCase());
     popIn(this, piece, PIECE_SCALE);
+    sfx('place');
     this.pieces[i] = piece;
 
     const r = result(this.board);
@@ -96,7 +99,7 @@ export class TicTacToe extends Phaser.Scene {
     this.busy = true;
     this.time.delayedCall(450, () => {
       this.busy = false;
-      if (!this.over) this.place(cpuMove(this.board, 'O'));
+      if (!this.over) this.place(cpuMove(this.board, 'O', { mistakeChance: MISTAKES[this.level] }));
     });
   }
 
@@ -116,6 +119,7 @@ export class TicTacToe extends Phaser.Scene {
       } else title = `${r.winner} wins!`;
     }
     this.status.setText(title);
+    sfx(r.winner === 'draw' ? 'place' : (this.mode === 'pvp' || r.winner === 'X') ? 'win' : 'lose');
     this.updateTexts();
     this.firstPlayer = this.firstPlayer === 'X' ? 'O' : 'X'; // take turns going first
     this.time.delayedCall(900, () => {
