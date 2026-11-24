@@ -9,7 +9,7 @@ export const GAMES = [
     art: 'mas',
     status: 'playable',
   },
-  { id: 'spire-roguelite', title: 'Spire Roguelite', tagline: 'Spells, relics and an overworld', art: 'has', status: 'soon' },
+  { id: 'spire-roguelite', title: 'Spire Roguelite', tagline: 'Deck-building dungeon climb: 3 heroes, 3 acts', art: 'has', status: 'playable' },
   { id: 'heroes-lite', title: 'Heroes Lite', tagline: 'Pocket Heroes of Might & Magic', art: 'has', status: 'playable' },
   { id: 'soccer', title: 'Pocket Soccer', tagline: '5-a-side arcade football: cup, endless, penalties', art: 'soccer', status: 'playable' },
   { id: 'city-chief', title: 'City Chief', tagline: 'Run the police force of Tiny Town', art: 'city', status: 'playable' },
