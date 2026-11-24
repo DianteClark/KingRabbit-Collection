@@ -303,7 +303,11 @@ function diplomacy(s, c, P) {
 
 function offer(s, from, to, kind) {
   s.offers = s.offers || [];
-  if (s.offers.some((o) => o.from === from && o.to === to && o.kind === kind)) return;
+  s.offerLog = s.offerLog || {};
+  const key = `${from}-${to}-${kind}`;
+  // Don't pester: one offer of a kind every 12 turns.
+  if (s.offers.some((o) => o.from === from && o.to === to && o.kind === kind) || s.turn - (s.offerLog[key] ?? -99) < 12) return;
+  s.offerLog[key] = s.turn;
   s.offers.push({ from, to, kind, turn: s.turn });
 }
 

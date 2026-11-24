@@ -71,7 +71,7 @@ export const RULES = {
         'Tap an enemy next to your selected unit to see the battle odds first: each side\'s strength with every bonus, and your chance to win. Nothing happens until you tap Attack.',
         'A battle is fought to the end: one unit is destroyed. The winner keeps its damage and heals while resting (fastest in a city).',
         'Defenders get bonuses for hills (+50%), forest (+25%), fortifying (+25%), being in a city (+25%) and walls (+75%). Spearmen are strong against mounted units; catapults, cannons and artillery against cities.',
-        'Walk a unit into an enemy city with no defender to capture it. Capturing a lone worker or settler takes it for yourself.',
+        'Walk a unit into an enemy city with no defender to capture it. Walking onto a lone enemy worker or settler captures it (a settler becomes a worker).',
         'Attacking a civ you are at peace with declares war, and peace can only be signed after 8 turns of war.',
       ],
     },

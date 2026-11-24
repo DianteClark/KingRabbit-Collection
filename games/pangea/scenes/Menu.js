@@ -21,6 +21,7 @@ export class Menu extends Phaser.Scene {
   create() {
     setBackground(this, PALETTE.night);
     window.__pangeaMenu = this;
+    this.leaving = false;
     this.diorama(92);
     shadowTitle(this, WIDTH / 2, 36, 'PANGEA');
     text(this, WIDTH / 2, 72, 'Found cities, grow an empire', { color: PALETTE.lavender });
@@ -120,6 +121,8 @@ export class Menu extends Phaser.Scene {
   }
 
   resume(saved) {
+    if (this.leaving || P.anyOpen()) return;
+    this.leaving = true;
     store.start = { state: saved, fresh: false };
     sfx('select');
     go(this, 'World');
@@ -150,6 +153,8 @@ export class Menu extends Phaser.Scene {
   }
 
   start(st) {
+    if (this.leaving) return;
+    this.leaving = true;
     clearGame();
     const seed = (Date.now() & 0xffffff) >>> 0;
     const rng = makeRng(seed);

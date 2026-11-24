@@ -35,6 +35,10 @@ export class World extends Phaser.Scene {
     this.s = start?.state || loadGame();
     if (!this.s) { this.scene.start('Menu'); return; }
     this.fresh = !!start?.fresh;
+    // The scene object is reused between games: reset everything that lives on it.
+    this.overShown = false; this.lastViewer = null; this.lastTechPrompt = null; this.lastIdlePrompt = null;
+    this.aiRunning = false; this.coachText = null; this.info = null; this.reach = null;
+    clearTimeout(this.saveTimer);
     this.busy = false;
     this.sel = null;
     this.pendingGoto = null;
@@ -872,6 +876,8 @@ export class World extends Phaser.Scene {
     cv.seenEv = s.evId || 0;
     const major = fresh.filter((e) => MAJOR.has(e.kind));
     const minor = fresh.filter((e) => !MAJOR.has(e.kind) && !e.quiet && e.kind !== 'idle');
+    if (fresh.some((e) => e.kind === 'tech' || e.kind === 'wonder')) sfx('power');
+    else if (fresh.some((e) => e.kind === 'built' && e.civ === this.me)) sfx('coin');
     minor.slice(-3).forEach((e, k) => this.time.delayedCall(k * 900, () => toast(this, e.text, HEIGHT - 190 - k * 4)));
     if (major.length && !this.s.over) {
       const color = (e) => (['cityLost', 'lost', 'war', 'dead', 'broke', 'starve'].includes(e.kind) ? '#f3b0a8' : ['cityWon', 'wonder', 'peace', 'pact', 'held', 'trade'].includes(e.kind) ? '#c9e6a8' : null);
