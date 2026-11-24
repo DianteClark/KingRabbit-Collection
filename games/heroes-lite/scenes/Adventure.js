@@ -310,6 +310,8 @@ export class Adventure extends Phaser.Scene {
     const week = Math.floor((s.day - 1) / 7) + 1; const dow = ((s.day - 1) % 7) + 1;
     this.dayText.setText(`Day ${s.day}`);
     this.subText.setText(s.mode === 'endless' ? `Week ${week} - wave in ${Math.max(0, s.endless.nextWave - s.day)}d` : `Week ${week}, day ${dow}`);
+    if (!G.townsOf(s, 0).length) this.subText.setText(`No town! ${Math.max(0, 7 - p.noTownDays)} days left`).setColor(PALETTE.orange);
+    else this.subText.setColor(PALETTE.lavender);
     this.resBar.update(p.res);
     this.heroBtns.removeAll(true);
     const heroes = G.heroesOf(s, 0);

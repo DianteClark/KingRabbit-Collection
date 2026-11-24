@@ -8,7 +8,7 @@ export const RULES = {
       heading: 'The adventure map',
       items: [
         'Drag to look around. Tap a hero (or its portrait at the bottom) to select it.',
-        'Tap a tile to plan a route: green steps are reachable today, red ones need more days. Tap the same tile again to go.',
+        'Tap a tile to plan a route: white dots are reachable today, orange ones need more days. Tap the same tile again to go.',
         'Each step uses movement points (diagonals cost more). Movement refills every morning. Tap End Day when you are done.',
         'Walk onto resources, chests, campfires and artifacts to pick them up. Visit mines to flag them for daily income.',
         'Shrines and buildings raise your hero\'s skills once per hero. Fountains and stables can be used every day.',
