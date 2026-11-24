@@ -29,7 +29,7 @@ An FTL-style space roguelite for portrait phones. Jump from beacon to beacon acr
 - **Run:** 7 sectors of 6 rows of beacons, then the Throne Gate (4 rows) with the flagship at the top. Each jump costs 1 fuel; leaving a sector gives +2 fuel. Out of fuel you can Drift (+1 fuel, the fleet advances) so a run can never soft-lock.
 - **Fleet:** starts below row 0 and advances 0.7 rows per jump (0.55 in Cruise). Arriving at an overrun beacon starts a fight with a Hegemony warship (sector + 1).
 - **Beacons:** ~44% fights, ~42% events, the rest quiet (50% chance of a fuel canister); 1-2 stores per sector, shown on the map. The very first jump is a gentle tutorial fight.
-- **Ship:** rooms on a grid; systems shields (2 power per layer), engines (5% dodge per power, needs a pilot), weapons, oxygen, medbay, drone bay (buyable), piloting and sensors (subsystems, no power). Reactor 8 (Wayfarer) up to 25.
+- **Ship:** rooms on a grid; systems shields (2 power per layer), engines (5% dodge per power, needs a pilot), weapons, oxygen, medbay, drone bay (buyable), piloting and sensors (subsystems, no power). Reactor 8 (Wayfarer) or 12 (Corvid), upgradable to 25.
 - **Combat:** real time with pause and 1x/2x. Weapons charge, then fire at their aimed room (auto-fire keeps the aim). Lasers pop one shield layer per shot; ion pops a layer or locks a system; missiles ignore shields and use ammo; flak scatters; beams never miss and lose 1 damage per layer. Hits damage hull, the room's system and crew; can start fires and breaches. Defense drones shoot down missiles and flak.
 - **Crew:** 5 species (Terran, Rokkan, Zephi, Synth, Kesh) with health, speed, repair and combat traits. Skills (pilot, engines, shields, weapons, repair, combat) level with use. Crew man the room they stand in; with crew auto-tasks on (default, toggle in the pause menu) idle crew repair, fight fires, seal breaches and repel boarders, then return to their stations. Manual orders set a new station.
 - **Enemies:** Reaver raiders/hunters, Automata (crewless), Kesh boarding ships (teleporter), Hegemony patrols, and the flagship (34 hull, 2 layers, 4 weapons, 2 drones, 3 boarding parties). Some enemies try to jump away when badly hurt.
@@ -42,10 +42,11 @@ An FTL-style space roguelite for portrait phones. Jump from beacon to beacon acr
 ## Balance
 
 `tests/star-drifter-balance.test.mjs` plays whole runs with the bot (fixed seeds):
-- Wayfarer, Normal: wins about a third of runs and reaches sector 5+ on average.
-- Cruise clearly easier than Normal (bot wins well over half).
-- Corvid, Normal: wins some runs too.
-- A won run visits every sector: 10+ fights and 30+ jumps.
+- Wayfarer, Normal: the bot wins 9/24 (about 35%) and averages sector 7. Test band: 3-16 wins of 24, average sector 5+.
+- Cruise clearly easier: 8/16 on the cruise seeds (test: at least 7 and 3+ more than Normal on the same seeds). Across other seeds Cruise wins 55-65%.
+- Corvid, Normal: 3/20 on the test seeds, 10/40 (25%) on others, about the same as the Wayfarer.
+- A won run visits every sector: 10+ fights and 30+ jumps (a typical win is ~45-55 jumps and 15-20 ships beaten).
+- The enemy skill drifts toward fights that cost 8-22% of your hull; with a fixed skill the bot's win rate moves from ~23% (easiest) to ~7% (hardest), so adaptation is felt but never decides a run on its own.
 
 ## Testing
 

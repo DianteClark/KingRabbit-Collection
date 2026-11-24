@@ -263,7 +263,7 @@ export class Combat extends Phaser.Scene {
         if (!tipSeen('boarders')) { markTip('boarders'); this.time.delayedCall(1200, () => this.toastOnce('Boarders! Your crew will fight them. Send more crew to that room to help.')); }
         const { x, y } = this.roomCenter(0, f.room);
         floatText(this, x, y - 10, 'BOARDERS!', PALETTE.orange);
-        toast(this, 'Enemy boarders on your ship!', 250, PALETTE.orange);
+        this.toastOnce('Enemy boarders on your ship!');
         sfx('thud');
         break;
       }
@@ -275,7 +275,7 @@ export class Combat extends Phaser.Scene {
         break;
       }
       case 'sabotage': sfx('error'); break;
-      case 'fleeing': toast(this, 'The enemy is charging its jump drive!', 140, PALETTE.orange); break;
+      case 'fleeing': this.toastOnce('The enemy is charging its jump drive! Finish it fast.'); break;
       case 'patch': sfx('place'); break;
       default: break;
     }
