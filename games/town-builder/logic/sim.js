@@ -89,7 +89,7 @@ export function newGame(mode = 'sandbox', seedOverride) {
     v: 1, mode, seed, layout, t: 0, weeks: 0,
     money: sc.money, tax: { R: ECON.defaultTax, C: ECON.defaultTax, I: ECON.defaultTax }, fund,
     loans: [], terrain: map.terrain, road: map.road, line: new Array(W * H).fill(0), zone: new Array(W * H).fill(''),
-    blds: [], nextId: 1, pop: 0, jobs: { C: 0, I: 0, F: 0 }, workers: 0, happy: 55,
+    blds: [], nextId: 1, pop: 0, jobs: { C: 0, I: 0, F: 0 }, workers: 0, happy: 60,
     demand: { R: 0.6, C: 0.2, I: 0.4, F: 0.3 }, ms: 0, hist: [], log: [], fires: [], active: [], rubble: [],
     dis: false, result: null, debtMonths: 0, report: null, hy: map.hy, start: map.start, rs: 0,
     tut: 0, seenTips: {}, stats: { maxPop: 0 }, landmarks: {},
@@ -138,7 +138,7 @@ const ci = (b) => idx(Math.min(W - 1, Math.floor(b.x + b.w / 2)), Math.min(H - 1
 
 /** Power each building needs. */
 function powerNeed(b) {
-  if (b.k === 'grow') return b.z === 'R' ? b.n / 6 : b.z === 'C' ? b.n / 3 : b.z === 'I' ? b.n / 2 : 0;
+  if (b.k === 'grow') return b.z === 'R' ? b.n / 8 : b.z === 'C' ? b.n / 4 : b.z === 'I' ? b.n / 3 : 0;
   const p = PLACE[b.k];
   if (p.power || p.svc === 'park' && !p.landmark) return 0;
   return p.landmark ? 6 : 4;
@@ -815,7 +815,7 @@ export function happiness(s) {
     if (a !== undefined) traf += n * Math.min(1, r.traffic[a]);
   }
   const parts = {};
-  if (!w) return { value: 55, parts };
+  if (!w) return { value: 60, parts };
   const jobs = s.jobs.C + s.jobs.I + s.jobs.F;
   const unemp = Math.max(0, s.workers - jobs) / Math.max(1, s.workers);
   const avgTax = (s.tax.R + s.tax.C + s.tax.I) / 3;
@@ -825,12 +825,12 @@ export function happiness(s) {
   parts.pollution = -(pol / w) * 35;
   parts.crime = -(crime / w) * 25;
   parts.taxes = -(avgTax - ECON.defaultTax) * 3;
-  parts.jobs = -unemp * 40;
+  parts.jobs = -unemp * 25;
   parts.power = -(unpow / w) * 30;
   parts.water = -(dry / w) * 12;
   parts.traffic = -(traf / w) * 10;
   parts.landmarks = Math.min(15, lm);
-  const v = 50 + Object.values(parts).reduce((a, x) => a + x, 0);
+  const v = 55 + Object.values(parts).reduce((a, x) => a + x, 0);
   return { value: Math.max(0, Math.min(100, v)), parts };
 }
 
@@ -1071,6 +1071,7 @@ export function goalStatus(s) {
 function checkGoal(s, events) {
   const g = goalStatus(s);
   if (!g || s.result) return;
+  if (!g.all && (g.monthsLeft === 12 || g.monthsLeft === 3)) log(s, `${g.monthsLeft === 12 ? 'One year' : 'Three months'} left to reach the goal! Check More, then Goal.`, 'bad', 'Planner');
   if (g.all) {
     s.result = { over: true, won: true, t: Math.floor(s.t) };
     events.push({ kind: 'win' });

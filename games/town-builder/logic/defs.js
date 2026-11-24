@@ -76,37 +76,37 @@ export const TREES = 5; // tree variants drawn on forest tiles
  */
 export const PLACE = {
   // Utilities
-  wind: { name: 'Wind Turbine', cat: 'util', frames: ['ind:32', 'ind:33', 'ind:34', 'ind:35'], cost: 400, upkeep: 6, power: 40, fund: 'power', unlock: 0, desc: 'Clean power for about 240 people.' },
-  coal: { name: 'Coal Plant', cat: 'util', frames: ['ind:44'], cost: 3000, upkeep: 45, power: 450, smoke: 70, smokeR: 8, fund: 'power', unlock: 0, dirty: true, desc: 'Lots of power, lots of smoke. Keep homes away.' },
-  solar: { name: 'Solar Farm', cat: 'util', frames: ['ind:40'], cost: 1800, upkeep: 15, power: 140, fund: 'power', unlock: 1, desc: 'Clean power for about 850 people.' },
-  nuclear: { name: 'Nuclear Plant', cat: 'util', frames: ['ind:43'], cost: 12000, upkeep: 160, power: 2000, fund: 'power', unlock: 3, dirty: true, desc: 'Huge clean-air power, but people worry.' },
-  wtower: { name: 'Water Tower', cat: 'util', frames: ['ind:14'], cost: 350, upkeep: 5, svc: 'water', r: 7, fund: 'power', unlock: 0, desc: 'Water for homes and shops nearby. Needs power.' },
-  pump: { name: 'Water Works', cat: 'util', frames: ['ind:42'], cost: 1600, upkeep: 30, svc: 'water', r: 14, fund: 'power', unlock: 2, desc: 'Water for a whole district. Needs power.' },
+  wind: { name: 'Wind Turbine', cat: 'util', frames: ['ind:32', 'ind:33', 'ind:34', 'ind:35'], cost: 400, upkeep: 6, power: 50, fund: 'power', unlock: 0, desc: 'Clean power for about 200 people.' },
+  coal: { name: 'Coal Plant', cat: 'util', frames: ['ind:44'], cost: 3000, upkeep: 45, power: 450, smoke: 70, smokeR: 8, fund: 'power', unlock: 0, dirty: true, desc: 'Power for 2,000 people. Smoky!' },
+  solar: { name: 'Solar Farm', cat: 'util', frames: ['ind:40'], cost: 1800, upkeep: 15, power: 140, fund: 'power', unlock: 1, desc: 'Clean power for about 600 people.' },
+  nuclear: { name: 'Nuclear Plant', cat: 'util', frames: ['ind:43'], cost: 12000, upkeep: 160, power: 2000, fund: 'power', unlock: 3, dirty: true, desc: 'Huge power, no smoke.' },
+  wtower: { name: 'Water Tower', cat: 'util', frames: ['ind:14'], cost: 350, upkeep: 5, svc: 'water', r: 7, fund: 'power', unlock: 0, desc: 'Waters land nearby. Needs power.' },
+  pump: { name: 'Water Works', cat: 'util', frames: ['ind:42'], cost: 1600, upkeep: 30, svc: 'water', r: 14, fund: 'power', unlock: 2, desc: 'Waters a whole district.' },
   // Services
-  police: { name: 'Police Station', cat: 'svc', frames: ['police:1'], cost: 900, upkeep: 20, svc: 'police', r: 10, fund: 'police', unlock: 0, desc: 'Cuts crime nearby. Chases off UFOs.' },
+  police: { name: 'Police Station', cat: 'svc', frames: ['police:1'], cost: 900, upkeep: 20, svc: 'police', r: 10, fund: 'police', unlock: 0, desc: 'Cuts crime. Chases off UFOs.' },
   fire: { name: 'Firehouse', cat: 'svc', frames: ['fire:0'], cost: 700, upkeep: 16, svc: 'fire', r: 9, fund: 'fire', unlock: 0, desc: 'Puts out fires nearby.' },
   clinic: { name: 'Clinic', cat: 'svc', frames: ['med:0'], cost: 900, upkeep: 20, svc: 'health', r: 10, fund: 'health', unlock: 1, desc: 'Keeps people healthy and happy.' },
-  school: { name: 'School', cat: 'svc', frames: ['edu:3'], cost: 1000, upkeep: 24, svc: 'edu', r: 10, fund: 'edu', unlock: 1, desc: 'Raises land value and happiness.' },
-  policehq: { name: 'Police HQ', cat: 'svc', frames: ['police:2'], cost: 2600, upkeep: 65, svc: 'police', r: 16, fund: 'police', unlock: 2, desc: 'A big station with a wide patrol area.' },
-  firest: { name: 'Fire Station', cat: 'svc', frames: ['fire:1'], cost: 2200, upkeep: 55, svc: 'fire', r: 15, fund: 'fire', unlock: 2, desc: 'A big station with a wide reach.' },
+  school: { name: 'School', cat: 'svc', frames: ['edu:3'], cost: 1000, upkeep: 24, svc: 'edu', r: 10, fund: 'edu', unlock: 1, desc: 'Raises land value, happiness.' },
+  policehq: { name: 'Police HQ', cat: 'svc', frames: ['police:2'], cost: 2600, upkeep: 65, svc: 'police', r: 16, fund: 'police', unlock: 2, desc: 'Big station, wide patrol area.' },
+  firest: { name: 'Fire Station', cat: 'svc', frames: ['fire:1'], cost: 2200, upkeep: 55, svc: 'fire', r: 15, fund: 'fire', unlock: 2, desc: 'Big fire station, wide reach.' },
   hospital: { name: 'Hospital', cat: 'svc', frames: ['med:2'], cost: 3000, upkeep: 75, svc: 'health', r: 17, fund: 'health', unlock: 2, desc: 'Health care for a large area.' },
-  highschool: { name: 'High School', cat: 'svc', frames: ['edu:2'], cost: 3000, upkeep: 75, svc: 'edu', r: 16, fund: 'edu', unlock: 2, desc: 'Education for a large area.' },
-  university: { name: 'University', cat: 'svc', frames: ['edu:1'], cost: 8000, upkeep: 140, svc: 'edu', r: 24, fund: 'edu', unlock: 3, desc: 'Raises land value across the city.', landmark: true, happy: 3 },
+  highschool: { name: 'High School', cat: 'svc', frames: ['edu:2'], cost: 3000, upkeep: 75, svc: 'edu', r: 16, fund: 'edu', unlock: 2, desc: 'Schooling for a large area.' },
+  university: { name: 'University', cat: 'svc', frames: ['edu:1'], cost: 8000, upkeep: 140, svc: 'edu', r: 24, fund: 'edu', unlock: 3, desc: 'Raises land value city-wide.', landmark: true, happy: 3 },
   // Transit (in the road tray)
-  busstop: { name: 'Bus Stop', cat: 'road', frames: ['mt:4', 'mt:5', 'mt:9', 'mt:10'], cost: 150, upkeep: 4, svc: 'transit', r: 5, fund: 'transit', unlock: 0, roadside: true, desc: 'Fewer cars nearby. Must touch a road.' },
+  busstop: { name: 'Bus Stop', cat: 'road', frames: ['mt:4', 'mt:5', 'mt:9', 'mt:10'], cost: 150, upkeep: 4, svc: 'transit', r: 5, fund: 'transit', unlock: 0, roadside: true, desc: 'Fewer cars. Must touch a road.' },
   busdepot: { name: 'Bus Depot', cat: 'road', frames: ['mt:0', 'mt:1'], cost: 1500, upkeep: 35, svc: 'transit', r: 12, fund: 'transit', unlock: 1, roadside: true, desc: 'Buses for a whole district.' },
-  train: { name: 'Train Station', cat: 'road', frames: ['mt:3'], cost: 4000, upkeep: 70, svc: 'transit', r: 17, fund: 'transit', unlock: 2, roadside: true, desc: 'Takes lots of cars off the roads.' },
+  train: { name: 'Train Station', cat: 'road', frames: ['mt:3'], cost: 4000, upkeep: 70, svc: 'transit', r: 17, fund: 'transit', unlock: 2, roadside: true, desc: 'Takes lots of cars off roads.' },
   airport: { name: 'Airport', cat: 'road', frames: ['airport:0'], cost: 25000, upkeep: 250, fund: 'transit', unlock: 4, landmark: true, roadside: true, income: 600, demandC: 0.25, happy: 3, desc: 'Visitors and trade: shops boom.' },
   // Parks and landmarks
-  park: { name: 'Small Park', cat: 'park', frames: ['res:93', 'res:94', 'res:103', 'res:104'], cost: 80, upkeep: 1, svc: 'park', r: 4, fund: 'parks', unlock: 0, desc: 'A bench and a tree. Raises land value.' },
-  plaza: { name: 'Plaza', cat: 'park', frames: ['res:95', 'res:96', 'res:98'], cost: 300, upkeep: 4, svc: 'park', r: 6, fund: 'parks', unlock: 0, desc: 'Raises land value and cleans the air.' },
-  bigpark: { name: 'Big Park', cat: 'park', frames: ['res:77', 'res:78', 'res:100'], cost: 900, upkeep: 10, svc: 'park', r: 9, fund: 'parks', unlock: 1, desc: 'A big green space everyone loves.' },
+  park: { name: 'Small Park', cat: 'park', frames: ['res:93', 'res:94', 'res:103', 'res:104'], cost: 80, upkeep: 1, svc: 'park', r: 4, fund: 'parks', unlock: 0, desc: 'Raises land value nearby.' },
+  plaza: { name: 'Plaza', cat: 'park', frames: ['res:95', 'res:96', 'res:98'], cost: 300, upkeep: 4, svc: 'park', r: 6, fund: 'parks', unlock: 0, desc: 'Raises land value, cleans air.' },
+  bigpark: { name: 'Big Park', cat: 'park', frames: ['res:77', 'res:78', 'res:100'], cost: 900, upkeep: 10, svc: 'park', r: 9, fund: 'parks', unlock: 1, desc: 'A big green space for everyone.' },
   court: { name: 'Sports Court', cat: 'park', frames: ['res:99'], cost: 1200, upkeep: 14, svc: 'park', r: 10, fund: 'parks', unlock: 2, desc: 'Fun for the whole town.', happy: 1 },
-  mansion: { name: "Mayor's Mansion", cat: 'park', frames: ['res:74'], cost: 2000, upkeep: 20, svc: 'park', r: 8, fund: 'parks', unlock: 1, landmark: true, happy: 5, desc: 'Your home. Everyone feels looked after.' },
-  lighthouse: { name: 'Lighthouse', cat: 'park', frames: ['res:102'], cost: 1500, upkeep: 8, svc: 'park', r: 6, fund: 'parks', unlock: 2, landmark: true, happy: 2, income: 60, nearWater: true, desc: 'A landmark by the water. Visitors come.' },
-  bank: { name: 'Bank Tower', cat: 'park', frames: ['com:34'], cost: 5000, upkeep: 20, unlock: 2, landmark: true, fund: 'parks', income: 160, demandC: 0.1, happy: 2, desc: 'A landmark. Brings money and shops.' },
-  hotel: { name: 'Grand Hotel', cat: 'park', frames: ['com:35'], cost: 9000, upkeep: 40, unlock: 3, landmark: true, fund: 'parks', income: 320, demandC: 0.1, happy: 3, desc: 'Tourists! Brings money every month.' },
-  arena: { name: 'Arena', cat: 'park', frames: ['com:45'], cost: 10000, upkeep: 60, svc: 'park', r: 14, unlock: 3, landmark: true, fund: 'parks', happy: 6, income: 150, desc: 'Big games, big crowds, happy people.' },
+  mansion: { name: "Mayor's Mansion", cat: 'park', frames: ['res:74'], cost: 2000, upkeep: 20, svc: 'park', r: 8, fund: 'parks', unlock: 1, landmark: true, happy: 5, desc: 'Your home. Makes people happy.' },
+  lighthouse: { name: 'Lighthouse', cat: 'park', frames: ['res:102'], cost: 1500, upkeep: 8, svc: 'park', r: 6, fund: 'parks', unlock: 2, landmark: true, happy: 2, income: 60, nearWater: true, desc: 'Landmark by water. Visitors!' },
+  bank: { name: 'Bank Tower', cat: 'park', frames: ['com:34'], cost: 5000, upkeep: 20, unlock: 2, landmark: true, fund: 'parks', income: 160, demandC: 0.1, happy: 2, desc: 'Landmark. Brings money, shops.' },
+  hotel: { name: 'Grand Hotel', cat: 'park', frames: ['com:35'], cost: 9000, upkeep: 40, unlock: 3, landmark: true, fund: 'parks', income: 320, demandC: 0.1, happy: 3, desc: 'Tourists bring money monthly.' },
+  arena: { name: 'Arena', cat: 'park', frames: ['com:45'], cost: 10000, upkeep: 60, svc: 'park', r: 14, unlock: 3, landmark: true, fund: 'parks', happy: 6, income: 150, desc: 'Big games, very happy people.' },
 };
 
 /** Line tools (drag a path) and area tools (drag a rectangle). */
@@ -123,14 +123,14 @@ export const TRAYS = {
 };
 
 export const TOOL_INFO = {
-  road: { name: 'Road', cost: LINE_COST.road, unlock: 0, desc: 'Drag to draw. Bridges cost more.' },
-  line: { name: 'Power Line', cost: LINE_COST.line, unlock: 0, desc: 'Drag to carry power across empty land.' },
-  'zone:R': { name: 'Residential', cost: ZONE_INFO.R.cost, unlock: 0, desc: 'Drag a rectangle near a road. Homes grow here.' },
-  'zone:C': { name: 'Commercial', cost: ZONE_INFO.C.cost, unlock: 0, desc: 'Shops and offices: jobs and taxes.' },
-  'zone:I': { name: 'Industrial', cost: ZONE_INFO.I.cost, unlock: 0, desc: 'Factories: lots of jobs, but smoky.' },
-  'zone:F': { name: 'Farm', cost: ZONE_INFO.F.cost, unlock: 0, desc: 'Fields need no power. Make it 3x3 or bigger.' },
-  dezone: { name: 'Dezone', cost: 0, unlock: 0, desc: 'Drag to remove zoning (and what grew on it).' },
-  bulldoze: { name: 'Bulldoze', cost: CLEAR_COST.building, unlock: 0, desc: 'Drag to clear anything, even trees.' },
+  road: { name: 'Road', cost: LINE_COST.road, unlock: 0, desc: 'Bridges over water cost $60.' },
+  line: { name: 'Power Line', cost: LINE_COST.line, unlock: 0, desc: 'Carries power over empty land.' },
+  'zone:R': { name: 'Residential', cost: ZONE_INFO.R.cost, unlock: 0, desc: 'Homes grow here, near a road.' },
+  'zone:C': { name: 'Commercial', cost: ZONE_INFO.C.cost, unlock: 0, desc: 'Shops and offices: jobs.' },
+  'zone:I': { name: 'Industrial', cost: ZONE_INFO.I.cost, unlock: 0, desc: 'Factories: jobs, but smoky.' },
+  'zone:F': { name: 'Farm', cost: ZONE_INFO.F.cost, unlock: 0, desc: 'No power needed. Zone 3x3+.' },
+  dezone: { name: 'Dezone', cost: 0, unlock: 0, desc: 'Removes zones and what grew.' },
+  bulldoze: { name: 'Bulldoze', cost: CLEAR_COST.building, unlock: 0, desc: 'Clears buildings, roads, trees.' },
 };
 
 // Monthly budget categories (funding 0-150%).
