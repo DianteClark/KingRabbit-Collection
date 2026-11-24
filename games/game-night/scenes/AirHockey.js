@@ -50,7 +50,7 @@ export class AirHockey extends Phaser.Scene {
     this.backOffT = 0;     // CPU retreating to let a pinned puck go
     this.thinkT = 0;
     this.aimOffset = 0;
-    this.serve(1);
+    this.serve('me');
     this.updateScore();
   }
 
@@ -75,8 +75,9 @@ export class AirHockey extends Phaser.Scene {
     this.scoreText.setText(`You ${this.scores[0]}  -  ${this.scores[1]} CPU   first to ${WIN_SCORE}`);
   }
 
-  serve(toward) {
-    this.puck.x = WIDTH / 2; this.puck.y = MID_Y + (toward === 0 ? -60 : 60);
+  /** Put the puck on one side to restart play: 'me' (bottom) or 'cpu' (top). */
+  serve(side) {
+    this.puck.x = WIDTH / 2; this.puck.y = MID_Y + (side === 'cpu' ? -60 : 60);
     this.puck.vx = 0; this.puck.vy = 0;
     this.frozen = 0.6;
   }
@@ -239,7 +240,8 @@ export class AirHockey extends Phaser.Scene {
       });
       return;
     }
-    this.serve(scorer === 0 ? 1 : 0);
+    // As in real air hockey, the player who conceded gets the puck.
+    this.serve(scorer === 0 ? 'cpu' : 'me');
   }
 }
 

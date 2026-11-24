@@ -48,7 +48,7 @@ export class BlockBreaker extends Phaser.Scene {
 
     this.input.on('pointermove', (p) => { if (p.isDown) this.dragTo(p); });
     this.input.on('pointerdown', (p) => { this.dragStart = { px: p.x, x: this.paddle.x }; });
-    this.input.on('pointerup', () => { if (this.balls.some((b) => b.stuck)) this.launch(); });
+    this.input.on('pointerup', (p, over) => { if (!over.length && !this.clearing && this.balls.some((b) => b.stuck)) this.launch(); });
 
     this.loadLevel(0);
   }
@@ -74,6 +74,7 @@ export class BlockBreaker extends Phaser.Scene {
     });
     this.speed = 330 + Math.min(i, 8) * 22;
     this.lastTouch = 0;
+    this.clearing = false;
     this.resetBall();
     this.updateHud();
   }
@@ -81,7 +82,8 @@ export class BlockBreaker extends Phaser.Scene {
   resetBall() {
     this.balls.forEach((b) => b.img.destroy());
     this.balls = [this.newBall(this.paddle.x, PADDLE_Y - 16, 0, 0, true)];
-    this.drops.forEach((d) => d.img.destroy()); this.drops = [];
+    this.drops.forEach((d) => { d.img.destroy(); d.label.destroy(); }); this.drops = [];
+    this.wideTimer?.remove();
     this.setPaddleWidth(72);
     this.hint.setVisible(true);
   }
@@ -109,7 +111,7 @@ export class BlockBreaker extends Phaser.Scene {
   }
 
   update(_, ms) {
-    if (this.over) return;
+    if (this.over || this.clearing) return;
     const dt = Math.min(ms / 1000, 1 / 30);
     this.paddle.img.x = Math.round(this.paddle.x);
 
@@ -183,9 +185,11 @@ export class BlockBreaker extends Phaser.Scene {
     if (Math.random() < 0.13) this.spawnDrop(br.x, br.y);
     this.updateHud();
     if (!this.bricks.length) {
+      // Freeze play for the fanfare so a ball can't drain after the last brick.
+      this.clearing = true;
       toast(this, `Level ${this.level + 1} clear!`, 360);
       sfx('win');
-      this.time.delayedCall(800, () => this.loadLevel(this.level + 1));
+      this.time.delayedCall(900, () => { if (!this.over) this.loadLevel(this.level + 1); });
     }
   }
 
@@ -200,7 +204,11 @@ export class BlockBreaker extends Phaser.Scene {
   applyPower(kind) {
     sfx('power');
     if (kind === '+') { this.lives++; this.updateHud(); toast(this, 'Extra ball!', 400); }
-    if (kind === 'W') { this.setPaddleWidth(110); toast(this, 'Wide paddle!', 400); this.time.delayedCall(12000, () => this.setPaddleWidth(72)); }
+    if (kind === 'W') {
+      this.setPaddleWidth(110); toast(this, 'Wide paddle!', 400);
+      this.wideTimer?.remove();   // a second W restarts the 12 seconds instead of cutting them short
+      this.wideTimer = this.time.delayedCall(12000, () => this.setPaddleWidth(72));
+    }
     if (kind === 'M') {
       const extra = [];
       for (const b of this.balls) if (!b.stuck) {
