@@ -4,7 +4,7 @@ import { text, button } from '../../../shared/core/ui.js';
 import { WIDTH } from '../../../shared/core/boot.js';
 import { header, go, modal, setBackground } from './common.js';
 import { CATEGORIES, score, totals, isComplete, UPPER_BONUS_AT } from '../logic/yacht.js';
-import { save } from '../save.js';
+import { getBest, submitBest } from '../save.js';
 
 const DIE_SCALE = 4;            // 12px dice -> 48px
 const DICE_Y = 116;
@@ -152,14 +152,13 @@ export class Yacht extends Phaser.Scene {
     const t = totals(this.card);
     this.bonusVal.setText(t.bonus ? `+${t.bonus}` : `${t.upper}/${UPPER_BONUS_AT}`);
     this.totalText.setText(`Total ${t.total}`);
-    this.bestText.setText(`Best ${save.get('yachtBest')}`);
+    this.bestText.setText(`Best ${getBest('yacht')}`);
   }
 
   finish() {
     const { total } = totals(this.card);
-    const best = save.get('yachtBest');
-    const isBest = total > best;
-    if (isBest) save.set('yachtBest', total);
+    const best = getBest('yacht');
+    const isBest = submitBest('yacht', total);
     this.refresh();
     this.time.delayedCall(500, () => {
       const m = modal(this, isBest ? 'New best!' : 'Game over', [`Final score ${total}`, `Best ${Math.max(best, total)}`], [

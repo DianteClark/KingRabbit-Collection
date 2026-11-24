@@ -35,6 +35,8 @@ export function button(scene, x, y, w, h, label, onTap, {
   if (icon) { icon.setPosition(-w / 2 + 24, 0); face.add(icon); lbl.setX(16); }
   c.add([shadow, face]);
   c.label = lbl;
+  c.body = body;
+  c.face = face;
 
   let enabled = true;
   c.setSize(w, h + 4);

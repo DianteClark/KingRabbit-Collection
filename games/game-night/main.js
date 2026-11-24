@@ -3,6 +3,14 @@ import { Boot } from './scenes/Boot.js';
 import { Menu } from './scenes/Menu.js';
 import { TicTacToe } from './scenes/TicTacToe.js';
 import { Reversi } from './scenes/Reversi.js';
+import { Checkers } from './scenes/Checkers.js';
+import { Chess } from './scenes/Chess.js';
+import { Go } from './scenes/Go.js';
+import { Tables } from './scenes/Tables.js';
+import { Dominoes } from './scenes/Dominoes.js';
+import { SeaBattle } from './scenes/SeaBattle.js';
 import { Yacht } from './scenes/Yacht.js';
 
-startGame({ scenes: [Boot, Menu, TicTacToe, Reversi, Yacht] });
+startGame({
+  scenes: [Boot, Menu, TicTacToe, Reversi, Checkers, Chess, Go, Tables, Dominoes, SeaBattle, Yacht],
+});
