@@ -40,7 +40,7 @@ A turn-based roguelike dungeon crawl by torchlight for portrait phones. Your tor
 
 - `tests/darkhold.test.mjs`: every floor of 40 seeds x 11 depths is connected (secret doors counted) and its stairs/boss/shop reachable without secrets; deterministic floors and daily seeds; difficulty never changes map/loot/monsters; FOV and light; braziers; combat, XP and perks; sneak attacks; unknown potions/scrolls; equipment and bag; ghost, shade, slime, archer, imp, mimic, sleeper, watcher behaviour; traps and searching; the shop; save round-trip determinism; the Hollow King's light weakness.
 - `tests/darkhold-bot.test.mjs`: 15 Normal runs (5 per hero) the bot must win at least 4 of and not all, average depth >= 6, every run ends; 9 Lantern runs at least 6 wins; easy awareness goes at least as far as hard.
-- Bot results while tuning (skill 0.35): Normal about 70% wins (Knight 75%, Rogue 75%, Mage 60%), Lantern about 90%, skill 1.0 about 40%. A full run is about 2,000-2,500 turns.
+- Bot results at the starting skill (0.35, seeds 1000+): Normal Knight 13/16, Rogue 11/16, Mage 10/16 wins; Lantern 30/30; at skill 1.0 about 40% Normal wins. Most bot deaths are on floors 5-9 (archers, ogres, demons). A full run is about 2,000-2,500 turns. The bot fights everything head-on and never retreats, so a careful player should do better on the same settings, and the adaptive skill then pushes monsters toward 'hard'.
 
 ## UI details
 
