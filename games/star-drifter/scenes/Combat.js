@@ -336,6 +336,7 @@ export class Combat extends Phaser.Scene {
     if (sens < 2) return;
     e.weapons.forEach((w, i) => {
       const x = x0 + i * 30;
+      g.fillStyle(hex(PALETTE.lavender)).fillRect(x - 1, 71, 28, 10);
       g.fillStyle(hex(PALETTE.ink)).fillRect(x, 72, 26, 8);
       g.fillStyle(w.on ? (w.charge >= 1 ? hex(PALETTE.red) : hex(PALETTE.orange)) : hex(PALETTE.indigo)).fillRect(x + 1, 73, Math.round(24 * (w.on ? w.charge : 0)), 6);
     });
@@ -600,6 +601,9 @@ export class Combat extends Phaser.Scene {
     g.fillStyle(hex(PALETTE.night));
     if (this.paused) g.fillTriangle(-6, -9, -6, 9, 9, 0);
     else { g.fillRect(-8, -9, 6, 18); g.fillRect(2, -9, 6, 18); }
+    // While paused the Play button pulses so it's obvious time is frozen.
+    const pulse = this.paused && !this.ending ? 0.5 + 0.5 * Math.sin(this.time.now / 180) : 1;
+    this.pauseBtn.body.setFillStyle(hex(PALETTE.gold), 0.55 + 0.45 * pulse);
     this.speedBtn.setLabel(`${this.speed}x`);
     this.autoBtn.body.setFillStyle(hex(this.c.autofire ? PALETTE.leaf : PALETTE.indigo));
     const c = this.c;
@@ -623,7 +627,7 @@ export class Combat extends Phaser.Scene {
       const d = SYSTEMS[f.id];
       if (f.id === 'drones') {
         const names = p.drones.map((dr) => `${DRONES[dr.id].short} ${dr.on ? 'on' : 'off'}`).join(', ') || 'no drones fitted';
-        msg = `Drones: ${names}. Parts: ${p.droneParts}.`;
+        msg = `Drones: ${names}. ${p.droneParts} part${p.droneParts === 1 ? '' : 's'} left.`;
         minus = p.drones.some((dr) => dr.on);
         plus = p.drones.some((dr, i) => !dr.on && !droneBlock(p, i));
       } else if (!d.power) {
@@ -725,7 +729,7 @@ export class Combat extends Phaser.Scene {
       const d = Math.hypot(dx, dy);
       if (d < bestD) { bestD = d; best = r.id; }
     }
-    return bestD <= 6 ? best : null;
+    return bestD <= 10 ? best : null;
   }
 
   tapWeapon(i) {
