@@ -22,7 +22,7 @@ export class Pick extends Phaser.Scene {
     kitChip(this, 60, 140, PLAYER_TEAM, 2);
     this.add.image(300, 140, kitTexture(this, PLAYER_TEAM.shirt, PLAYER_TEAM.shorts, 1), '0_1').setScale(3);
     text(this, WIDTH / 2, 132, PLAYER_TEAM.name, { size: 32, color: PALETTE.cream });
-    text(this, WIDTH / 2, 170, 'Always attacks upward', { color: PALETTE.lavender });
+    text(this, WIDTH / 2, 170, 'Attacks up, then down', { color: PALETTE.lavender });
 
     text(this, WIDTH / 2, 236, 'VS', { size: 32, color: PALETTE.gold });
 

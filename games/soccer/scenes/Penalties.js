@@ -11,6 +11,7 @@ import {
   newShootout, nextKicker, recordKick, resolveKick, cpuKick, cpuDive, goals,
 } from '../logic/penalties.js';
 import { applyResult } from '../flow.js';
+import { sound } from '../sound.js';
 
 // Drawn at 2x like the match. Goal line at GY, the mouth is GOAL_W * 2 wide.
 const S = 2;
@@ -120,6 +121,7 @@ export class Penalties extends Phaser.Scene {
     this.reset(side);
     this.busy = false;
     this.dive = 0;
+    sound('whistle');
     const team = side === 0 ? this.home : this.away;
     this.msg.setText(`${team.short} to shoot`).setColor(side === 0 ? PALETTE.gold : PALETTE.orange);
     if (side === 0) {
@@ -196,7 +198,7 @@ export class Penalties extends Phaser.Scene {
       onUpdate: () => sh.setFrame(`4_${ANIM.run[Math.floor(this.time.now / 90) % 4]}`),
       onComplete: () => {
         sh.setTexture(kitS, `4_${ANIM.kick[2]}`);
-        sfx('shoot');
+        sound('shot');
         const tx = WIDTH / 2 + aim * MOUTH / 2;
         const high = result === 'miss' && Math.abs(aim) <= 1;
         let endY = result === 'goal' ? GY - 22 : high ? GY - 70 : GY - 6;

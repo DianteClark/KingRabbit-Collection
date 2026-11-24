@@ -30,12 +30,14 @@ export class Match {
    * @param {number} [o.halfSeconds]
    * @param {number} [o.seed]
    */
-  constructor({ skills = [0.5, 0.5], humanSide = null, halfSeconds = 90, seed = 1 } = {}) {
+  constructor({ skills = [0.5, 0.5], humanSide = null, halfSeconds = 90, seed = 1, swapEnds = true } = {}) {
     this.rng = makeRng(seed);
     this.params = [aiParams(skills[0]), aiParams(skills[1])];
     this.humanSide = humanSide;
     this.halfSeconds = halfSeconds;
     this.players = [];
+    this.ends = [0, 1];      // end 0 = defends the bottom goal; swapped at half time
+    this.swapAtHalf = swapEnds;
     this.teams = [{ side: 0, players: [] }, { side: 1, players: [] }];
     let id = 0;
     for (const side of [0, 1]) {
@@ -62,6 +64,16 @@ export class Match {
     this.firstKick = this.rng() < 0.5 ? 0 : 1;
     this.setPiece('kickoff', this.firstKick);
     if (humanSide !== null) this.active = this.teams[humanSide].players[4];
+  }
+
+  /** Which side defends end 0 (bottom) or 1 (top) right now. */
+  sideAtEnd(end) { return this.ends[0] === end ? 0 : 1; }
+
+  /** Teams change ends at half time. */
+  swapEnds() {
+    this.ends = [this.ends[1], this.ends[0]];
+    for (const p of this.players) p.end = this.ends[p.side];
+    this.emit('ends');
   }
 
   emit(type, data = {}) { this.events.push({ type, ...data }); }
@@ -150,17 +162,17 @@ export class Match {
     this.buffer = null; this.charge = 0; this.charging = false;
     const team = this.teams[side].players;
     let spot; let takerPos; let taker;
-    const dirIn = attackDir(side);
+    const dirIn = attackDir(this.ends[side]);
     if (type === 'kickoff') {
       spot = { x: W / 2, y: L / 2 };
       taker = team[4];
       takerPos = { x: W / 2, y: L / 2 - dirIn * 5 };
     } else if (type === 'goalkick') {
-      spot = { x: W / 2 + (x < W / 2 ? -18 : 18), y: side === 0 ? L - SIX_D : SIX_D };
+      spot = { x: W / 2 + (x < W / 2 ? -18 : 18), y: this.ends[side] === 0 ? L - SIX_D : SIX_D };
       taker = team[0];
       takerPos = { x: spot.x, y: spot.y - dirIn * 5 };
     } else if (type === 'corner') {
-      spot = { x: x < W / 2 ? 1 : W - 1, y: oppGoalY(side) === 0 ? 1 : L - 1 };
+      spot = { x: x < W / 2 ? 1 : W - 1, y: oppGoalY(this.ends[side]) === 0 ? 1 : L - 1 };
       const out = { x: spot.x < W / 2 ? -1 : 1, y: spot.y < L / 2 ? -1 : 1 };
       takerPos = { x: spot.x + out.x * 4, y: spot.y + out.y * 4 };
       taker = nearestTo(team.filter((p) => p.role !== 'GK'), spot);
@@ -184,29 +196,29 @@ export class Match {
 
   setupSpot(p) {
     const { type, side, spot } = this.sp;
-    if (p.role === 'GK') return { x: W / 2, y: ownGoalY(p.side) + attackDir(p.side) * 6 };
+    if (p.role === 'GK') return { x: W / 2, y: ownGoalY(p.end) + attackDir(p.end) * 6 };
     const attacking = p.side === side;
     let s = formationSpot(this, p, { ballX: spot.x, ballY: spot.y, attacking });
     if (type === 'kickoff') {
       // Own half only; the defending side also keeps out of the centre circle.
-      const lim = L / 2 - attackDir(p.side) * 10;
-      if (p.side === 0) s.y = Math.max(s.y, lim); else s.y = Math.min(s.y, lim);
-      if (p.role === 'LM' || p.role === 'RM') s.y = p.side === 0 ? Math.max(s.y, L / 2 + 16) : Math.min(s.y, L / 2 - 16);
+      const lim = L / 2 - attackDir(p.end) * 10;
+      if (p.end === 0) s.y = Math.max(s.y, lim); else s.y = Math.min(s.y, lim);
+      if (p.role === 'LM' || p.role === 'RM') s.y = p.end === 0 ? Math.max(s.y, L / 2 + 16) : Math.min(s.y, L / 2 - 16);
       if (!attacking || p.role !== 'FWD') {
         const d = norm(s.x - W / 2, s.y - L / 2);
-        if (d.d < CIRCLE_R + 6) s = { x: W / 2 + (d.d > 0 ? d.x : 0) * (CIRCLE_R + 6), y: L / 2 + (d.d > 0 ? d.y : -attackDir(p.side)) * (CIRCLE_R + 6) };
+        if (d.d < CIRCLE_R + 6) s = { x: W / 2 + (d.d > 0 ? d.x : 0) * (CIRCLE_R + 6), y: L / 2 + (d.d > 0 ? d.y : -attackDir(p.end)) * (CIRCLE_R + 6) };
       }
-      if (attacking && p.role === 'FWD') s = { x: W / 2 + 14, y: L / 2 - attackDir(p.side) * 3 };
-      if (attacking && p.role === 'DEF') s = { x: W / 2 - 22, y: L / 2 - attackDir(p.side) * 28 };
+      if (attacking && p.role === 'FWD') s = { x: W / 2 + 14, y: L / 2 - attackDir(p.end) * 3 };
+      if (attacking && p.role === 'DEF') s = { x: W / 2 - 22, y: L / 2 - attackDir(p.end) * 28 };
     } else if (type === 'corner' && attacking) {
-      const gy = oppGoalY(side); const inward = attackDir(side) * -1;
+      const gy = oppGoalY(this.ends[side]); const inward = attackDir(this.ends[side]) * -1;
       const near = spot.x < W / 2 ? -1 : 1;
       if (p.role === 'FWD') s = { x: W / 2 + near * 14, y: gy + inward * 22 };
       else if (p.role === 'LM') s = { x: W / 2 - near * 16, y: gy + inward * 28 };
       else if (p.role === 'RM') s = { x: W / 2, y: gy + inward * 50 };
     } else if (type === 'corner') {
       // Defenders crowd the box
-      const gy = ownGoalY(p.side); const inward = attackDir(p.side);
+      const gy = ownGoalY(p.end); const inward = attackDir(p.end);
       const xs = { DEF: W / 2 - 10, LM: W / 2 + 14, RM: W / 2 - 24, FWD: W / 2 + 4 };
       const ds = { DEF: 18, LM: 24, RM: 34, FWD: 60 };
       s = { x: xs[p.role], y: gy + inward * ds[p.role] };
@@ -216,7 +228,7 @@ export class Match {
       const d = norm(s.x - spot.x, s.y - spot.y);
       const need = type === 'kickoff' ? CIRCLE_R + 4 : 22;
       if (d.d < need) {
-        const dir = d.d > 0 ? d : { x: 0, y: attackDir(p.side) * -1 };
+        const dir = d.d > 0 ? d : { x: 0, y: attackDir(p.end) * -1 };
         s = { x: spot.x + dir.x * need, y: spot.y + dir.y * need };
       }
     }
@@ -251,7 +263,7 @@ export class Match {
       if (p.side === sp.side || p.role === 'GK') continue;
       const d = norm(p.x - sp.spot.x, p.y - sp.spot.y);
       if (d.d < need) {
-        const dir = d.d > 0 ? d : { x: 0, y: -attackDir(p.side) };
+        const dir = d.d > 0 ? d : { x: 0, y: -attackDir(p.end) };
         p.x = clamp(sp.spot.x + dir.x * need, 4, W - 4); p.y = clamp(sp.spot.y + dir.y * need, 4, L - 4);
       }
     }
@@ -316,7 +328,7 @@ export class Match {
     let d = { ...dir };
     if (type === 'throwin') {
       const inward = this.sp.spot.x < W / 2 ? 1 : -1;
-      if (d.x * inward < 0.25) d = norm(inward * 0.5, d.y || attackDir(t.side) * 0.8);
+      if (d.x * inward < 0.25) d = norm(inward * 0.5, d.y || attackDir(t.end) * 0.8);
     }
     if (kind === 'pass') {
       const opts = passOptions(this, t, { dir: d, maxDist: type === 'throwin' ? 110 : 170 });
@@ -325,8 +337,8 @@ export class Match {
     } else if (type === 'corner' || type === 'throwin') {
       // Shoot on a corner = a high cross toward the goal mouth; on a throw-in = a long throw.
       if (type === 'corner') {
-        const gy = oppGoalY(t.side);
-        const tx = W / 2 + d.x * 30; const ty = gy - attackDir(t.side) * (14 + power * 30);
+        const gy = oppGoalY(t.end);
+        const tx = W / 2 + d.x * 30; const ty = gy - attackDir(t.end) * (14 + power * 30);
         const v = norm(tx - t.x, ty - t.y);
         const sp = 120 + power * 60;
         kickBall(this, t, v.x * sp, v.y * sp, 70 + power * 30);
@@ -362,7 +374,7 @@ export class Match {
     for (const p of this.players) {
       if (p.side === scorer) {
         p.celebrate = 1;
-        const tgt = p === hero ? { x: clamp(hero.x, 20, W - 20), y: L / 2 + (scorer === 0 ? 60 : -60) } : { x: hero.x + (p.id % 3 - 1) * 10, y: hero.y + (p.id % 2 ? 8 : -8) };
+        const tgt = p === hero ? { x: clamp(hero.x, 20, W - 20), y: L / 2 + (this.ends[scorer] === 0 ? 60 : -60) } : { x: hero.x + (p.id % 3 - 1) * 10, y: hero.y + (p.id % 2 ? 8 : -8) };
         steer(p, tgt.x, tgt.y, RUN * 0.8, dt);
       } else {
         p.dejected = 1;
@@ -375,10 +387,11 @@ export class Match {
 
   stepHalf(dt) {
     this.phaseT -= dt;
-    for (const p of this.players) steer(p, p.x, p.y + (p.side === 0 ? 8 : -8), RUN * 0.3, dt);
+    for (const p of this.players) steer(p, p.x, p.y + (p.end === 0 ? 8 : -8), RUN * 0.3, dt);
     this.movePlayers(dt, true);
     if (this.phaseT <= 0) {
       this.half = 2; this.clock = 0;
+      if (this.swapAtHalf) this.swapEnds();
       this.setPiece('kickoff', 1 - this.firstKick);
     }
   }
@@ -476,7 +489,7 @@ export class Match {
 
   humanShoot(p, s, power) {
     // Pointing back toward your own goal makes it a big clearance in that direction.
-    const back = s && s.y * attackDir(p.side) < -0.5;
+    const back = s && s.y * attackDir(p.end) < -0.5;
     if (back) passIntoSpace(this, p, s, 90 + power * 80, { lofted: true });
     // Stick roughly straight (or idle): aim away from the keeper; pushed sideways: aim that way.
     else shoot(this, p, { power, aimX: s && Math.abs(s.x) > 0.3 ? s.x : null, human: true });
@@ -596,7 +609,7 @@ export class Match {
   /** Goal, crossbar, or the ball going out over a line. */
   crossLine(px, py) {
     const b = this.ball;
-    for (const [gy, defSide] of [[0, 1], [L, 0]]) {
+    for (const [gy, defSide] of [[0, this.sideAtEnd(1)], [L, this.sideAtEnd(0)]]) {
       const crossed = gy === 0 ? (py >= 0 && b.y < 0) : (py <= L && b.y > L);
       if (!crossed) continue;
       const inMouth = Math.abs(b.x - W / 2) < GOAL_W / 2 - BALL_R + 0.5;
@@ -626,11 +639,11 @@ export class Match {
     if (b.y < -BALL_R || b.y > L + BALL_R) {
       if (b.owner && Math.abs(b.x - W / 2) < GOAL_W / 2) {
         // Dribbled into the goal mouth: that's a goal too.
-        const side = b.y < 0 ? 0 : 1;
+        const side = this.sideAtEnd(b.y < 0 ? 0 : 1);
         this.goal(side);
         return;
       }
-      const defSide = b.y < 0 ? 1 : 0;
+      const defSide = this.sideAtEnd(b.y < 0 ? 1 : 0);
       this.emit('out');
       if (last === defSide) this.setPiece('corner', 1 - defSide, b.x, b.y);
       else this.setPiece('goalkick', defSide, b.x, b.y);
@@ -658,7 +671,7 @@ export class Match {
     // Keepers first: they can use their hands in their own box.
     for (const k of [this.teams[0].players[0], this.teams[1].players[0]]) {
       if (b.owner || k.stunT > 0 || k.kickCool > 0) continue;
-      if (!inBox(k.side, b.x, b.y, 2) || !inBox(k.side, k.x, k.y, 6)) continue;
+      if (!inBox(k.end, b.x, b.y, 2) || !inBox(k.end, k.x, k.y, 6)) continue;
       const prm = this.params[k.side];
       const reach = (k.diveT > 0 ? 10 : 7) * prm.keeperReach;
       const d = dist(k.x, k.y, b.x, b.y);
@@ -671,7 +684,7 @@ export class Match {
         if (wasShot) { this.stats.saves[k.side]++; this.emit('save', { side: k.side, caught: true }); }
         else this.emit('catch', { side: k.side });
       } else {
-        const away = attackDir(k.side);
+        const away = attackDir(k.end);
         const r = this.rng();
         if (r < 0.4) {
           // Tipped round the post (or over the bar): it carries on past the goal for a corner.
@@ -776,7 +789,7 @@ export class Match {
 
   header(p) {
     const b = this.ball;
-    const gy = oppGoalY(p.side);
+    const gy = oppGoalY(p.end);
     const dGoal = dist(p.x, p.y, W / 2, gy);
     if (dGoal < 95) {
       // Head it at goal.
@@ -816,7 +829,7 @@ export class Match {
 
 export function makePlayer(id, side, role) {
   return {
-    id, side, role,
+    id, side, role, end: side,
     x: W / 2, y: side === 0 ? L * 0.75 : L * 0.25,
     vx: 0, vy: 0, tvx: 0, tvy: 0, accel: 10,
     fx: 0, fy: side === 0 ? -1 : 1,
@@ -900,7 +913,7 @@ export function kickBall(m, p, vx, vy, vz = 0) {
   const b = m.ball;
   b.owner = null; b.held = false;
   b.x = p.x + p.fx * 4; b.y = p.y + p.fy * 4;
-  if (Math.abs(b.x - p.x) < 0.5 && Math.abs(b.y - p.y) < 0.5) b.y += attackDir(p.side) * 3;
+  if (Math.abs(b.x - p.x) < 0.5 && Math.abs(b.y - p.y) < 0.5) b.y += attackDir(p.end) * 3;
   b.vx = vx; b.vy = vy; b.vz = vz; b.z = vz > 0 ? 1 : 0;
   b.lastTouch = p; b.intended = null; b.shotBy = null;
   p.kickCool = 0.28; p.kickT = 0.25; p.holdT = 0;

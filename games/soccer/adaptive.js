@@ -22,11 +22,16 @@ export function resetSkill(id = SKILL_ID) { setSkill(id, START, 0); }
 /** 1-10 for display. */
 export const skillLabel = (id = SKILL_ID) => Math.round(getSkill(id) * 9) + 1;
 
-/** result: 1 win, 0.5 draw, 0 loss (your side). margin 0..1 from the goal difference. */
+/**
+ * result: 1 win, 0.5 draw, 0 loss (your side). margin 0..1 from the goal difference.
+ * Sized from CPU-vs-CPU sims (see logic/ai.js effectiveSkill): 0.1 of skill is worth about a
+ * 5-10% swing in win chance, so after three settling-in matches one result moves the CPU by
+ * 0.035-0.065 (a narrow win nudges it, a thrashing a bit more). Small, steady steps.
+ */
 export function reportResult(result, margin = 0.5, id = SKILL_ID) {
   const games = ((save.get('skillGames') || {})[id] || 0) + 1;
-  const k = games <= 4 ? 0.14 : 0.08;
-  const delta = k * (result - 0.5) * 2 * (0.6 + 0.8 * margin);
+  const k = games <= 3 ? 0.1 : 0.05;
+  const delta = k * (result - 0.5) * 2 * (0.7 + 0.6 * margin);
   setSkill(id, getSkill(id) + delta, games);
 }
 

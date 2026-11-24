@@ -29,7 +29,23 @@ export const needsPens = (mode, score) => mode !== 'quick' && score[0] === score
  * Record a finished match. score [you, them]; pens [you, them] after a shoot-out.
  * Returns { outcome, won, cup?, streak?, ended? }.
  */
+/** Cup and Endless matches are marked as started, so leaving the page counts as quitting. */
+export function markStarted(data) {
+  if (data.mode === 'cup' || data.mode === 'endless') save.set('unfinished', { ...data });
+}
+
+/** Matches abandoned without the pause menu (closed the tab, reloaded, phone killed it). */
+export function settleUnfinished() {
+  const data = save.get('unfinished');
+  if (!data) return null;
+  const res = applyResult(data, QUIT_SCORE);
+  return { data, res };
+}
+
+export const QUIT_SCORE = [0, 3];
+
 export function applyResult(data, score, pens = null) {
+  save.set('unfinished', null);
   const won = pens ? pens[0] > pens[1] : score[0] > score[1];
   const draw = !pens && score[0] === score[1];
   const outcome = draw ? 'd' : won ? 'w' : 'l';

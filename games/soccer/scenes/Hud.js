@@ -7,7 +7,7 @@ import { modal, openHowTo, kitChip } from './common.js';
 import { PHASE } from '../logic/match.js';
 import { OX, OY } from './MatchScene.js';
 import { W, L } from '../logic/constants.js';
-import { applyResult, needsPens, matchData } from '../flow.js';
+import { applyResult, needsPens, matchData, QUIT_SCORE } from '../flow.js';
 import { save } from '../save.js';
 
 const BAR_H = 52;
@@ -43,6 +43,7 @@ export class Hud extends Phaser.Scene {
     this.clockText = text(this, WIDTH / 2, 41, '', { color: PALETTE.lavender });
     this.modeText = text(this, 66, 41, this.modeLabel(), { color: PALETTE.lavender, origin: [0, 0.5] });
 
+    this.dirG = this.add.graphics();   // which way you're attacking, next to the clock
     this.radar = this.add.graphics();
     this.controls = this.add.graphics();
     this.passLabel = text(this, PASS.x, PASS.y, 'PASS', { color: PALETTE.cream });
@@ -128,9 +129,20 @@ export class Hud extends Phaser.Scene {
     this.scoreText.setText(`${m.score[0]} - ${m.score[1]}`);
     const half = m.half === 1 ? '1st' : '2nd';
     this.clockText.setText(m.phase === PHASE.OVER ? 'Full time' : m.phase === PHASE.HALF ? 'Half time' : `${half}  ${m.minute}'`);
+    this.drawDirection();
     this.drawRadar();
     this.drawControls();
     this.updateHint();
+  }
+
+  drawDirection() {
+    const g = this.dirG; const up = this.m.ends[0] === 0;
+    const x = WIDTH / 2 + 62; const y = 41;
+    g.clear();
+    g.fillStyle(hex(this.ms.home.shirt));
+    if (up) g.fillTriangle(x - 6, y + 4, x + 6, y + 4, x, y - 5);
+    else g.fillTriangle(x - 6, y - 4, x + 6, y - 4, x, y + 5);
+    g.lineStyle(1, hex(PALETTE.cream)).strokeTriangle(...(up ? [x - 6, y + 4, x + 6, y + 4, x, y - 5] : [x - 6, y - 4, x + 6, y - 4, x, y + 5]));
   }
 
   drawRadar() {
@@ -144,6 +156,10 @@ export class Hud extends Phaser.Scene {
     g.fillStyle(hex(PALETTE.ink), 0.7).fillRect(R.x - 2, R.y - 2, R.w + 4, R.h + 4);
     g.lineStyle(1, 0xffffff, 0.5).strokeRect(R.x, R.y, R.w, R.h);
     g.fillStyle(0xffffff, 0.5).fillRect(R.x, R.y + R.h / 2, R.w, 1);
+    // The goal you're attacking, in gold (it changes at half time).
+    const gw = Math.round(R.w * 0.3);
+    const attackTop = m.ends[0] === 0;
+    g.fillStyle(hex(PALETTE.gold)).fillRect(R.x + (R.w - gw) / 2, attackTop ? R.y - 2 : R.y + R.h - 1, gw, 3);
     const sx = R.w / W; const sy = R.h / L;
     for (const p of m.players) {
       const c = p.side === 0 ? (p === m.active ? PALETTE.gold : this.ms.home.shirt) : this.ms.away.shirt;
@@ -269,7 +285,7 @@ export class Hud extends Phaser.Scene {
       ['Quit match', () => {
         md.destroy();
         if (mode === 'quick') { this.leave('Menu'); return; }
-        const res = applyResult(this.ms.data0, [0, 3]);
+        const res = applyResult(this.ms.data0, QUIT_SCORE);
         this.leave(mode === 'cup' ? 'Cup' : 'Endless', res);
       }],
     ]);

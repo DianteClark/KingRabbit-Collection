@@ -9,6 +9,7 @@ import { skillLabel, resetSkill } from '../adaptive.js';
 import { kitTexture } from '../sprites.js';
 import { PLAYER_TEAM, TEAMS, teamById } from '../logic/teams.js';
 import { ROUND_NAMES, opponentOf } from '../logic/cup.js';
+import { settleUnfinished } from '../flow.js';
 
 const LENGTH_LABEL = { short: 'Short', normal: 'Normal', long: 'Long' };
 const NEXT_LENGTH = { short: 'normal', normal: 'long', long: 'short' };
@@ -17,6 +18,8 @@ export class Menu extends Phaser.Scene {
   constructor() { super('Menu'); }
 
   create() {
+    // A Cup or Endless match left without the pause menu counts as quitting it.
+    const left = settleUnfinished();
     setBackground(this, PALETTE.night);
     this.drawPitchStrip();
     shadowTitle(this, WIDTH / 2, 40, 'POCKET');
@@ -55,6 +58,13 @@ export class Menu extends Phaser.Scene {
     });
     this.soundBtn = button(this, WIDTH - 52, 600, 88, 40, '', () => { setMuted(!isMuted()); this.syncSound(); });
     this.syncSound();
+    if (left) {
+      const what = left.data.mode === 'cup' ? 'Cup' : 'Endless';
+      const after = left.data.mode === 'cup' ? 'You are out of the cup.' : `Your run ended at ${left.res.streak} wins.`;
+      const m = modal(this, 'Match lost', [`You left your ${what} match`, 'before the end, so it', 'counts as a 3-0 defeat.', after], [
+        ['OK', () => { m.destroy(); this.scene.restart(); }],
+      ]);
+    }
   }
 
   /** Strip of real pitch art with two players chasing the ball, as a title picture. */

@@ -220,6 +220,25 @@ test('soccer: keepers catch soft shots and dive at wide ones', () => {
   assert.ok(dived >= 2, `dived for ${dived} of 5 wide shots`);
 });
 
+test('soccer: teams change ends at half time and score in the other goal', () => {
+  const where = { 1: [], 2: [] };
+  let keeperY2 = null;
+  for (let seed = 1; seed <= 6; seed++) {
+    const m = new Match({ skills: [0.7, 0.3], seed, halfSeconds: 60 });
+    while (m.phase !== PHASE.OVER) {
+      m.step(DT);
+      for (const e of m.events) if (e.type === 'goal' && e.side === 0) where[m.half].push(m.ball.y);
+      m.events.length = 0;
+      if (m.half === 2 && m.phase === PHASE.PLAY && keeperY2 === null) keeperY2 = m.teams[0].players[0].y;
+    }
+    assert.deepEqual(m.ends, [1, 0]);
+  }
+  assert.ok(where[1].length > 0 && where[2].length > 0, 'side 0 scores in both halves');
+  assert.ok(where[1].every((y) => y < 0), 'first half: into the top goal');
+  assert.ok(where[2].every((y) => y > C.L), 'second half: into the bottom goal');
+  assert.ok(keeperY2 < C.BOX_D, 'side 0 keeper now guards the top goal');
+});
+
 // ---------------------------------------------------------------- the human side
 
 /** A simple scripted "player" driving the touch inputs: run at goal, shoot in range, tackle. */
@@ -232,7 +251,7 @@ function humanBot() {
     if (passTap) { passTap = false; return input; }      // release between taps
     if (m.phase === PHASE.TAKING && m.sp.side === 0) { passTap = true; input.pass = true; return input; }
     if (b.owner === p) {
-      const gx = C.W / 2 - p.x; const gy = 0 - p.y;
+      const gx = C.W / 2 - p.x; const gy = C.oppGoalY(m.ends[0]) - p.y;   // ends swap at half time
       const d = Math.hypot(gx, gy);
       input.mx = gx / d; input.my = gy / d;
       if (d < 85 || shootHold > 0) {
@@ -411,4 +430,22 @@ test('soccer: keeper kits never clash with either team', () => {
     }
   }
   assert.ok(T.TEAMS.every((t) => t.shirt !== T.PLAYER_TEAM.shirt));
+});
+
+test('soccer: skill remap is monotonic and keeps the ends; adaptive steps stay small', async () => {
+  const { effectiveSkill } = await import(base + 'ai.js');
+  let prev = -1;
+  for (let s = 0; s <= 1.0001; s += 0.05) { const e = effectiveSkill(s); assert.ok(e > prev); prev = e; }
+  assert.equal(effectiveSkill(0), 0);
+  assert.equal(effectiveSkill(1), 1);
+  const A = await import(new URL('../games/soccer/adaptive.js', import.meta.url).href);
+  A.resetSkill('soccer-test');
+  for (let i = 0; i < 3; i++) A.reportResult(1, 0.3, 'soccer-test');      // settling in
+  const before = A.getSkill('soccer-test');
+  A.reportResult(1, 0, 'soccer-test');                                     // narrow win
+  const small = A.getSkill('soccer-test') - before;
+  A.reportResult(0, 1, 'soccer-test');                                     // heavy defeat
+  const big = before + small - A.getSkill('soccer-test');
+  assert.ok(small > 0.03 && small < 0.04, `narrow win step ${small}`);
+  assert.ok(big > 0.06 && big < 0.07, `thrashing step ${big}`);
 });

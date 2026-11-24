@@ -7,6 +7,8 @@ import {
 } from '../logic/constants.js';
 import { teamById, keeperKits } from '../logic/teams.js';
 import { kitTexture, dirIndex, ANIM } from '../sprites.js';
+import { markStarted } from '../flow.js';
+import { sound } from '../sound.js';
 
 // World layout: the pitch's (0, 0) corner sits at (OX, OY) in world pixels; the camera draws at 2x.
 export const OX = 48;
@@ -40,7 +42,7 @@ export class MatchScene extends Phaser.Scene {
     cam.setBackgroundColor('#4aa33a');
     cam.setZoom(ZOOM);
     // Extra room at the bottom so play near your goal can sit above the thumb buttons.
-    cam.setBounds(-8, 8, WORLD_W + 16, WORLD_H + 56);
+    cam.setBounds(-8, 8, WORLD_W + 16, WORLD_H + 100);
     cam.roundPixels = true;
     cam.fadeIn(200);
 
@@ -52,6 +54,7 @@ export class MatchScene extends Phaser.Scene {
     this.camPos = { x: OX + W / 2, y: OY + L / 2 };
     cam.centerOn(this.camPos.x, this.camPos.y);
 
+    markStarted(this.data0);
     this.scene.launch('Hud', { matchScene: this });
     this.hud = this.scene.get('Hud');
     window.__soccer = this;
@@ -153,20 +156,25 @@ export class MatchScene extends Phaser.Scene {
     const m = this.match;
     for (const e of m.events) {
       switch (e.type) {
-        case 'pass': case 'throw': case 'cross': sfx('move'); break;
-        case 'shot': case 'header': sfx('shoot'); break;
+        case 'pass': case 'throw': case 'cross': sound('pass'); break;
+        case 'shot': case 'header': sound('shot'); break;
         case 'tackle': case 'steal': sfx('capture'); break;
         case 'slide': sfx('flip'); break;
         case 'post': case 'bar': sfx('hit'); this.cameras.main.shake(120, 0.004); this.hud.toast(e.type === 'post' ? 'Off the post!' : 'Off the bar!'); break;
         case 'save': sfx('thud'); this.hud.toast(e.caught ? 'Great save!' : 'Saved!'); break;
-        case 'block': sfx('bounce'); break;
+        case 'block': sound('touch'); break;
         case 'hurdle': sfx('flip'); break;
         case 'goal': this.onGoal(e); break;
-        case 'whistle': sfx(e.kind === 'kickoff' ? 'select' : 'power'); if (e.kind === 'half') this.hud.banner('HALF TIME'); if (e.kind === 'full') this.hud.banner('FULL TIME'); break;
-        case 'throwin': this.hud.toast(e.side === 0 ? 'Your throw-in' : 'Their throw-in'); break;
-        case 'corner': this.hud.toast(e.side === 0 ? 'Corner to you' : 'Corner to them'); break;
-        case 'goalkick': this.hud.toast('Goal kick'); break;
-        case 'out': sfx('tap'); break;
+        case 'whistle':
+          if (e.kind === 'kickoff') sound('whistle');
+          if (e.kind === 'half') { sound('whistleLong'); this.hud.banner('HALF TIME'); }
+          if (e.kind === 'full') { sound('whistleFull'); this.hud.banner('FULL TIME'); }
+          break;
+        case 'ends': this.hud.banner('SECOND HALF', PALETTE.gold, this.match.ends[0] === 1 ? 'Ends swapped: you attack DOWN' : 'Ends swapped: you attack UP'); break;
+        case 'throwin': sound('whistle'); this.hud.toast(e.side === 0 ? 'Your throw-in' : 'Their throw-in'); break;
+        case 'corner': sound('whistle'); this.hud.toast(e.side === 0 ? 'Corner to you' : 'Corner to them'); break;
+        case 'goalkick': sound('whistle'); this.hud.toast('Goal kick'); break;
+        case 'out': break;
         case 'switch': sfx('tap'); break;
         default: break;
       }
@@ -184,12 +192,13 @@ export class MatchScene extends Phaser.Scene {
   }
 
   confetti(color, e) {
-    const gy = e.side === 0 ? OY : OY + L;
+    const top = this.match.ends[e.side] === 0;   // scored in the top goal
+    const gy = top ? OY : OY + L;
     for (let i = 0; i < 26; i++) {
       const c = i % 3 === 0 ? 0xffffff : hex(color);
       const r = this.add.rectangle(OX + W / 2 + (Math.random() - 0.5) * GOAL_W, gy, 2, 2, c).setDepth(99999);
       this.tweens.add({
-        targets: r, x: r.x + (Math.random() - 0.5) * 120, y: gy + (e.side === 0 ? 1 : -1) * (20 + Math.random() * 90),
+        targets: r, x: r.x + (Math.random() - 0.5) * 120, y: gy + (top ? 1 : -1) * (20 + Math.random() * 90),
         alpha: 0, duration: 900 + Math.random() * 700, ease: 'Cubic.easeOut', onComplete: () => r.destroy(),
       });
     }
@@ -264,11 +273,12 @@ export class MatchScene extends Phaser.Scene {
     const b = m.ball;
     const cam = this.cameras.main;
     // Lead the ball a little and keep it above the thumb controls.
-    // Near the top goal look further up so the goal clears the scoreboard; near your own goal
-    // keep the ball above the thumb buttons.
+    // Near the top goal look further up so the goal clears the scoreboard.
     const up = Math.max(0, Math.min(1, (L * 0.45 - b.y) / (L * 0.35)));
     let tx = OX + W / 2 + (b.x - W / 2) * 0.75 + b.vx * 0.12;
-    let ty = OY + b.y + b.vy * 0.2 + 18 - up * 52;
+    // Mirror for the bottom goal (you attack it after half time): lift play clear of the buttons.
+    const down = Math.max(0, Math.min(1, (b.y - L * 0.6) / (L * 0.3)));
+    let ty = OY + b.y + b.vy * 0.2 + 18 - up * 52 + down * 40;
     if (m.phase === PHASE.GOAL) { tx = OX + b.x; ty = OY + b.y + (b.y < L / 2 ? 50 : -30); }
     const k = dt > 0 ? Math.min(1, dt * 5) : 1;
     this.camPos.x += (tx - this.camPos.x) * k;

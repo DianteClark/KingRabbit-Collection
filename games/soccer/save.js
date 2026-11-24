@@ -6,7 +6,7 @@ export const save = createSave('soccer', {
   record: { w: 0, d: 0, l: 0 },
   cup: null, cupsWon: 0, cupRuns: 0,
   endless: { streak: 0 }, endlessBest: 0,
-  length: 'normal', opponent: 'foxes', seenHelp: false,
+  length: 'normal', opponent: 'foxes', seenHelp: false, unfinished: null,
 });
 
 /** outcome 'w' | 'd' | 'l' */
