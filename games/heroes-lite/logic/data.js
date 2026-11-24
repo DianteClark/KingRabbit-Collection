@@ -137,18 +137,19 @@ export const SPELLS = {
 export const SPELL_IDS = Object.keys(SPELLS);
 export const spellsOfLevel = (lv) => SPELL_IDS.filter((s) => SPELLS[s].level === lv);
 
-// Artifacts: icon = [x, y] on Items/AllItems.png (16x16).
+// Artifacts: icon = [x, y] on art/artifacts.png (16x16), cut from HAS Items/AllItems.png
+// so the game doesn't download the whole 600KB sheet for 10 icons.
 export const ARTIFACTS = {
-  sword: { name: 'Broadsword', desc: '+2 Attack', icon: [512, 304], atk: 2 },
-  shield: { name: 'Lion Shield', desc: '+2 Defense', icon: [512, 128], def: 2 },
-  helm: { name: 'Great Helm', desc: '+1 Attack, +1 Defense', icon: [176, 304], atk: 1, def: 1 },
-  hat: { name: 'Wizard Hat', desc: '+2 Knowledge', icon: [288, 320], know: 2 },
-  scepter: { name: 'Sun Scepter', desc: '+2 Spell Power', icon: [576, 432], pow: 2 },
-  boots: { name: 'Winged Boots', desc: '+25 movement a day', icon: [304, 144], move: 25 },
-  coin: { name: 'Endless Coin', desc: '+250 gold a day', icon: [192, 512], gold: 250 },
-  medal: { name: 'Hero Medal', desc: '+1 to all skills', icon: [176, 528], atk: 1, def: 1, pow: 1, know: 1 },
-  compass: { name: 'Spyglass', desc: '+2 sight range', icon: [176, 512], sight: 2 },
-  lamp: { name: 'Genie Lamp', desc: '+1 Power, +1 Knowledge', icon: [288, 528], pow: 1, know: 1 },
+  sword: { name: 'Broadsword', desc: '+2 Attack', icon: [0, 0], atk: 2 },
+  shield: { name: 'Lion Shield', desc: '+2 Defense', icon: [16, 0], def: 2 },
+  helm: { name: 'Great Helm', desc: '+1 Attack, +1 Defense', icon: [32, 0], atk: 1, def: 1 },
+  hat: { name: 'Wizard Hat', desc: '+2 Knowledge', icon: [48, 0], know: 2 },
+  scepter: { name: 'Sun Scepter', desc: '+2 Spell Power', icon: [64, 0], pow: 2 },
+  boots: { name: 'Winged Boots', desc: '+25 movement a day', icon: [80, 0], move: 25 },
+  coin: { name: 'Endless Coin', desc: '+250 gold a day', icon: [96, 0], gold: 250 },
+  medal: { name: 'Hero Medal', desc: '+1 to all skills', icon: [112, 0], atk: 1, def: 1, pow: 1, know: 1 },
+  compass: { name: 'Spyglass', desc: '+2 sight range', icon: [128, 0], sight: 2 },
+  lamp: { name: 'Genie Lamp', desc: '+1 Power, +1 Knowledge', icon: [144, 0], pow: 1, know: 1 },
 };
 export const ARTIFACT_IDS = Object.keys(ARTIFACTS);
 

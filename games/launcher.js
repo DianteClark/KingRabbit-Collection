@@ -99,3 +99,8 @@ document.addEventListener('click', (e) => {
 
 // Coming back with the browser's back button can restore a stale page: refresh it.
 window.addEventListener('pageshow', (e) => { if (e.persisted) window.location.reload(); });
+
+// Cache the collection on the phone for quick, offline-friendly opens (see public/sw.js).
+if ('serviceWorker' in navigator && location.hostname !== 'localhost') {
+  navigator.serviceWorker.register('./sw.js', { scope: './' }).catch(() => {});
+}

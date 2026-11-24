@@ -18,7 +18,7 @@ import tGrass from '../../shared/assets/has-heroic-fantasy/e-all-in-one-compilat
 import tSand from '../../shared/assets/has-heroic-fantasy/e-all-in-one-compilation/HAS2020-alpha-1/Biomes/SandBiome/SB-LandTileset.png?url';
 import tIce from '../../shared/assets/has-heroic-fantasy/e-all-in-one-compilation/HAS2020-alpha-1/Biomes/IceBiome/IB-LandTileset.png?url';
 import tDirt from '../../shared/assets/has-heroic-fantasy/e-all-in-one-compilation/HAS2020-alpha-1/Biomes/DirtBiome/DB-LandTileset.png?url';
-import items from '../../shared/assets/has-heroic-fantasy/e-all-in-one-compilation/HAS2020-alpha-1/Items/AllItems.png?url';
+import items from './art/artifacts.png?url';
 import spells from '../../shared/assets/has-heroic-fantasy/e-all-in-one-compilation/HAS2020-alpha-1/Magic-Spells/MagicSpellsIcons.png?url';
 import battle from '../../shared/assets/has-heroic-fantasy/a-terrain-world-maps/HAS-Battlegrounds-v.0.1/Battlegrounds-sheet.png?url';
 

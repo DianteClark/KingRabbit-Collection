@@ -48,6 +48,8 @@ export async function startGame({ scenes, background = PALETTE.night, orientatio
   game.events.once('ready', sync);
   sync();
 
+  watchFirstScreen(game);
+  registerOffline();
   tryOrientationLock(land ? 'landscape' : 'portrait');
   window.__game = game; // handy for debugging in the browser console
   return game;
@@ -69,4 +71,26 @@ function tryOrientationLock(mode) {
   const lock = () => screen.orientation?.lock?.(mode).catch(() => {});
   lock();
   window.addEventListener('pointerup', lock, { once: true });
+}
+
+/**
+ * Keep the page's loading screen (injected by vite.config.js) showing loader progress until the
+ * game's first real screen is up, then remove it.
+ */
+function watchFirstScreen(game) {
+  const done = () => { window.__bootDone?.(); };
+  const timer = setInterval(() => {
+    if (!game.isBooted) return;
+    const active = game.scene.getScenes(true);
+    const loading = active.find((s) => s.load?.isLoading?.());
+    if (loading) { window.__bootProgress?.(loading.load.progress); return; }
+    const real = active.some((s) => !/boot|preload|load/i.test(s.scene.key));
+    if (real) { clearInterval(timer); done(); }
+  }, 100);
+}
+
+/** Cache each game on the phone after the first visit so later opens are quick, even offline. */
+function registerOffline() {
+  if (!('serviceWorker' in navigator) || location.hostname === 'localhost') return;
+  try { navigator.serviceWorker.register(new URL('../sw.js', location.href), { scope: new URL('../', location.href).pathname }).catch(() => {}); } catch { /* ignore */ }
 }
