@@ -3,13 +3,14 @@
 export const RULES = {
   title: 'Pocket Soccer',
   sections: [
-    { heading: 'Goal', text: 'Five-a-side football: score more goals than the other team before the final whistle. You play in blue. You attack up the screen in the first half; the teams change ends at half time, so in the second half you attack down. The little arrow next to the clock and the gold goal on the mini-map always show your way.' },
+    { heading: 'Goal', text: 'Five-a-side football: score more goals than the other team before the final whistle. Turn your phone sideways: the pitch runs left to right. You play in blue and attack the right-hand goal in the first half; the teams change ends at half time, so in the second half you attack the left-hand goal. The little arrow next to the clock and the gold goal on the mini-map (top right) always show your way.' },
     {
       heading: 'Controls',
       items: [
-        'Left half of the screen: put your thumb down anywhere and drag to run. The stick appears where you touch.',
+        'Left thumb: put it down anywhere on the left side of the screen and drag to run. The stick appears where you touch.',
+        'Right thumb: SHOOT (big button) and PASS (below it, toward the middle) in the bottom-right corner.',
         'PASS: passes to the best teammate in the direction you are pushing (or facing).',
-        'SHOOT: hold to build power (the bar above your player), let go to shoot. Push left or right while shooting to aim for a corner. Full power can fly over the bar from far out.',
+        'SHOOT: hold to build power (the bar above your player), let go to shoot. Push up or down while shooting to aim for a corner. Full power can fly over the bar from far out.',
         'Without the ball, PASS becomes TACKLE: a slide toward the ball. Mistime it and you are on the floor for a moment.',
         'Without the ball, SHOOT switches to the teammate nearest the ball.',
         'You always control the player marked with the gold arrow. It switches to the player nearest the ball by itself.',

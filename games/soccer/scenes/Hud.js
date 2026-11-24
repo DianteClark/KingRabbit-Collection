@@ -1,20 +1,23 @@
 import Phaser from 'phaser';
 import { PALETTE, hex } from '../../../shared/core/palette.js';
 import { text, button } from '../../../shared/core/ui.js';
-import { WIDTH } from '../../../shared/core/boot.js';
+import { WIDTH, HEIGHT } from './common.js';
 import { sfx } from '../../../shared/core/sfx.js';
 import { modal, openHowTo, kitChip } from './common.js';
 import { PHASE } from '../logic/match.js';
-import { OX, OY } from './MatchScene.js';
+import { dirToPitch } from '../logic/view.js';
 import { W, L } from '../logic/constants.js';
 import { applyResult, needsPens, matchData, QUIT_SCORE } from '../flow.js';
 import { save } from '../save.js';
 
-const BAR_H = 52;
-const STICK = { x: 84, y: 540, r: 46, knob: 22 };
-const SHOOT = { x: 306, y: 520, r: 44 };
-const PASS = { x: 222, y: 584, r: 38 };
-const RADAR = { x: WIDTH - 50, y: BAR_H + 8, w: 42, h: 72 };
+// Landscape layout (640x360): scoreboard bar with the mini-map inside it across the top, the
+// floating stick on the left edge, Shoot and Pass on the right edge.
+const BAR_H = 44;
+const STICK = { x: 78, y: 286, r: 44, knob: 21 };
+const STICK_ZONE = 270;            // touches left of this (below the bar) drive the stick
+const SHOOT = { x: 588, y: 266, r: 42 };
+const PASS = { x: 520, y: 320, r: 34 };
+const RADAR = { x: 486, y: 3, w: 72, h: 38 };
 
 /** Overlay for the match: scoreboard, radar, touch controls, messages and menus. */
 export class Hud extends Phaser.Scene {
@@ -30,25 +33,25 @@ export class Hud extends Phaser.Scene {
 
   create() {
     const home = this.ms.home; const away = this.ms.away;
-    // Top bar
+    // Top bar: back, score, clock and attack arrow, mini-map, help.
     this.add.rectangle(0, 0, WIDTH, BAR_H, hex(PALETTE.night)).setOrigin(0);
     this.add.rectangle(0, BAR_H, WIDTH, 2, hex(PALETTE.ink)).setOrigin(0);
-    button(this, 26, 26, 40, 38, '<', () => this.pause(), { size: 32, fill: PALETTE.cream });
-    button(this, WIDTH - 26, 26, 40, 38, '?', () => this.help(), { size: 32, fill: PALETTE.gold });
-    kitChip(this, 66, 18, home);
-    kitChip(this, WIDTH - 66, 18, away);
-    text(this, 100, 18, home.short, { color: PALETTE.cream });
-    text(this, WIDTH - 100, 18, away.short, { color: PALETTE.cream });
-    this.scoreText = text(this, WIDTH / 2, 17, '0 - 0', { size: 32, color: PALETTE.gold });
-    this.clockText = text(this, WIDTH / 2, 41, '', { color: PALETTE.lavender });
-    this.modeText = text(this, 66, 41, this.modeLabel(), { color: PALETTE.lavender, origin: [0, 0.5] });
+    button(this, 24, 22, 40, 36, '<', () => this.pause(), { size: 32, fill: PALETTE.cream });
+    button(this, WIDTH - 24, 22, 40, 36, '?', () => this.help(), { size: 32, fill: PALETTE.gold });
+    kitChip(this, 62, 22, home);
+    kitChip(this, 338, 22, away);
+    text(this, 96, 22, home.short, { color: PALETTE.cream });
+    text(this, 304, 22, away.short, { color: PALETTE.cream });
+    this.scoreText = text(this, 200, 21, '0 - 0', { size: 32, color: PALETTE.gold });
+    this.clockText = text(this, 410, 22, '', { color: PALETTE.lavender });
+    this.mode = this.modeLabel();
 
     this.dirG = this.add.graphics();   // which way you're attacking, next to the clock
     this.radar = this.add.graphics();
     this.controls = this.add.graphics();
     this.passLabel = text(this, PASS.x, PASS.y, 'PASS', { color: PALETTE.cream });
     this.shootLabel = text(this, SHOOT.x, SHOOT.y, 'SHOOT', { color: PALETTE.cream });
-    this.hint = text(this, WIDTH / 2, 470, '', { color: PALETTE.cream }).setAlpha(0);
+    this.hint = text(this, 330, 334, '', { color: PALETTE.cream }).setAlpha(0);
     this.hintBg = null;
 
     this.setupInput();
@@ -75,7 +78,7 @@ export class Hud extends Phaser.Scene {
       if (this.modalOpen || p.y < BAR_H + 4) return;
       if (inCircle(p, SHOOT)) { this.buttons.shoot.add(p.id); return; }
       if (inCircle(p, PASS)) { this.buttons.pass.add(p.id); return; }
-      if (p.x < WIDTH * 0.58 && this.stick.id === null) {
+      if (p.x < STICK_ZONE && this.stick.id === null) {
         this.stick = { id: p.id, ox: p.x, oy: p.y, dx: 0, dy: 0 };
       }
     });
@@ -117,7 +120,9 @@ export class Hud extends Phaser.Scene {
       pass = pass || k.X.isDown || k.J.isDown;
       shoot = shoot || k.SPACE.isDown || k.K.isDown;
     }
-    return { mx, my, pass, shoot };
+    // Screen directions -> pitch directions (the pitch is drawn turned on its side).
+    const d = dirToPitch(mx, my);
+    return { mx: d.x, my: d.y, pass, shoot };
   }
 
   // ------------------------------------------------------------------ drawing
@@ -128,7 +133,8 @@ export class Hud extends Phaser.Scene {
     const m = this.m;
     this.scoreText.setText(`${m.score[0]} - ${m.score[1]}`);
     const half = m.half === 1 ? '1st' : '2nd';
-    this.clockText.setText(m.phase === PHASE.OVER ? 'Full time' : m.phase === PHASE.HALF ? 'Half time' : `${half}  ${m.minute}'`);
+    const mode = this.mode ? `${this.mode} ` : '';
+    this.clockText.setText(m.phase === PHASE.OVER ? 'Full time' : m.phase === PHASE.HALF ? 'Half time' : `${mode}${half} ${m.minute}'`);
     this.drawDirection();
     this.drawRadar();
     this.drawControls();
@@ -136,38 +142,35 @@ export class Hud extends Phaser.Scene {
   }
 
   drawDirection() {
-    const g = this.dirG; const up = this.m.ends[0] === 0;
-    const x = WIDTH / 2 + 62; const y = 41;
+    // Arrow pointing the way you attack: right in the first half, left after the change of ends.
+    const g = this.dirG; const right = this.m.ends[0] === 0;
+    const x = 470; const y = 22;
+    const pts = right ? [x - 5, y - 6, x - 5, y + 6, x + 5, y] : [x + 5, y - 6, x + 5, y + 6, x - 5, y];
     g.clear();
-    g.fillStyle(hex(this.ms.home.shirt));
-    if (up) g.fillTriangle(x - 6, y + 4, x + 6, y + 4, x, y - 5);
-    else g.fillTriangle(x - 6, y - 4, x + 6, y - 4, x, y + 5);
-    g.lineStyle(1, hex(PALETTE.cream)).strokeTriangle(...(up ? [x - 6, y + 4, x + 6, y + 4, x, y - 5] : [x - 6, y - 4, x + 6, y - 4, x, y + 5]));
+    g.fillStyle(hex(this.ms.home.shirt)).fillTriangle(...pts);
+    g.lineStyle(1, hex(PALETTE.cream)).strokeTriangle(...pts);
   }
 
   drawRadar() {
+    // Mini-map in the scoreboard bar, laid out like the pitch on screen (goals left and right).
     const g = this.radar; const m = this.m; const R = RADAR;
     g.clear();
-    // Fade out of the way when the play is right underneath it (top corners).
-    const v = this.ms.cameras.main.worldView;
-    const bx = (OX + m.ball.x - v.x) * 2; const by = (OY + m.ball.y - v.y) * 2;
-    const under = bx > R.x - 40 && by < R.y + R.h + 50;
-    g.setAlpha(under ? 0.25 : 1);
-    g.fillStyle(hex(PALETTE.ink), 0.7).fillRect(R.x - 2, R.y - 2, R.w + 4, R.h + 4);
-    g.lineStyle(1, 0xffffff, 0.5).strokeRect(R.x, R.y, R.w, R.h);
-    g.fillStyle(0xffffff, 0.5).fillRect(R.x, R.y + R.h / 2, R.w, 1);
+    g.fillStyle(hex(PALETTE.leaf), 0.6).fillRect(R.x, R.y, R.w, R.h);
+    g.lineStyle(1, 0xffffff, 0.6).strokeRect(R.x, R.y, R.w, R.h);
+    g.fillStyle(0xffffff, 0.6).fillRect(R.x + R.w / 2, R.y, 1, R.h);
     // The goal you're attacking, in gold (it changes at half time).
-    const gw = Math.round(R.w * 0.3);
-    const attackTop = m.ends[0] === 0;
-    g.fillStyle(hex(PALETTE.gold)).fillRect(R.x + (R.w - gw) / 2, attackTop ? R.y - 2 : R.y + R.h - 1, gw, 3);
-    const sx = R.w / W; const sy = R.h / L;
+    const gh = Math.round(R.h * 0.34);
+    const right = m.ends[0] === 0;
+    g.fillStyle(hex(PALETTE.gold)).fillRect(right ? R.x + R.w - 1 : R.x - 2, R.y + (R.h - gh) / 2, 3, gh);
+    const at = (x, y) => ({ x: Math.round(R.x + ((L - y) / L) * R.w), y: Math.round(R.y + (x / W) * R.h) });
     for (const p of m.players) {
       const c = p.side === 0 ? (p === m.active ? PALETTE.gold : this.ms.home.shirt) : this.ms.away.shirt;
-      g.fillStyle(hex(PALETTE.ink)).fillRect(Math.round(R.x + p.x * sx) - 2, Math.round(R.y + p.y * sy) - 2, 4, 4);
-      g.fillStyle(hex(c)).fillRect(Math.round(R.x + p.x * sx) - 1, Math.round(R.y + p.y * sy) - 1, 2, 2);
+      const q = at(p.x, p.y);
+      g.fillStyle(hex(PALETTE.ink)).fillRect(q.x - 2, q.y - 2, 4, 4);
+      g.fillStyle(hex(c)).fillRect(q.x - 1, q.y - 1, 2, 2);
     }
-    const b = m.ball;
-    g.fillStyle(0xffffff).fillRect(Math.round(R.x + b.x * sx) - 1, Math.round(R.y + b.y * sy) - 1, 3, 3);
+    const q = at(m.ball.x, m.ball.y);
+    g.fillStyle(0xffffff).fillRect(q.x - 1, q.y - 1, 3, 3);
   }
 
   drawControls() {
@@ -237,17 +240,16 @@ export class Hud extends Phaser.Scene {
   // ------------------------------------------------------------------ messages
 
   toast(msg) {
-    const bg = this.add.rectangle(WIDTH / 2, 150, 10, 28, hex(PALETTE.ink), 0.6).setDepth(40);
-    const t = text(this, WIDTH / 2, 150, msg, { color: PALETTE.gold }).setDepth(41);
-    bg.width = t.width + 20;
+    const t = text(this, WIDTH / 2, 72, msg, { color: PALETTE.gold }).setDepth(41);
+    const bg = this.add.rectangle(WIDTH / 2, 72, t.width + 20, 28, hex(PALETTE.ink), 0.6).setDepth(40);
     this.tweens.add({ targets: [t, bg], alpha: 0, delay: 1000, duration: 300, onComplete: () => { t.destroy(); bg.destroy(); } });
   }
 
   banner(msg, color = PALETTE.gold, sub = '') {
     const c = this.add.container(0, 0).setDepth(45);
-    c.add(this.add.rectangle(WIDTH / 2, 250, WIDTH, sub ? 92 : 64, hex(PALETTE.ink), 0.7));
-    c.add(text(this, WIDTH / 2, sub ? 236 : 250, msg, { size: 32, color }));
-    if (sub) c.add(text(this, WIDTH / 2, 272, sub, { color: PALETTE.cream }));
+    c.add(this.add.rectangle(WIDTH / 2, 160, WIDTH, sub ? 92 : 64, hex(PALETTE.ink), 0.7));
+    c.add(text(this, WIDTH / 2, sub ? 146 : 160, msg, { size: 32, color }));
+    if (sub) c.add(text(this, WIDTH / 2, 182, sub, { color: PALETTE.cream }));
     c.setScale(1, 0);
     this.tweens.add({ targets: c, scaleY: 1, duration: 160, ease: 'Back.easeOut' });
     this.tweens.add({ targets: c, alpha: 0, delay: 1800, duration: 300, onComplete: () => c.destroy() });
