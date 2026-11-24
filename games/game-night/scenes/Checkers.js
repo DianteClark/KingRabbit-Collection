@@ -26,7 +26,7 @@ export class Checkers extends Phaser.Scene {
     this.g = checkerboard(this, { left: LEFT, top: TOP, cell: CELL, frame: PALETTE.red });
     this.hl = highlighter(this, this.g);
     this.pieces = this.add.container(0, 0).setDepth(10);
-    this.input.on('pointerup', (p) => this.tap(this.g.indexAt(p.x, p.y)));
+    this.input.on('pointerup', (p, over) => { if (!over.length) this.tap(this.g.indexAt(p.x, p.y)); });
     text(this, WIDTH / 2, TOP + CELL * 8 + 40, 'Captures are compulsory', { color: PALETTE.lavender });
     this.restart();
   }
@@ -89,7 +89,9 @@ export class Checkers extends Phaser.Scene {
     const mine = this.board[i] && side(this.board[i]) === this.turn;
     if (mine && this.moves.some((m) => m.from === i)) { this.selected = i; this.draw(); return; }
     if (this.selected >= 0) {
-      const m = this.moves.find((x) => x.from === this.selected && x.to === i);
+      // Two jump routes can end on the same square: take the one that captures the most.
+      const m = this.moves.filter((x) => x.from === this.selected && x.to === i)
+        .sort((a, b) => b.captured.length - a.captured.length)[0];
       if (m) { this.apply(m); return; }
     }
     this.selected = -1;
@@ -100,10 +102,17 @@ export class Checkers extends Phaser.Scene {
     this.busy = true;
     this.selected = -1;
     // Hop the piece along its path, then commit.
-    const piece = this.pieces.list.find((o) => {
-      const c = this.g.center(m.from); return o.x === c.x && o.y === c.y;
-    });
+    // The piece (and the crown on top of a king) hop together along the path.
+    const c0 = this.g.center(m.from);
+    const sprites = this.pieces.list.filter((o) => o.x === c0.x && (o.y === c0.y || o.y === c0.y - 7));
+    const piece = sprites[0];
     const hops = m.path.slice(1).map((sq) => this.g.center(sq));
+    // Fade out the captured pieces one by one as the jumper passes over them.
+    m.captured.forEach((sq, k) => {
+      const cc = this.g.center(sq);
+      const gone = this.pieces.list.filter((o) => o.x === cc.x && (o.y === cc.y || o.y === cc.y - 7));
+      this.tweens.add({ targets: gone, alpha: 0, delay: 160 * (k + 1) - 60, duration: 120 });
+    });
     const finish = () => {
       const before = this.board[m.from];
       this.board = play(this.board, m);
@@ -117,10 +126,10 @@ export class Checkers extends Phaser.Scene {
       this.next();
     };
     if (!piece) { finish(); return; }
-    piece.setDepth(20);
+    sprites.forEach((sp) => this.pieces.bringToTop(sp));
     this.tweens.chain({
-      targets: piece,
-      tweens: hops.map((h) => ({ x: h.x, y: h.y, duration: 160, ease: 'Quad.easeOut' })),
+      targets: sprites,
+      tweens: hops.map((h) => ({ x: h.x, y: { getEnd: (target) => h.y - (target === sprites[1] ? 7 : 0) }, duration: 160, ease: 'Quad.easeOut' })),
       onComplete: finish,
     });
   }
@@ -136,12 +145,14 @@ export class Checkers extends Phaser.Scene {
 
   finish(winner) {
     this.over = true;
+    const left = this.board.filter((p) => p && side(p) === other(winner)).length;
+    const won = this.board.filter((p) => p && side(p) === winner).length;
     const title = this.mode === 'cpu' ? (winner === 'd' ? 'You win!' : 'CPU wins') : `${this.name(winner)} wins!`;
     this.status.setText(title);
     sfx(this.mode === 'pvp' || winner === 'd' ? 'win' : 'lose');
     endGame(this, {
-      id: 'checkers', mode: this.mode, title, lines: ['The other side has no moves left'],
-      outcome: winner === 'd' ? 'w' : 'l', onAgain: () => this.restart(),
+      id: 'checkers', mode: this.mode, title, lines: [left ? 'The other side has no moves left' : 'Every piece captured'],
+      outcome: winner === 'd' ? 'w' : 'l', margin: Math.min(1, won / 8), onAgain: () => this.restart(),
     });
   }
 }

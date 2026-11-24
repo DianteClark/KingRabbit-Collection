@@ -69,15 +69,44 @@ export function cpuTarget(shots, sunkCells, remaining, rng = Math.random, level 
     }
     return unshot[Math.floor(rng() * unshot.length)];
   }
+  if (openHits.length && cfg.density && rng() < cfg.density) {
+    // Hard: of all the ways the remaining ships could lie over the unsunk hits, which free square
+    // is covered most often?
+    const hitSet = new Set(openHits);
+    const scores = new Array(N * N).fill(0);
+    for (const len of remaining) {
+      for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) {
+        for (const horizontal of [true, false]) {
+          if (horizontal ? c + len > N : r + len > N) continue;
+          const cells = Array.from({ length: len }, (_, k) => (horizontal ? r * N + c + k : (r + k) * N + c));
+          if (!cells.every((x) => free(x) || hitSet.has(x))) continue;
+          const covered = cells.filter((x) => hitSet.has(x)).length;
+          if (!covered) continue;
+          for (const x of cells) if (free(x)) scores[x] += covered * covered;
+        }
+      }
+    }
+    let best = 0; let picks = [];
+    for (let i = 0; i < N * N; i++) {
+      if (scores[i] > best) { best = scores[i]; picks = [i]; } else if (best && scores[i] === best) picks.push(i);
+    }
+    if (picks.length) return picks[Math.floor(rng() * picks.length)];
+  }
   if (openHits.length) {
     const cands = [];
-    if (openHits.length >= 2) {
-      const horizontal = Math.floor(openHits[0] / N) === Math.floor(openHits[1] / N);
-      const line = openHits.sort((a, b) => a - b);
-      const step = horizontal ? 1 : N;
-      const before = line[0] - step; const after = line[line.length - 1] + step;
-      if (free(before) && (!horizontal || Math.floor(before / N) === Math.floor(line[0] / N))) cands.push(before);
-      if (free(after) && (!horizontal || Math.floor(after / N) === Math.floor(line[0] / N))) cands.push(after);
+    const hitSet = new Set(openHits);
+    // Lines of 2+ touching hits show which way a ship lies: shoot at the open ends of those lines.
+    for (const h of openHits) {
+      for (const step of [1, N]) {
+        const sameLine = (a, b) => step === N || Math.floor(a / N) === Math.floor(b / N);
+        if (hitSet.has(h - step) && sameLine(h, h - step)) continue;          // not the start of a run
+        let end = h;
+        while (hitSet.has(end + step) && sameLine(end, end + step)) end += step;
+        if (end === h) continue;                                                // single hit
+        const before = h - step; const after = end + step;
+        if (free(before) && sameLine(h, before)) cands.push(before);
+        if (free(after) && sameLine(end, after)) cands.push(after);
+      }
     }
     if (!cands.length) {
       for (const h of openHits) {

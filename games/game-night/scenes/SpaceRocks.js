@@ -172,6 +172,14 @@ export class SpaceRocks extends Phaser.Scene {
       const a = Math.atan2(this.ship.y - u.y, this.ship.x - u.x) + (Math.random() - 0.5) * 2 * this.cfg.ufoAim;
       this.shoot(u.x, u.y, a, 220, true);
     }
+    const s = this.ship;
+    if (s.alive && s.invuln <= 0 && Math.hypot(s.x - u.x, s.y - u.y) < 20) {
+      // Ramming the saucer destroys both.
+      this.burst(u.x, u.y, PALETTE.red);
+      u.img.destroy(); this.ufo = null; this.ufoTimer = this.cfg.ufoEvery;
+      this.crash();
+      return;
+    }
     if (u.x < -20 || u.x > WIDTH + 20) { u.img.destroy(); this.ufo = null; this.ufoTimer = this.cfg.ufoEvery; }
   }
 

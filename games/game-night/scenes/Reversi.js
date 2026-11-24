@@ -40,9 +40,11 @@ export class Reversi extends Phaser.Scene {
       this.add.image(x, y, 'reversi', 'cell').setScale(SCALE);
     }
 
-    this.hints = this.add.graphics();
+    this.hints = this.add.graphics().setDepth(5);
+    this.lastMark = this.add.graphics().setDepth(6);
     this.discs = new Array(64).fill(null);
-    this.input.on('pointerup', (p) => {
+    this.input.on('pointerup', (p, over) => {
+      if (over.length) return;   // a popup or button is on top
       const cx = Math.floor((p.x - LEFT) / CELL);
       const cy = Math.floor((p.y - TOP) / CELL);
       if (cx >= 0 && cx < SIZE && cy >= 0 && cy < SIZE) this.humanMove(cy * SIZE + cx);
@@ -72,6 +74,7 @@ export class Reversi extends Phaser.Scene {
     this.turn = 1;
     this.over = false;
     this.busy = false;
+    this.lastMove = -1;
     this.refresh();
   }
 
@@ -87,6 +90,13 @@ export class Reversi extends Phaser.Scene {
     this.counts[1].setText(String(c.dark));
     this.counts[2].setText(String(c.light));
     this.hints.clear();
+    this.lastMark.clear();
+    if (this.lastMove >= 0) {
+      // Small red square on the disc that was just played.
+      const { x, y } = this.pos(this.lastMove);
+      this.lastMark.fillStyle(hex(PALETTE.ink)).fillRect(x - 4, y - 4, 8, 8);
+      this.lastMark.fillStyle(hex(PALETTE.red)).fillRect(x - 2, y - 2, 4, 4);
+    }
     if (this.over) return;
     this.status.setText(this.isCpuTurn() ? 'CPU is thinking...' : `${this.name(this.turn)} to move`);
     if (!this.isCpuTurn()) {
@@ -116,6 +126,9 @@ export class Reversi extends Phaser.Scene {
   apply(i) {
     const { board, flips } = play(this.board, i, this.turn);
     this.board = board;
+    this.lastMove = i;
+    this.lastMark.clear();
+    this.hints.clear();
     const { x, y } = this.pos(i);
     const d = this.add.image(x, y, 'reversi', FRAME[this.turn]).setScale(0);
     this.tweens.add({ targets: d, scale: SCALE, duration: 150, ease: 'Back.easeOut' });

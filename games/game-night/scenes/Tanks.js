@@ -271,9 +271,19 @@ export class Tanks extends Phaser.Scene {
     const centred = Math.abs(e.x - cx) < 3 && Math.abs(e.y - cy) < 3;
     // Re-plan at tile centres, when stuck, or every so often.
     if ((centred && e.thinkT <= 0) || e.stuck > 0.4 || !e.plan) {
+      const [sdx, sdy] = DIRS[e.dir];
+      const wasStuck = e.stuck > 0.4 && this.solidAt(e.x + sdx * 16, e.y + sdy * 16, true) !== 'B';   // bricks just get shot
       e.thinkT = this.cfg.think;
       e.stuck = 0;
       e.plan = this.plan(e, cr, cc);
+      // Stuck twice in a row the same way (usually nose to nose with another tank): try another road.
+      e.stuckN = wasStuck ? (e.stuckN || 0) + 1 : 0;
+      if (e.stuckN >= 2) {
+        const others = Object.keys(DIRS).filter((d) => d !== e.plan);
+        e.plan = Phaser.Utils.Array.GetRandom(others);
+        e.thinkT = this.cfg.think * 2;
+        e.stuckN = 0;
+      }
       if (e.plan !== e.dir) e.img.setAngle(DIRS[e.plan][2]);
     }
     const moved = this.drive(e, e.plan, speed, dt);

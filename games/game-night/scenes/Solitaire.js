@@ -32,7 +32,7 @@ export class Solitaire extends Phaser.Scene {
     button(this, 230, 614, 84, 40, 'Deal', () => this.askDeal());
     this.autoBtn = button(this, 318, 614, 76, 40, 'Finish', () => this.autoFinish(), { fill: PALETTE.gold });
     this.time.addEvent({ delay: 1000, loop: true, callback: () => this.updateClock() });
-    this.input.on('pointerup', (p) => this.tap(p.x, p.y));
+    this.input.on('pointerup', (p, over) => { if (!over.length) this.tap(p.x, p.y); });
     this.newDeal();
   }
 
@@ -48,7 +48,7 @@ export class Solitaire extends Phaser.Scene {
 
   updateClock() {
     if (this.done || !this.g) return;
-    const t = Math.floor((this.time.now - this.started) / 1000);
+    const t = Math.floor(this.elapsed / 1000);
     this.movesText.setText(`${this.g.moves}\nmoves\n${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`);
   }
 
@@ -75,8 +75,15 @@ export class Solitaire extends Phaser.Scene {
     this.tweens.add({ targets: this.hintG, alpha: { from: 1, to: 0.2 }, yoyo: true, repeat: 3, duration: 220, onComplete: () => { this.hintG.clear(); this.hintG.setAlpha(1); } });
   }
 
+  /** The clock only runs while the game is on screen (not behind How to Play, not after a win). */
+  update(_, ms) {
+    if (!this.done) this.elapsed += ms;
+  }
+
   newDeal() {
-    this.started = this.time.now;
+    this.elapsed = 0;
+    this.finishing = false;
+    this.dealId = (this.dealId || 0) + 1;
     this.g = deal();
     this.history = [];
     this.done = false;
@@ -96,7 +103,7 @@ export class Solitaire extends Phaser.Scene {
   }
 
   undo() {
-    if (this.done || !this.history.length) return;
+    if (this.done || this.finishing || !this.history.length) return;
     this.sel = null;
     this.g = this.history.pop();
     this.draw();
@@ -194,7 +201,7 @@ export class Solitaire extends Phaser.Scene {
 
   // ---------- input ----------
   tap(x, y) {
-    if (this.done) return;
+    if (this.done || this.finishing) return;
     const under = this.hits.filter((h) => x >= h.x && x < h.x + h.w && y >= h.y && y < h.y + h.h).reverse(); // topmost first
     const hit = under.find((h) => h.src) || under.find((h) => h.dst);
     if (!hit) { this.sel = null; this.draw(); return; }
@@ -230,11 +237,16 @@ export class Solitaire extends Phaser.Scene {
   }
 
   autoFinish() {
-    if (!canAutoFinish(this.g)) return;
+    if (this.finishing || !canAutoFinish(this.g)) return;
+    this.finishing = true;
+    this.sel = null;
+    const deal = this.dealId;
     const stepOnce = () => {
+      if (deal !== this.dealId) return;   // a new deal started meanwhile
       const n = autoStep(this.g);
-      if (!n) return;
+      if (!n) { this.finishing = false; return; }
       this.g = n;
+      sfx('card');
       this.draw();
       if (won(this.g)) { this.win(); return; }
       this.time.delayedCall(70, stepOnce);

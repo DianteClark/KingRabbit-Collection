@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { PALETTE, hex } from '../../../shared/core/palette.js';
 import { text, button } from '../../../shared/core/ui.js';
 import { WIDTH } from '../../../shared/core/boot.js';
-import { header, go, setBackground, toast, popIn } from './common.js';
+import { header, go, setBackground, toast, popIn, modal } from './common.js';
 import { grid, endGame, think } from './boardkit.js';
 import { sfx } from '../../../shared/core/sfx.js';
 import { N, newGame, play, pass, isOver, cpuMove, tryMove, suggestDead, toggleDead, finalScore, LEVELS } from '../logic/go.js';
@@ -35,7 +35,7 @@ export class Go extends Phaser.Scene {
     this.g = grid(LEFT, TOP, N, CELL);
     this.marks = this.add.graphics().setDepth(12);
     this.stones = this.add.container(0, 0).setDepth(10);
-    this.input.on('pointerup', (p) => this.tap(this.g.indexAt(p.x, p.y)));
+    this.input.on('pointerup', (p, over) => { if (!over.length) this.tap(this.g.indexAt(p.x, p.y)); });
 
     const by = TOP + w + 44;
     this.passBtn = button(this, WIDTH / 2 - 76, by, 136, 44, 'Pass', () => this.humanPass());
@@ -45,12 +45,13 @@ export class Go extends Phaser.Scene {
   }
 
   restart() {
-    this.game = newGame();
+    this.st = newGame();
     this.counting = false;
     this.dead = new Set();
     this.passBtn?.setLabel('Pass');
     this.over = false;
     this.busy = false;
+    this.confirming = false;
     this.lastMove = -1;
     this.draw();
     this.next();
@@ -61,11 +62,11 @@ export class Go extends Phaser.Scene {
     return p === 1 ? 'You' : 'CPU';
   }
 
-  isCpu() { return this.mode === 'cpu' && this.game.turn === 2; }
+  isCpu() { return this.mode === 'cpu' && this.st.turn === 2; }
 
   draw(territory) {
     this.stones.removeAll(true);
-    this.game.board.forEach((v, i) => {
+    this.st.board.forEach((v, i) => {
       if (!v) return;
       const { x, y } = this.g.center(i);
       const s = this.add.image(x, y, 'go', FRAME[v]).setScale(CELL / 8);
@@ -84,42 +85,43 @@ export class Go extends Phaser.Scene {
         this.marks.fillStyle(hex(o === 1 ? PALETTE.indigo : PALETTE.cream)).fillRect(x - 5, y - 5, 10, 10);
       });
     }
-    const c = this.game.captures;
+    const c = this.st.captures;
     this.caps.setText(`Captured: ${this.name(1)} ${c[1]}   ${this.name(2)} ${c[2]}`);
   }
 
   next() {
-    if (isOver(this.game)) { this.finish(); return; }
+    if (isOver(this.st)) { this.finish(); return; }
     if (this.isCpu()) {
       this.status.setText('CPU is thinking...');
       this.busy = true;
       think(this, () => {
-        const m = cpuMove(this.game, { cfg: this.cfg });
+        if (this.over || !this.isCpu()) return;   // resigned while the CPU was thinking
+        const m = cpuMove(this.st, { cfg: this.cfg });
         this.busy = false;
-        if (m < 0) { toast(this, 'CPU passes', 600); this.game = pass(this.game); this.lastMove = -1; this.draw(); this.next(); }
+        if (m < 0) { toast(this, 'CPU passes', 600); this.st = pass(this.st); this.lastMove = -1; this.draw(); this.next(); }
         else this.place(m);
       });
     } else {
-      const prevPass = this.game.passes === 1 ? ' (opponent passed)' : '';
-      this.status.setText(`${this.name(this.game.turn)} to play${prevPass}`);
+      const prevPass = this.st.passes === 1 ? ' (opponent passed)' : '';
+      this.status.setText(`${this.name(this.st.turn)} to play${prevPass}`);
     }
   }
 
   tap(i) {
     if (this.counting) {
-      if (i >= 0 && this.game.board[i]) { this.dead = toggleDead(this.game.board, this.dead, i); this.drawCounting(); }
+      if (i >= 0 && this.st.board[i]) { this.dead = toggleDead(this.st.board, this.dead, i); this.drawCounting(); }
       return;
     }
     if (i < 0 || this.over || this.busy || this.isCpu()) return;
-    if (this.game.board[i]) return;
-    if (!tryMove(this.game, i)) { toast(this, 'Not allowed there (suicide or ko)', 600); return; }
+    if (this.st.board[i]) return;
+    if (!tryMove(this.st, i)) { toast(this, 'Not allowed there (suicide or ko)', 600); return; }
     this.place(i);
   }
 
   place(i) {
-    const next = play(this.game, i);
+    const next = play(this.st, i);
     if (!next) return;
-    this.game = next;
+    this.st = next;
     this.lastMove = i;
     if (next.lastCaptured) { this.cameras.main.shake(80, 0.004); sfx('capture'); } else sfx('place');
     this.draw();
@@ -129,16 +131,27 @@ export class Go extends Phaser.Scene {
   humanPass() {
     if (this.counting) { this.score(); return; }
     if (this.over || this.busy || this.isCpu()) return;
-    this.game = pass(this.game);
+    this.st = pass(this.st);
     this.lastMove = -1;
     this.draw();
     this.next();
   }
 
   resign() {
+    if (this.over || this.counting || this.confirming) return;
+    if (this.mode === 'cpu' && this.busy) return;
+    this.confirming = true;
+    const who = this.mode === 'pvp' ? `${this.name(this.st.turn)} resigns?` : 'Resign this game?';
+    const m = modal(this, who, ['The game counts as a loss.'], [
+      ['Resign', () => { m.destroy(); this.confirming = false; this.doResign(); }, PALETTE.red, PALETTE.cream],
+      ['Keep playing', () => { m.destroy(); this.confirming = false; }],
+    ]);
+  }
+
+  doResign() {
     if (this.over || this.counting) return;
     this.over = true;
-    const loser = this.mode === 'cpu' ? 1 : this.game.turn;
+    const loser = this.mode === 'cpu' ? 1 : this.st.turn;
     const winner = 3 - loser;
     endGame(this, {
       id: 'go', mode: this.mode, title: `${this.name(winner)} win${winner === 1 && this.mode === 'cpu' ? '' : 's'}`,
@@ -149,14 +162,14 @@ export class Go extends Phaser.Scene {
   finish() {
     // Both passed: agree which stones are dead before counting.
     this.counting = true;
-    this.dead = suggestDead(this.game.board);
+    this.dead = suggestDead(this.st.board);
     this.passBtn.setLabel('Score');
     this.status.setText('Tap groups to mark them dead');
     this.drawCounting();
   }
 
   drawCounting() {
-    const { territory, black, white } = finalScore(this.game.board, this.dead);
+    const { territory, black, white } = finalScore(this.st.board, this.dead);
     this.draw(territory);
     for (const i of this.dead) {
       const { x, y } = this.g.center(i);
@@ -172,8 +185,8 @@ export class Go extends Phaser.Scene {
   score() {
     this.counting = false;
     this.over = true;
-    const sc = finalScore(this.game.board, this.dead);
-    this.game = { ...this.game, board: sc.board };
+    const sc = finalScore(this.st.board, this.dead);
+    this.st = { ...this.st, board: sc.board };
     this.dead = new Set();
     this.draw(sc.territory);
     const blackWins = sc.black > sc.white;

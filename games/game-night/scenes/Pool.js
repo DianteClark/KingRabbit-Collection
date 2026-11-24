@@ -44,10 +44,13 @@ export class Pool extends Phaser.Scene {
     this.status = text(this, WIDTH / 2, 112, '', { color: PALETTE.gold });
     this.drawTable();
     this.aimG = this.add.graphics().setDepth(8);
+    this.callG = this.add.graphics().setDepth(9);
+    this.aiming = null;
+    this.placing = false;
     this.ballLayer = this.add.container(0, 0).setDepth(5);
     text(this, WIDTH / 2, T.y + T.h + 44, 'Drag back from the cue ball, release to shoot', { color: PALETTE.lavender });
 
-    this.input.on('pointerdown', (p) => this.aimStart(p));
+    this.input.on('pointerdown', (p, over) => this.aimStart(p, over));
     this.input.on('pointermove', (p) => this.aimMove(p));
     this.input.on('pointerup', (p) => this.aimEnd(p));
     this.newRack();
@@ -70,8 +73,10 @@ export class Pool extends Phaser.Scene {
   newRack() {
     // Rack the triangle with the 8 in the middle of the third row.
     const order = [1, 9, 2, 10, 8, 3, 11, 4, 12, 5, 13, 6, 14, 7, 15];
-    const rest = Phaser.Utils.Array.Shuffle(order.filter((n) => n !== 8 && n !== 1 && n !== 9));
-    const seq = [1, rest[0], rest[1], rest[2], 8, rest[3], rest[4], rest[5], rest[6], rest[7], 9, rest[8], rest[9], rest[10], rest[11]];
+    // Standard rack: 8 in the middle, and one solid and one stripe in the two back corners.
+    const rest = Phaser.Utils.Array.Shuffle(order.filter((n) => n !== 8 && n !== 1 && n !== 9 && n !== 7));
+    const seq = [1, rest[0], rest[1], rest[2], 8, rest[3], rest[4], rest[5], rest[6], rest[7], 9, rest[8], rest[9], rest[10], 7];
+    if (Math.random() < 0.5) { seq[10] = 7; seq[14] = 9; }
     this.balls = [{ n: 0, x: HEAD.x, y: HEAD.y, vx: 0, vy: 0, in: false }];
     let k = 0;
     for (let row = 0; row < 5; row++) {
@@ -85,6 +90,8 @@ export class Pool extends Phaser.Scene {
     this.moving = false;
     this.breakShot = true;
     this.ballInHand = false;
+    this.aiming = null;
+    this.placing = false;
     this.redraw();
     this.startTurn();
   }
@@ -115,6 +122,7 @@ export class Pool extends Phaser.Scene {
   onEight(p) { return this.groups[p] && this.remaining(p) === 0; }
 
   startTurn() {
+    this.wasOnEight = this.onEight(this.turn);   // decided before the shot: clearing your group and the 8 together loses
     this.potted = [];
     this.firstHit = null;
     this.railAfterHit = false;
@@ -130,7 +138,6 @@ export class Pool extends Phaser.Scene {
   }
 
   drawCall() {
-    this.callG ??= this.add.graphics().setDepth(9);
     this.callG.clear();
     if (this.calledPocket >= 0) {
       const [x, y] = POCKETS[this.calledPocket];
@@ -139,8 +146,10 @@ export class Pool extends Phaser.Scene {
   }
 
   // ---------- aiming ----------
-  aimStart(p) {
-    if (this.over || this.moving || this.isCpu()) return;
+  aimStart(p, over) {
+    if (this.over || this.moving || this.isCpu() || over?.length) return;
+    // Only touches on or around the table count (not the header or the text below).
+    if (p.y < T.y - 40 || p.y > T.y + T.h + 40) return;
     const c = this.cue();
     // Calling the pocket for the 8.
     if (this.onEight(this.turn)) {
@@ -148,7 +157,7 @@ export class Pool extends Phaser.Scene {
       if (k >= 0) { this.calledPocket = k; this.drawCall(); this.status.setText('Pocket called. Now shoot the 8'); return; }
     }
     if (this.ballInHand && Math.hypot(p.x - c.x, p.y - c.y) < R * 3) { this.placing = true; return; }
-    this.aiming = { x: p.x, y: p.y };
+    this.aiming = { x: p.x, y: p.y, sx: p.x, sy: p.y, dragged: false };
   }
 
   aimMove(p) {
@@ -160,8 +169,10 @@ export class Pool extends Phaser.Scene {
       return;
     }
     if (!this.aiming) return;
-    this.aiming = { x: p.x, y: p.y };
-    this.drawAim();
+    this.aiming.x = p.x; this.aiming.y = p.y;
+    // A shot needs a real drag, so a stray tap never fires the cue ball.
+    if (Math.hypot(p.x - this.aiming.sx, p.y - this.aiming.sy) > 12) this.aiming.dragged = true;
+    if (this.aiming.dragged) this.drawAim();
   }
 
   shotFromAim() {
@@ -205,10 +216,10 @@ export class Pool extends Phaser.Scene {
       toast(this, 'Call a pocket for the 8 first', 360);
       return;
     }
-    const shot = this.shotFromAim();
+    const shot = this.aiming.dragged ? this.shotFromAim() : null;
     this.aiming = null;
     this.aimG.clear();
-    if (!shot || shot.power < 0.06) return;
+    if (!shot || shot.power < 0.06) return;   // let go right next to the ball: cancelled
     this.shoot(shot.dir, shot.power);
   }
 
@@ -290,8 +301,11 @@ export class Pool extends Phaser.Scene {
     const scratch = this.potted.includes(0);
     const noHit = this.firstHit === null;
     const myGroup = this.groups[me];
-    const wrongFirst = myGroup && this.firstHit !== null
-      && groupOf(this.firstHit) !== myGroup && !(groupOf(this.firstHit) === 'eight' && this.remaining(me) === 0);
+    // Legal first contact: a ball of your group, or the 8 once you're on it. On an open table any
+    // ball but the 8 is fine.
+    const wrongFirst = this.firstHit !== null && (myGroup
+      ? groupOf(this.firstHit) !== myGroup && !(groupOf(this.firstHit) === 'eight' && this.wasOnEight)
+      : !wasBreak && this.firstHit === 8);
     const noRail = !noHit && !this.potted.length && !this.railAfterHit;
     const foul = scratch || noHit || wrongFirst || noRail;
 
@@ -303,7 +317,7 @@ export class Pool extends Phaser.Scene {
         while (this.balls.some((b) => b !== eight && !b.in && Math.hypot(b.x - eight.x, b.y - eight.y) < R * 2.1)) eight.y -= R * 2.1;
         toast(this, '8 on the break - respotted', 360);
       } else {
-        const cleared = this.onEight(me);
+        const cleared = this.wasOnEight;
         const rightPocket = this.calledPocket < 0 || this.eightPocket === this.calledPocket;
         if (cleared && !scratch && rightPocket) this.finish(me, 'Sank the 8 in the called pocket!');
         else this.finish(opp, !cleared ? 'The 8 went down early' : scratch ? 'Scratched on the 8' : 'The 8 went in the wrong pocket');

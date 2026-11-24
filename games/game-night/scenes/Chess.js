@@ -31,10 +31,17 @@ export class Chess extends Phaser.Scene {
         this.worker = new Worker(new URL('../logic/chessWorker.js', import.meta.url), { type: 'module' });
         this.events.once('shutdown', () => { this.worker?.terminate(); this.worker = null; });
       }
+      const fallback = () => {
+        // The worker failed to load or crashed: think on the main thread instead.
+        this.worker?.terminate(); this.worker = null; this.noWorker = true;
+        if (id === this.engineId) this.time.delayedCall(50, () => done(cpuMove(this.s, { cfg: this.cfg })));
+      };
+      if (this.noWorker) throw new Error('no worker');
       this.worker.onmessage = (e) => { if (e.data.id === this.engineId) done(e.data.move); };
+      this.worker.onerror = fallback;
       this.worker.postMessage({ state: this.s, cfg: this.cfg, id });
     } catch {
-      this.time.delayedCall(50, () => done(cpuMove(this.s, { cfg: this.cfg })));
+      this.time.delayedCall(50, () => { if (id === this.engineId) done(cpuMove(this.s, { cfg: this.cfg })); });
     }
   }
 
@@ -46,7 +53,7 @@ export class Chess extends Phaser.Scene {
     this.g = checkerboard(this, { left: LEFT, top: TOP, cell: CELL, labels: true });
     this.hl = highlighter(this, this.g);
     this.pieces = this.add.container(0, 0).setDepth(10);
-    this.input.on('pointerup', (p) => this.tap(this.g.indexAt(p.x, p.y)));
+    this.input.on('pointerup', (p, over) => { if (!over.length) this.tap(this.g.indexAt(p.x, p.y)); });
     this.restart();
   }
 
@@ -125,7 +132,11 @@ export class Chess extends Phaser.Scene {
 
   askPromotion(m) {
     const names = [['Queen', 'Q'], ['Rook', 'R'], ['Bishop', 'B'], ['Knight', 'N']];
-    const box = modal(this, 'Promote to', [], names.map(([label, p]) => [label, () => { box.destroy(); this.apply({ ...m, promoTo: p }); }]));
+    this.busy = true;
+    const box = modal(this, 'Promote to', [], [
+      ...names.map(([label, p]) => [label, () => { box.destroy(); this.apply({ ...m, promoTo: p }); }]),
+      ['Cancel', () => { box.destroy(); this.busy = false; this.selected = -1; this.draw(); }, PALETTE.indigo, PALETTE.cream],
+    ]);
   }
 
   apply(m) {

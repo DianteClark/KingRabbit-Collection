@@ -97,7 +97,7 @@ export class MoleRunner extends Phaser.Scene {
   }
 
   updateHud() {
-    this.hud.setText(`Level ${this.levelIdx + 1}  Gems ${this.gemsLeft}  Lives ${this.lives}  Score ${this.score}  Best ${Math.max(getBest('molerunner'), this.score)}`);
+    this.hud.setText(`Level ${this.levelIdx + 1}   Gems ${this.gemsLeft}   Lives ${this.lives}   Score ${this.score}`);
   }
 
   occupiedBy(exclude) {
@@ -237,7 +237,7 @@ export class MoleRunner extends Phaser.Scene {
   }
 
   die(why) {
-    if (this.over || this.dying) return;
+    if (this.over || this.dying || this.cleared) return;   // already through to the next level
     this.dying = true;
     this.tweens.killAll();
     this.cameras.main.shake(200, 0.01);
@@ -268,7 +268,7 @@ export class MoleRunner extends Phaser.Scene {
     const isBest = submitBest('molerunner', this.score);
     // Clearing 3 levels in a run counts as beating the computer.
     reportResult('molerunner', Math.min(1, (this.levelsCleared || 0) / 3), 0.5);
-    const m = modal(this, isBest ? 'New best!' : 'Game over', [`Score ${this.score}`, `Reached level ${this.levelIdx + 1}`], [
+    const m = modal(this, isBest ? 'New best!' : 'Game over', [`Score ${this.score}`, `Reached level ${this.levelIdx + 1}`, `Best ${getBest('molerunner')}`], [
       ['Play again', () => { m.destroy(); this.scene.restart(); }],
       ['Menu', () => go(this, 'Menu')],
     ]);
