@@ -13,6 +13,7 @@ Aleksandr Makarov's (iknowkingrabbit) pixel-art packs.
 | Pocket Pets: catch, train and battle pets (see docs/games/pocket-pets.md) | Playable | [/pocket-pets/](https://dianteclark.github.io/KingRabbit-Collection/pocket-pets/) |
 | Hollow Crown: top-down sword-and-dungeon adventure (see docs/games/hero-quest.md) | Playable | [/hero-quest/](https://dianteclark.github.io/KingRabbit-Collection/hero-quest/) |
 | Sand Tactics: turn-based desert war (see docs/games/sand-tactics.md) | Playable | [/sand-tactics/](https://dianteclark.github.io/KingRabbit-Collection/sand-tactics/) |
+| Robbox: robot programming puzzles (see docs/games/robbox.md) | Playable | [/robbox/](https://dianteclark.github.io/KingRabbit-Collection/robbox/) |
 | City Chief: run the police force of Tiny Town (see docs/games/city-chief.md) | Playable | [/city-chief/](https://dianteclark.github.io/KingRabbit-Collection/city-chief/) |
 | Pocket Soccer: 5-a-side arcade football (see docs/games/soccer.md) | Playable | [/soccer/](https://dianteclark.github.io/KingRabbit-Collection/soccer/) |
 
