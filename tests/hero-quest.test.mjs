@@ -524,3 +524,60 @@ test('boss tells: the Slime King only hurts as it lands; the Hollow King blinks 
   assert.ok(h.shield);
   assert.ok(['vanish', 'appear', 'hover', 'windup'].includes(h.state));
 });
+
+test('SWORD becomes TALK / READ / OPEN only when that thing is right in front of you, from every side', () => {
+  const g = freshGame();
+  const sides = [['up', 0, 1], ['down', 0, -1], ['left', 1, 0], ['right', -1, 0]]; // facing, offset of where you stand
+  let checked = 0;
+  for (const r of rooms) {
+    const targets = [];
+    for (const n of r.npcs) targets.push([n.x, n.y, 'TALK']);
+    for (const xy of Object.keys(r.signs)) { const [x, y] = xy.split(',').map(Number); targets.push([x, y, 'READ']); }
+    for (const [xy, spec] of Object.entries(r.chests)) { if (!spec.hidden) { const [x, y] = xy.split(',').map(Number); targets.push([x, y, 'OPEN']); } }
+    for (const [tx, ty, want] of targets) {
+      for (const [dir, ox, oy] of sides) {
+        const sx = tx + ox; const sy = ty + oy;
+        if (sx < 0 || sy < 0 || sx >= C.COLS || sy >= C.ROWS || !WALKABLE.has(r.map[sy][sx])) continue;
+        if (r.npcs.some((n) => n.x === sx && n.y === sy)) continue;
+        place(g, r.id, sx, sy, dir);
+        assert.equal(g.actionLabel(), want, `${r.id} ${want} at ${tx},${ty} from ${sx},${sy}`);
+        const away = { up: 'down', down: 'up', left: 'right', right: 'left' }[dir];
+        g.p.dir = away;
+        assert.notEqual(g.actionLabel(), want, `${r.id} ${want} still shown facing away`);
+        g.p.dir = dir;
+        checked++;
+      }
+    }
+  }
+  // Odo talks across his counter
+  place(g, 'in:shop', 5, 5, 'up');
+  assert.equal(g.actionLabel(), 'TALK');
+  assert.ok(checked > 20);
+});
+
+test('opening a chest or reading a sign happens once per press, and the chest then says SWORD', () => {
+  const g = freshGame();
+  place(g, 'd1:2,1', 5, 6, 'up');
+  assert.equal(g.actionLabel(), 'OPEN');
+  g.update(DT, { attack: true });
+  assert.equal(g.mode, 'dialog');
+  g.closeDialog(); g.closeDialog();
+  assert.ok(g.s.items.boomerang);
+  g.closeDialog(); // extra closes do nothing
+  assert.equal(g.mode, 'play');
+  assert.equal(g.actionLabel(), 'SWORD');
+  const before = JSON.stringify(g.s.items);
+  g.update(DT, { attack: true });
+  assert.equal(JSON.stringify(g.s.items), before);
+});
+
+test('the text catalogue covers every NPC, sign and item message, and no line is too long for the dialog box', async () => {
+  const { allTexts, ITEM_TEXT } = await import(base + 'story.js');
+  const { dialog, toast } = allTexts(ROOMS);
+  for (const r of rooms) for (const lines of Object.values(r.signs)) for (const l of lines) assert.ok(dialog.includes(l));
+  for (const lines of Object.values(ITEM_TEXT)) for (const l of lines) assert.ok(dialog.includes(l));
+  assert.ok(toast.some((t) => t.startsWith('Next:')));
+  // measured in the browser: 4 lines of 16 px BoldPixels fit the box, about 40 characters each
+  for (const l of dialog) assert.ok(l.length <= 150, `too long for the dialog box: ${l}`);
+  for (const t of toast) assert.ok(t.length <= 90, `too long for a toast: ${t}`);
+});

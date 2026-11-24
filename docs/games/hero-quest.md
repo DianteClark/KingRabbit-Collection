@@ -12,7 +12,9 @@ A short top-down sword-and-dungeon adventure for a phone held in one hand. The G
 - The room (11 x 13 tiles of 16 px) is drawn at a crisp 2x in the middle (x 144-496) using the full screen height. At 2x it is 416 px tall, so the camera follows you up and down by up to 28 px and never shows past the room's edges (`layout.js` `camY`). Room slides start from the current camera position and end on the new room's clamped view.
 - Left margin: pause `<`, hearts (two rows of five), gems, dungeon keys, and the floating stick (thumb down anywhere on the left half of the screen, margin or room).
 - Right margin: `?`, then SWAP, ITEM and a big SWORD button stacked for the right thumb. SWORD turns into TALK / READ / OPEN next to people, signs and chests.
-- Dialogs sit over the lower part of the room; toasts at its bottom edge; the area name at its top.
+- Dialogs sit over the lower part of the room, or the top when the bottom box would cover you; toasts at its bottom edge; the area name at its top.
+- A tap that advances or closes a dialog never also fires a HUD button (pause, help) on release. Touch hit areas (`layout.js` `hitSword/hitItem/hitSwap`) are slightly larger than drawn and never overlap.
+- Shop prices you can't afford grey out and say how many more gems you need.
 - Pause and shop are two-column panels; title and ending use left/right columns.
 - All positions live in `layout.js` (plain numbers, tested). Text is 16/32 px only.
 - The shield is always up: rocks coming at the way you face bounce off unless you're mid-swing.
@@ -78,8 +80,8 @@ Green slime (hops at random), blue slime (lunges when you line up), red slime (f
 Tuned by playing each boss through the real scene with a scripted "human" (decisions at ~8 Hz, reacting to tells: dodge squats/charges, sidestep rocks, attack only in safe windows, boomerang the Hollow King, bomb the Golem King) at the starting pace 4/10 with the hearts you'd have at that point. After tuning it wins every fight, taking 0-5 half hearts (Slime King 17-23 s, Golem King 12-15 s at 12 HP, where the extra hits came from the bot hugging him to drop bombs, Hollow King 13-21 s); every hit it took came from a told attack.
 
 ## Tests
-- `tests/hero-quest.test.mjs`: map validity (sizes, legend, chest/sign/warp/house alignment, matching room edges, no openings to nowhere), the whole-game solver in every key order (every chest, every boss), item gating, every switch puzzle from every doorway, bomb refills near cracked walls, and rules (sword, contact damage and i-frames, shield, keys, block pushing, boomerang, bombs, death/respawn, potions, shop, bosses' immunities, splitting, clear-shutters, enemies stay in bounds, adaptive presets, save round-trip, the hidden cave).
-- `tests/hero-quest-layout.test.mjs`: the landscape layout fits 640x360, controls stay in the margins without overlapping, the stick zone avoids the buttons, and the camera keeps the player and only the room in view.
+- `tests/hero-quest.test.mjs`: map validity (sizes, legend, chest/sign/warp/house alignment, matching room edges, no openings to nowhere), the whole-game solver in every key order (every chest, every boss), item gating, every switch puzzle from every doorway, bomb refills near cracked walls, and rules (sword, contact damage and i-frames, shield, keys, block pushing, boomerang, bombs, death/respawn, potions, shop, bosses' immunities, splitting, clear-shutters, enemies stay in bounds, adaptive presets, save round-trip, the hidden cave), SWORD's TALK/READ/OPEN label for every NPC, sign and chest from every side (and not when facing away), one action per press, and `allTexts()` (every NPC line in every story state, signs, items, objectives, shop text).
+- `tests/hero-quest-layout.test.mjs`: the landscape layout fits 640x360, button hit areas cover what's drawn without overlapping, controls stay in the margins without overlapping, the stick zone avoids the buttons, and the camera keeps the player and only the room in view.
 - `tests/hero-quest-playthrough.test.mjs`: a bot plays from the first line to the ending through the real simulation (walking, pushing, unlocking, boomerang, bombs, chests), opening every chest.
 
 ## Next ideas

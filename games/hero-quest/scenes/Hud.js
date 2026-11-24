@@ -14,7 +14,7 @@ import { musicOn, setMusicOn } from '../music.js';
 import { ROOMS } from '../logic/data.js';
 // Landscape layout (see layout.js): the room fills the middle, full height. Left margin: pause,
 // hearts, gems, keys and the stick. Right margin: help, then SWAP / ITEM / SWORD for the thumb.
-import { VIEW, LEFT, RIGHT, MID as MARGIN_R, STICK, SWORD, ITEMB, SWAP, PAUSE_BTN, HELP_BTN, stickZone } from '../layout.js';
+import { VIEW, LEFT, RIGHT, MID as MARGIN_R, STICK, SWORD, ITEMB, SWAP, PAUSE_BTN, HELP_BTN, stickZone, hitSword, hitItem, hitSwap } from '../layout.js';
 
 const { WIDTH, HEIGHT } = LANDSCAPE;       // 640 x 360
 
@@ -100,14 +100,12 @@ export class Hud extends Phaser.Scene {
 
   setupInput() {
     this.input.addPointer(3);
-    const inCircle = (p, c, extra = 10) => Math.hypot(p.x - c.x, p.y - c.y) < c.r + extra;
-    const inSwap = (p) => Math.abs(p.x - SWAP.x) < SWAP.w / 2 + 6 && Math.abs(p.y - SWAP.y) < SWAP.h / 2 + 6;
     this.input.on('pointerdown', (p) => {
-      if (this.dialog) { this.advanceDialog(); return; }
+      if (this.dialog) { this.dialogTapAt = this.time.now; this.advanceDialog(); return; }
       if (this.modal || (p.y < 48 && (p.x < 60 || p.x > WIDTH - 60))) return;
-      if (inCircle(p, SWORD)) { this.down.sword.add(p.id); this.press.attack = true; return; }
-      if (inCircle(p, ITEMB)) { this.down.item.add(p.id); this.press.item = true; return; }
-      if (this.swapVisible && inSwap(p)) { this.press.cycle = true; return; }
+      if (hitSword(p.x, p.y)) { this.down.sword.add(p.id); this.press.attack = true; return; }
+      if (hitItem(p.x, p.y)) { this.down.item.add(p.id); this.press.item = true; return; }
+      if (this.swapVisible && hitSwap(p.x, p.y)) { this.press.cycle = true; return; }
       if (stickZone(p.x, p.y) && this.stick.id === null) this.stick = { id: p.id, ox: p.x, oy: p.y, dx: 0, dy: 0 };
     });
     this.input.on('pointermove', (p) => {
@@ -251,10 +249,14 @@ export class Hud extends Phaser.Scene {
     this.closeDialogBox();
     const c = this.add.container(0, 0).setDepth(50);
     // over the lower part of the room, a little wider than it
-    const x0 = LEFT - 24; const w = VIEW.w + 48; const top = HEIGHT - 128;
+    const x0 = LEFT - 24; const w = VIEW.w + 48;
+    // keep the speaker in sight: if the player is low on screen, the box goes to the top
+    const cam = this.play.cameras.main;
+    const py = VIEW.y + (this.g.p.y - (cam.midPoint.y - VIEW.h / 4)) * 2;
+    const top = py > HEIGHT - 140 ? 4 : HEIGHT - 128; // only when the bottom box would cover you
     c.add(panel(this, x0, top, w, 124, { fill: PALETTE.night, inner: PALETTE.cream }));
     const body = text(this, x0 + 16, top + 14, '', { color: PALETTE.cream, origin: [0, 0], align: 'left', wrap: w - 40 });
-    const more = text(this, x0 + w - 22, HEIGHT - 20, 'v', { color: PALETTE.gold });
+    const more = text(this, x0 + w - 22, top + 104, 'v', { color: PALETTE.gold });
     c.add([body, more]);
     this.tweens.add({ targets: more, y: more.y + 3, yoyo: true, repeat: -1, duration: 300 });
     this.dialog = { c, body, more, lines, i: 0, shown: 0, onDone, t0: this.time.now };
@@ -310,7 +312,11 @@ export class Hud extends Phaser.Scene {
     return c;
   }
 
+  /** A tap that just advanced or closed a dialog must not also press a HUD button on release. */
+  justTapped() { return this.dialog || (this.dialogTapAt && this.time.now - this.dialogTapAt < 400); }
+
   pauseMenu() {
+    if (this.justTapped()) return;
     if (this.modal || this.dialog || this.play.busy) return;
     this.scene.pause('Play');
     const m = this.openModal((c) => {
@@ -375,6 +381,7 @@ export class Hud extends Phaser.Scene {
   }
 
   help(onClose = null) {
+    if (!onClose && this.justTapped()) return;
     if (document.getElementById('howto')) return;
     this.scene.pause('Play');
     const sections = [...RULES.sections];
@@ -421,9 +428,11 @@ export class Hud extends Phaser.Scene {
           sfx(res.ok ? 'coin' : 'error');
           this.play.saveNow();
           draw();
-        }, { fill: PALETTE.gold });
+        }, { fill: PALETTE.gold, silent: true });
         c.add([icon, name, desc, b]);
-        rows.push({ sync: (cur) => { desc.setText(cur.why || cur.desc); b.setEnabled(!cur.why && g.s.gems >= cur.price); } });
+        rows.push({ sync: (cur) => { const short = !cur.why && g.s.gems < cur.price;
+          desc.setText(cur.why || (short ? `Need ${cur.price - g.s.gems} more gems` : cur.desc)).setColor(cur.why || short ? PALETTE.sand : PALETTE.lavender);
+          b.setEnabled(!cur.why && !short); } });
       });
       c.add(button(this, x0 + w - 90, top + h - 34, 144, 40, 'Thanks!', () => m.close(), { fill: PALETTE.lavender }));
       draw();

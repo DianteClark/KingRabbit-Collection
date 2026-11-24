@@ -38,7 +38,10 @@ function sheet({ title, sub = '', html = '', foot = '', cls = '', wrap = '', onC
       if (!silent) sfx('tap');
       onClose?.();
     },
-    set(part, h) { const n = el.querySelector(`.cc-${part}`); if (n && n.innerHTML !== h) n.innerHTML = h; },
+    // Compare with what we last wrote (the browser rewrites innerHTML, so comparing with it would
+    // replace the buttons every refresh and swallow taps that land mid-replace).
+    last: {},
+    set(part, h) { if (p.last[part] === h) return; const n = el.querySelector(`.cc-${part}`); if (n) { n.innerHTML = h; p.last[part] = h; } },
   };
   el.addEventListener('click', (e) => {
     const b = e.target.closest('[data-act]');

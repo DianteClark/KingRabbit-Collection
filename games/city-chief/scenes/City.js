@@ -288,7 +288,7 @@ export class City extends Phaser.Scene {
       st.fg.width = 82 * v / 100;
       st.fg.fillColor = hex(v < 25 ? PALETTE.red : v < 45 ? PALETTE.orange : PALETTE.leaf);
     });
-    this.moneyText.setText(`$${Math.round(s.money).toLocaleString('en-US')}`);
+    this.moneyText.setText(`${s.money < 0 ? '-' : ''}$${Math.abs(Math.round(s.money)).toLocaleString('en-US')}`);
     this.moneyText.setColor(s.money < 0 ? '#f3b0a8' : PALETTE.gold);
     const waiting = this.waitingCalls().length;
     this.waitBtn.setVisible(waiting > 0);
@@ -298,7 +298,9 @@ export class City extends Phaser.Scene {
     this.pauseTag.setVisible(!goal && this.speed === 0 && Math.floor(this.time.now / 500) % 2 === 0);
     this.clockText.setText(`Day ${s.day}  ${S.clock(s.minute)}${s.mode === 'endless' ? '  Endless' : ''}`);
     const last = s.log.at(-1);
-    const tickerStr = last ? `${S.clock(last.t)} ${last.text}` : 'All quiet. Tap a marker to see a call.';
+    // Two lines at most so it never runs into the buttons below; the full text is in the radio log.
+    let tickerStr = last ? `${S.clock(last.t)} ${last.text}` : 'All quiet. Tap a marker to see a call.';
+    if (tickerStr.length > 78) tickerStr = `${tickerStr.slice(0, 76).trimEnd()}...`;
     if (this.ticker.text !== tickerStr) {
       this.ticker.setText(tickerStr);
       this.ticker.setColor({ bad: '#f3b0a8', good: '#c9e6a8', alert: PALETTE.orange }[last?.tone] || PALETTE.cream);

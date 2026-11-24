@@ -53,3 +53,18 @@ test('the camera follows vertically but never shows past the room', () => {
   assert.equal(L.camY(8), half);
   assert.equal(L.camY(C.ROOM_H - 8), C.ROOM_H - half);
 });
+
+test('touch hit areas cover what is drawn and never overlap each other', () => {
+  const hits = { sword: L.hitSword, item: L.hitItem, swap: L.hitSwap };
+  // the drawn centre and edges register
+  for (const [x, y] of [[L.SWORD.x, L.SWORD.y], [L.SWORD.x, L.SWORD.y - L.SWORD.r + 1], [L.SWORD.x + L.SWORD.r - 1, L.SWORD.y]]) assert.ok(L.hitSword(x, y));
+  for (const [x, y] of [[L.ITEMB.x, L.ITEMB.y], [L.ITEMB.x, L.ITEMB.y + L.ITEMB.r - 1]]) assert.ok(L.hitItem(x, y));
+  assert.ok(L.hitSwap(L.SWAP.x - L.SWAP.w / 2 + 1, L.SWAP.y));
+  // no screen point is in two of them
+  for (let x = L.RIGHT; x < L.SCREEN.W; x++) {
+    for (let y = 0; y < L.SCREEN.H; y++) {
+      const n = Object.values(hits).filter((f) => f(x, y)).length;
+      assert.ok(n <= 1, `${x},${y} hits ${n} buttons`);
+    }
+  }
+});

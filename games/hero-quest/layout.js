@@ -22,3 +22,9 @@ export const ITEMB = { x: 586, y: 184, r: 32 };
 export const SWAP = { x: 586, y: 126, w: 72, h: 30 };
 /** The floating stick starts anywhere on the left half (margin or room), away from the buttons. */
 export const stickZone = (x, y) => x < MID && !(y < 48 && x < 60);
+
+// Touch hit areas: a little bigger than what's drawn, but never overlapping each other.
+export const SLACK = { sword: 10, item: 4, swap: 6 };
+export const hitSword = (x, y) => Math.hypot(x - SWORD.x, y - SWORD.y) < SWORD.r + SLACK.sword;
+export const hitItem = (x, y) => Math.hypot(x - ITEMB.x, y - ITEMB.y) < ITEMB.r + SLACK.item;
+export const hitSwap = (x, y) => Math.abs(x - SWAP.x) < SWAP.w / 2 + SLACK.swap && Math.abs(y - SWAP.y) < SWAP.h / 2 + SLACK.swap;

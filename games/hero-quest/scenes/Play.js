@@ -8,7 +8,7 @@ import { save } from '../save.js';
 import { getSkill, report } from '../adaptive.js';
 import { DIR_NAME, ITEM } from '../art.js';
 import { playMusic, jingle, tuneFor } from '../music.js';
-import { objective } from '../logic/story.js';
+import { objective, allTexts } from '../logic/story.js';
 
 import { VIEW, camY } from '../layout.js';
 
@@ -79,6 +79,9 @@ export class Play extends Phaser.Scene {
     this.syncAll(0);
     sfx('move');
   }
+
+  /** Every line the game can show (browser layout checks). */
+  textCatalog(extra = []) { return allTexts(ROOMS, extra); }
 
   /** Jump to a room (browser tests / debugging). */
   debugGoto(id, tx, ty, dir = 'down') {
