@@ -260,6 +260,7 @@ export class Battle extends Phaser.Scene {
 
   fightMenu() {
     this.clearMenu();
+    this.ready = true; window.__pets.ready = true;
     const me = B.active(this.b, 0);
     const foe = B.active(this.b, 1);
     this.msgText.setText('Pick a move. STRONG moves hit twice as hard.');
@@ -298,6 +299,7 @@ export class Battle extends Phaser.Scene {
   }
 
   async act(action) {
+    if (!this.ready) return; // one action per turn, however fast the taps come
     const problem = B.actionProblem(this.b, action);
     if (problem) { sfx('error'); this.msgText.setText(problem); return; }
     this.clearMenu();
@@ -498,6 +500,7 @@ export class Battle extends Phaser.Scene {
     const result = b.result;
     this.clearMenu();
     if (setup.kind === 'trainer') {
+      if (result === 'win') sfx('win');
       reportResult(SKILL_ID, result === 'win' ? 1 : 0, B.margin(b), setup.weight ?? 0.35);
       const lines = result === 'win' ? setup.lose : setup.win;
       if (lines?.length) {

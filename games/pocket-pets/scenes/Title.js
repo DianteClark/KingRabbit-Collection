@@ -49,7 +49,10 @@ export class Title extends Phaser.Scene {
       button(this, WIDTH / 2, y, 300, 52, 'Start your journey', () => this.start(), { fill: PALETTE.gold });
     }
     y += 60;
-    if (saved?.champion) text(this, WIDTH / 2, y, 'Champion! Fill the PetDex to finish it all.', { color: PALETTE.gold });
+    if (saved?.champion) {
+      const c = dexCounts(saved);
+      text(this, WIDTH / 2, y, c.caught >= c.total ? 'Champion with a complete PetDex!' : 'Champion! Fill the PetDex to finish it all.', { color: PALETTE.gold });
+    }
 
     button(this, 92, 614, 168, 40, '< All Games', () => { window.location.href = '../'; }, { fill: PALETTE.indigo, color: PALETTE.cream });
     this.lvlBtn = button(this, 228, 614, 96, 40, `Foe Lv ${skillLabel()}`, () => this.levelInfo(), { fill: PALETTE.indigo, color: PALETTE.cream });

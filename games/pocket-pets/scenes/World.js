@@ -2,10 +2,11 @@ import Phaser from 'phaser';
 import { PALETTE, hex } from '../../../shared/core/palette.js';
 import { text, button, panel } from '../../../shared/core/ui.js';
 import { sfx } from '../../../shared/core/sfx.js';
-import { WIDTH, HEIGHT, header, go, modal, modalOpen, toast, store, persist, petImage, typeChip, pin, LCD } from './common.js';
+import { WIDTH, HEIGHT, header, go, modal, modalOpen, toast, store, persist, petImage, typeChip, pin, fit, LCD } from './common.js';
 import { buildingTexture, CASE, TYPE_CASE } from '../art.js';
 import * as G from '../logic/game.js';
 import { MAPS, LEADERS, BADGES, tileAt, doorOf, buildingAt } from '../logic/world.js';
+import * as DATA from '../logic/data.js';
 import { SPECIES, ITEMS, STARTERS } from '../logic/data.js';
 import { TYPE_INFO } from '../logic/types.js';
 import { petName } from '../logic/pet.js';
@@ -58,14 +59,27 @@ export class World extends Phaser.Scene {
     this.placePlayer();
     this.cameraTo(true);
 
-    header(this, this.map.name, () => { persist(); go(this, 'Title'); });
+    header(this, this.map.name, () => {
+      if (this.busy || this.moving || this.dialog || this.tamerWalk) { sfx('error'); return; }
+      persist(); go(this, 'Title');
+    });
     this.hud();
     this.input.on('pointerup', (p) => this.onTap(p));
+    // Lifting the d-pad finger anywhere (even off the game) stops walking; other fingers don't.
+    const release = (p) => { if (this.held && p.id === this.heldId) { this.held = null; this.padFaces?.forEach((f) => f()); } };
+    this.input.on('pointerup', release);
+    this.input.on('pointerupoutside', release);
+    this.input.on('gameout', () => { this.held = null; this.padFaces?.forEach((f) => f()); });
     this.input.keyboard?.on('keydown', (e) => this.onKey(e, true));
     this.input.keyboard?.on('keyup', (e) => this.onKey(e, false));
-    window.__pets = { scene: this, G, state: st, tapTile: (x, y) => this.tapTile(x, y), say: () => this.advanceDialog() };
+    window.__pets = { scene: this, G, state: st, tapTile: (x, y) => this.tapTile(x, y), say: () => this.advanceDialog(), data: { ...DATA, MAPS, LEADERS } };
 
     persist();
+    // Save when the phone locks or the tab is closed, too.
+    const away = () => { if (document.visibilityState === 'hidden') persist(); };
+    document.addEventListener('visibilitychange', away);
+    window.addEventListener('pagehide', persist);
+    this.events.once('shutdown', () => { document.removeEventListener('visibilitychange', away); window.removeEventListener('pagehide', persist); });
     this.time.delayedCall(200, () => this.arrive());
   }
 
@@ -155,9 +169,10 @@ export class World extends Phaser.Scene {
       c.add([sh, face, t]);
       pin(c);
       c.setSize(46, 44).setInteractive({ useHandCursor: true });
-      c.on('pointerdown', () => { if (this.dialog || blocking()) return; face.y = 2; t.y = 0; this.held = dir; this.path = null; this.pending = null; });
+      c.on('pointerdown', (p) => { if (this.dialog || blocking() || modalOpen(this)) return; face.y = 2; t.y = 0; this.held = dir; this.heldId = p.id; this.path = null; this.pending = null; });
       const up = () => { face.y = 0; t.y = -2; if (this.held === dir) this.held = null; };
       c.on('pointerup', up); c.on('pointerout', up);
+      this.padFaces = [...(this.padFaces || []), () => { face.y = 0; t.y = -2; }];
     }
     this.aBtn = fix(button(this, 178, 574, 56, 52, 'A', () => this.pressA(), { size: 32, fill: PALETTE.gold }));
     fix(button(this, 296, 530, 116, 38, 'Pets', () => this.openParty(), { fill: PALETTE.cream }));
@@ -169,7 +184,8 @@ export class World extends Phaser.Scene {
   }
 
   refreshHud() {
-    this.coinText.setText(`${this.state.coins}c`);
+    this.coinText.setText(`${this.state.coins}c`).setScale(1);
+    fit(this.coinText, 76);
     BADGES.forEach((id, i) => {
       const has = this.state.badges.includes(id);
       this.badgeIcons[i].setFillStyle(has ? hex(TYPE_INFO[LEADERS[id].type].color) : hex(PALETTE.indigo));
@@ -202,8 +218,10 @@ export class World extends Phaser.Scene {
   onTap(p) {
     if (this.tamerWalk) { this.skipWalk = true; return; }
     if (blocking() || modalOpen(this)) return;
+    // Taps on the header and the bottom bar belong to their buttons (A also moves the dialogue on).
+    if (p.y < VIEW_TOP || p.y > VIEW_BOTTOM) return;
     if (this.dialog) { this.advanceDialog(); return; }
-    if (this.busy || p.y < VIEW_TOP || p.y > VIEW_BOTTOM) return;
+    if (this.busy) return;
     const wx = p.x + this.cameras.main.scrollX; const wy = p.y + this.cameras.main.scrollY;
     // People are drawn a little above their tile, so a tap on a sprite counts as a tap on its person.
     for (const n of G.npcsOn(this.state)) {
@@ -333,6 +351,9 @@ export class World extends Phaser.Scene {
   afterStep(events) {
     const now = Date.now();
     if (now - this.lastSave > 1000) { persist(); this.lastSave = now; }
+    // ...and once more when you stop walking, so the last steps are never lost.
+    this.saveTimer?.remove();
+    this.saveTimer = this.time.delayedCall(500, () => { persist(); this.lastSave = Date.now(); });
     for (const e of events) {
       if (e.t === 'exit') {
         this.busy = true; this.path = null; this.held = null;
@@ -371,6 +392,12 @@ export class World extends Phaser.Scene {
     if (o.spotted) {
       const npc = G.npcsOn(st).find((n) => n.id === o.spotted);
       if (npc) this.spotted(npc);
+      return;
+    }
+    // Resumed (or came back from a battle) somewhere a tamer is waiting: they still challenge you.
+    if (!o.after) {
+      const waiting = G.npcsOn(st).find((n) => n.ambush && !n.beaten && G.canFight(st)) || G.spottedBy(st);
+      if (waiting) this.spotted(waiting);
     }
   }
 
@@ -594,7 +621,7 @@ export class World extends Phaser.Scene {
       const x = 70 + (i % 3) * 110; const y = 210 + Math.floor(i / 3) * 150;
       c.add(this.add.rectangle(x, y, 84, 84, hex(LCD.light)).setStrokeStyle(3, hex(PALETTE.ink)));
       c.add(petImage(this, x, y, p.sp, 3.5, 1));
-      c.add(text(this, x, y + 58, petName(p), { color: PALETTE.cream }));
+      c.add(fit(text(this, x, y + 58, petName(p), { color: PALETTE.cream }), 100));
       c.add(text(this, x, y + 80, `Lv ${p.lv}`, { color: PALETTE.lavender }));
     });
     const dc = G.dexCounts(st);
