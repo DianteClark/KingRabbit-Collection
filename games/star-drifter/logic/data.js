@@ -231,7 +231,7 @@ export const SHIPS = {
     missiles: 8, droneParts: 2,
   },
   corvid: {
-    name: 'Corvid', layout: 'corvid', hull: 28, reactor: 10,
+    name: 'Corvid', layout: 'corvid', hull: 28, reactor: 12,
     blurb: 'A nimble raider: ion lance, two lasers, an attack drone and a mixed crew.',
     systems: { shields: 2, engines: 3, weapons: 4, oxygen: 1, medbay: 1, drones: 2, piloting: 1, sensors: 1 },
     weapons: ['ion1', 'heavy1', 'pulse1'], drones: ['combat'], weaponSlots: 3, droneSlots: 2,

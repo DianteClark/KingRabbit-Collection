@@ -141,6 +141,7 @@ export function nextSector(run) {
 export function startFight(run, { kind, level, tutorial = false, final = false, bonus = null, fleet = false }) {
   const enemy = makeEnemy(run.rng, { kind, level, mode: run.mode, tutorial });
   const crewBefore = aliveCrew(run.ship).map((c) => c.name);
+  run.note = null;
   run.fight = { kind, level, tutorial, final, bonus, fleet, crewBefore };
   const crng = { s: (Math.floor(next(run.rng) * 4294967295) >>> 0) || 7 };
   run.combat = createCombat(run.ship, enemy, {

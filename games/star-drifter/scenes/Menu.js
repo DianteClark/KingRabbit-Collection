@@ -1,7 +1,7 @@
 import { PALETTE, hex, text, button, WIDTH, HEIGHT, go, route, setBackground, helpButton, sfx, Phaser, icon, modal } from './common.js';
 import { isMuted, setMuted } from '../../../shared/core/sfx.js';
 import { loadRun, saveRun, getRecords, recordRun, isUnlocked, getSkill } from '../save.js';
-import { newRun, sectorName, SHIPS } from '../logic/run.js';
+import { newRun, SHIPS } from '../logic/run.js';
 import { makeShip } from '../logic/ship.js';
 import { skillLabel } from '../logic/adaptive.js';
 import { drawHull, drawRooms, HULL_COLORS } from './shipview.js';
@@ -41,9 +41,8 @@ export class Menu extends Phaser.Scene {
     this.run = run;
     let y = 300;
     if (run) {
-      const where = run.screen === 'combat' ? 'in a fight' : `sector ${run.sector}`;
       button(this, WIDTH / 2, y, 300, 50, 'Continue', () => route(this, run), { fill: PALETTE.gold });
-      text(this, WIDTH / 2, y + 38, `${run.ship.name}, ${run.mode === 'cruise' ? 'Cruise' : 'Normal'}, ${where}: ${sectorName(run)}`, { color: PALETTE.lavender, wrap: 330 });
+      text(this, WIDTH / 2, y + 38, `${run.ship.name} (${run.mode === 'cruise' ? 'Cruise' : 'Normal'}), sector ${run.sector}${run.screen === 'combat' ? ', mid-fight' : ''}`, { color: PALETTE.lavender });
       y += 76;
     }
     button(this, WIDTH / 2, y, 300, 50, 'New run', () => this.newRun(), { fill: run ? PALETTE.lavender : PALETTE.gold });
