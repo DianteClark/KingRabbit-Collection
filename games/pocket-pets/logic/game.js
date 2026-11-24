@@ -388,6 +388,10 @@ export function afterBattle(state, setup, result, caughtPet) {
   const out = { lines: [], coins: 0, badge: null, blackout: false };
   state.stats.battles += 1;
   for (const p of setup.foeParty) markSeen(state, p.sp);
+  if (setup.friendly && result !== 'lose') {
+    healAll(state);
+    out.lines.push('Prof. Rowan patched up your pet. Good as new!');
+  }
   if (result === 'win') {
     state.stats.wins += 1;
     if (setup.kind === 'trainer') {
@@ -414,7 +418,7 @@ export function afterBattle(state, setup, result, caughtPet) {
       // The first rival battle is just for fun: it counts as done and costs nothing.
       state.beaten[setup.id] = true;
       healAll(state);
-      out.lines.push('Your pets are tired. You give them a rest.');
+      out.lines.push('Prof. Rowan patched up your pet. Good as new!');
     } else blackout(state, out);
   }
   return out;

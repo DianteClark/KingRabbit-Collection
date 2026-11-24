@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { PALETTE, hex } from '../../../shared/core/palette.js';
 import { text, button } from '../../../shared/core/ui.js';
 import { isMuted, setMuted, sfx } from '../../../shared/core/sfx.js';
-import { WIDTH, HEIGHT, go, modal, shadowTitle, setBackground, store, openHowTo, petImage, setPetFrame, LCD } from './common.js';
+import { WIDTH, go, modal, shadowTitle, setBackground, store, openHowTo, petImage, setPetFrame, LCD } from './common.js';
 import { loadGame, clearGame, saveGame } from '../save.js';
 import { skillLabel, resetSkill } from '../adaptive.js';
 import { newGame, dexCounts } from '../logic/game.js';
