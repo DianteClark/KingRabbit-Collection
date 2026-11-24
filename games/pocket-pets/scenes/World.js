@@ -14,6 +14,7 @@ import { partyPanel, bagPanel, dexPanel, shopPanel, boxPanel, blocking, closeAll
 const T = 32; // tile size on screen
 const VIEW_TOP = 54;
 const VIEW_BOTTOM = 504;
+const DIALOG_TOP = 384;
 const PLAYER_CH = 8;
 const STEP_MS = 150;
 
@@ -114,9 +115,11 @@ export class World extends Phaser.Scene {
   cameraTo(instant) {
     const cam = this.cameras.main;
     const mw = this.map.tiles[0].length * T; const mh = this.map.tiles.length * T;
-    const viewH = VIEW_BOTTOM - VIEW_TOP;
-    let sx = mw <= WIDTH ? (mw - WIDTH) / 2 : Phaser.Math.Clamp(this.player.x - WIDTH / 2, 0, mw - WIDTH);
-    let sy = mh <= viewH ? (mh - viewH) / 2 - VIEW_TOP : Phaser.Math.Clamp(this.player.y - VIEW_TOP - viewH / 2, -VIEW_TOP, mh - VIEW_BOTTOM);
+    // While a dialogue box is open, keep the player in the part of the map above it.
+    const bottom = this.dialog ? DIALOG_TOP : VIEW_BOTTOM;
+    const viewH = bottom - VIEW_TOP;
+    const sx = mw <= WIDTH ? (mw - WIDTH) / 2 : Phaser.Math.Clamp(this.player.x - WIDTH / 2, 0, mw - WIDTH);
+    const sy = mh <= viewH ? (mh - viewH) / 2 - VIEW_TOP : Phaser.Math.Clamp(this.player.y - VIEW_TOP - viewH / 2, -VIEW_TOP, mh - bottom);
     if (instant) { cam.scrollX = Math.round(sx); cam.scrollY = Math.round(sy); return; }
     cam.scrollX = Math.round(cam.scrollX + (sx - cam.scrollX) * 0.35);
     cam.scrollY = Math.round(cam.scrollY + (sy - cam.scrollY) * 0.35);
@@ -356,7 +359,7 @@ export class World extends Phaser.Scene {
     this.dialog?.c.destroy();
     const D = 6000;
     const c = this.add.container(0, 0).setScrollFactor(0).setDepth(D);
-    const top = 384; const h = 114;
+    const top = DIALOG_TOP; const h = 114;
     c.add(panel(this, 6, top, WIDTH - 12, h, { fill: PALETTE.cream, inner: PALETTE.night, border: PALETTE.ink }));
     let tx = 22;
     if (face != null) {

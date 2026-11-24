@@ -294,7 +294,7 @@ export const MAPS = {
     npcs: [
       { id: 'pk_guard', x: 8, y: 1, ch: SP.guard, name: 'Guard', kind: 'gate', need: { badges: 3 }, aside: [7, 2], face: 'down',
         text: ['Guard: The Summit Trail is only for tamers with three badges.'] },
-      { id: 'rival2', x: 7, y: 9, ch: SP.rival, name: 'Kit', title: 'Rival', kind: 'trainer', face: 'down', sight: 0, ambush: true, hideWhenBeaten: true, rival: true,
+      { id: 'rival2', x: 7, y: 14, ch: SP.rival, name: 'Kit', title: 'Rival', kind: 'trainer', face: 'down', sight: 0, ambush: true, hideWhenBeaten: true, rival: true,
         team: [['chirrup', 19], ['zapkit', 19], ['R2', 21]], reward: 25, skillWeight: 0.7,
         intro: ['Kit: There you are! I\'ve been training non-stop.', 'This time I won\'t lose!'],
         lose: ['Kit: Again?! Fine... Marina\'s Tide pets hate Spark moves. Good luck.'], win: ['Kit: Yes! Finally!'] },
