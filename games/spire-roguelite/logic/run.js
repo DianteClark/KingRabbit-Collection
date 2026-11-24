@@ -64,6 +64,7 @@ export function newRun({ hero = 'knight', mode = 'normal', seed = Date.now() } =
 function startAct(run) {
   run.map = generateMap(run.rng);
   run.pos = null;
+  run.path = [];
   run.fightsThisAct = 0;
   run.bossId = pick(run.rng, ACTS[run.act - 1].bosses);
   run.screen = 'map';
@@ -108,6 +109,7 @@ export function availableNodes(run) {
 export function travel(run, nodeId) {
   if (!availableNodes(run).includes(nodeId)) return false;
   run.pos = nodeId;
+  run.path = [...(run.path || []), nodeId];
   run.floor += 1;
   run.stats.floors += 1;
   const node = run.map.nodes[nodeId];

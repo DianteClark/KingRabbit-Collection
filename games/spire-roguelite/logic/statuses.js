@@ -21,7 +21,7 @@ export const STATUSES = {
   // Player powers
   warlord: { name: 'Warlord', kind: 'buff', art: 'sk:11,1', desc: (n) => `Gain ${n} Strength at the start of each turn.` },
   bulwark: { name: 'Bulwark', kind: 'buff', art: 'sk:1,1', desc: () => 'Block is not removed at the start of your turn.' },
-  pyro: { name: 'Pyromania', kind: 'buff', art: 'sp:5,5', desc: (n) => `Playing an Attack deals ${n} damage to ALL enemies.` },
+  pyro: { name: 'Fire Soul', kind: 'buff', art: 'sp:5,5', desc: (n) => `Playing an Attack deals ${n} damage to ALL enemies.` },
   wildfire: { name: 'Wildfire', kind: 'buff', art: 'sp:1,0', desc: (n) => `End of turn: deal ${n} damage to ALL enemies.` },
   noxious: { name: 'Noxious Fumes', kind: 'buff', art: 'sp:4,0', desc: (n) => `Start of turn: apply ${n} Poison to ALL enemies.` },
   archmage: { name: 'Archmage', kind: 'buff', art: 'sk:12,5', desc: (n) => `Gain ${n} extra Energy each turn.` },

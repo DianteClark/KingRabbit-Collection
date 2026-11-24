@@ -69,7 +69,7 @@ card('rally', {
   play: (c, v) => { c.applySelf('str', v.n); c.applySelf('strDown', v.n); },
 });
 card('hamstring', {
-  name: 'Hamstring', cls: 'knight', type: 'attack', rarity: 'common', cost: 2, target: 'enemy', art: 'sk:3,7',
+  name: 'Hobble', cls: 'knight', type: 'attack', rarity: 'common', cost: 2, target: 'enemy', art: 'sk:3,7',
   text: 'Deal {dmg} damage. Apply {n} Weak.', v: { dmg: 12, n: 2 }, up: { dmg: 14, n: 3 },
   play: (c, v, t) => { c.attack(t, v.dmg); c.apply(t, 'weak', v.n); },
 });
@@ -104,7 +104,7 @@ card('ironSkin', {
   play: (c, v) => c.applySelf('plate', v.n),
 });
 card('whirlwind', {
-  name: 'Whirlwind', cls: 'knight', type: 'attack', rarity: 'uncommon', cost: 'X', art: 'sp:0,3',
+  name: 'Cyclone', cls: 'knight', type: 'attack', rarity: 'uncommon', cost: 'X', art: 'sp:0,3',
   text: 'Deal {dmg} damage to ALL enemies X times.', v: { dmg: 5 }, up: { dmg: 8 },
   play: (c, v) => { for (let i = 0; i < v.X; i++) c.attackAll(v.dmg); },
 });
@@ -216,12 +216,12 @@ card('overload', {
   play: (c, v) => { c.gainEnergy(v.n); c.addCard('dazed', 'draw', 1); },
 });
 card('pyromania', {
-  name: 'Pyromania', cls: 'mage', type: 'power', rarity: 'uncommon', cost: 1, art: 'sp:5,5',
+  name: 'Fire Soul', cls: 'mage', type: 'power', rarity: 'uncommon', cost: 1, art: 'sp:5,5',
   text: 'Whenever you play an Attack, deal {n} damage to ALL enemies.', v: { n: 2 }, up: { n: 3 },
   play: (c, v) => c.applySelf('pyro', v.n),
 });
 card('thunderclap', {
-  name: 'Thunderclap', cls: 'mage', type: 'attack', rarity: 'uncommon', cost: 1, art: 'sp:6,2',
+  name: 'Thunder Clap', cls: 'mage', type: 'attack', rarity: 'uncommon', cost: 1, art: 'sp:6,2',
   text: 'Deal {dmg} damage and apply 1 Vulnerable to ALL enemies.', v: { dmg: 6 }, up: { dmg: 9 },
   play: (c, v) => { c.attackAll(v.dmg); c.applyAll('vuln', 1); },
 });
@@ -241,7 +241,7 @@ card('hex', {
   play: (c, v, t) => { c.apply(t, 'weak', v.n); c.apply(t, 'vuln', v.n); },
 });
 card('firestorm', {
-  name: 'Firestorm', cls: 'mage', type: 'attack', rarity: 'rare', cost: 3, art: 'sp:7,0',
+  name: 'Fire Storm', cls: 'mage', type: 'attack', rarity: 'rare', cost: 3, art: 'sp:7,0',
   text: 'Deal {dmg} damage to ALL enemies {m} times.', v: { dmg: 7, m: 3 }, up: { dmg: 7, m: 4 },
   play: (c, v) => { for (let i = 0; i < v.m; i++) c.attackAll(v.dmg); },
 });
@@ -303,7 +303,7 @@ card('flurry', {
   play: (c, v, t) => c.attack(t, v.dmg, v.m),
 });
 card('piercingShot', {
-  name: 'Piercing Shot', cls: 'ranger', type: 'attack', rarity: 'common', cost: 2, target: 'enemy', art: 'sp:3,0',
+  name: 'Piercing Shot', cls: 'ranger', type: 'attack', rarity: 'common', cost: 2, target: 'enemy', art: 'ar:9,4',
   text: 'Deal {dmg} damage. Ignores Block.', v: { dmg: 14 }, up: { dmg: 19 },
   play: (c, v, t) => c.attack(t, v.dmg, 1, { pierce: true }),
 });
@@ -353,7 +353,7 @@ card('envenom', {
   play: (c) => c.applySelf('envenom', 1),
 });
 card('adrenaline', {
-  name: 'Adrenaline', cls: 'ranger', type: 'skill', rarity: 'rare', cost: 0, art: 'sk:4,1',
+  name: 'Rush', cls: 'ranger', type: 'skill', rarity: 'rare', cost: 0, art: 'sk:4,1',
   text: 'Gain {n} Energy. Draw 2 cards. Exhaust.', v: { n: 1 }, up: { n: 2 }, flags: { exhaust: true },
   play: (c, v) => { c.gainEnergy(v.n); c.draw(2); },
 });
@@ -363,7 +363,7 @@ card('eagleEye', {
   play: (c) => c.applySelf('eagle', 1),
 });
 card('deathMark', {
-  name: 'Death Mark', cls: 'ranger', type: 'skill', rarity: 'rare', cost: 2, upCost: 1, art: 'sp:5,6',
+  name: 'Death Mark', cls: 'ranger', type: 'skill', rarity: 'rare', cost: 2, upCost: 1, art: 'ar:0,0',
   text: 'Each enemy gains {n} Poison plus as much again as it already has.', v: { n: 5 }, up: { n: 8 },
   play: (c, v) => { for (const e of c.livingEnemies()) c.apply(e, 'poison', c.enemyStatus(e, 'poison') + v.n); },
 });
@@ -385,7 +385,7 @@ card('swiftStrike', {
   play: (c, v, t) => c.attack(t, v.dmg),
 });
 card('goodInstincts', {
-  name: 'Good Instincts', cls: 'neutral', type: 'skill', rarity: 'uncommon', cost: 0, art: 'sk:12,1',
+  name: 'Quick Guard', cls: 'neutral', type: 'skill', rarity: 'uncommon', cost: 0, art: 'sk:12,1',
   text: 'Gain {block} Block.', v: { block: 6 }, up: { block: 9 },
   play: (c, v) => c.block(v.block),
 });
@@ -410,7 +410,7 @@ card('masterPlan', {
   play: (c, v) => c.draw(v.n),
 });
 card('apotheosis', {
-  name: 'Apotheosis', cls: 'neutral', type: 'skill', rarity: 'rare', cost: 2, upCost: 1, art: 'sp:7,4',
+  name: 'Ascend', cls: 'neutral', type: 'skill', rarity: 'rare', cost: 2, upCost: 1, art: 'sp:7,4',
   text: 'Upgrade ALL your cards for the rest of this fight. Exhaust.', v: {}, flags: { exhaust: true },
   play: (c) => c.upgradeAllInCombat(),
 });
@@ -498,7 +498,7 @@ export function describe(card, fmt) {
   return src.replace(/\{(\w+)\}/g, (_, k) => {
     if (fmt) { const r = fmt(k, v[k], v); if (r !== undefined) return String(r); }
     return v[k] === undefined ? '?' : String(v[k]);
-  });
+  }).replace(/\b1 (card|turn)\(s\)/g, '1 $1').replace(/\((s)\)/g, '$1');
 }
 
 /** Pool of cards that can show up as rewards for a class. */

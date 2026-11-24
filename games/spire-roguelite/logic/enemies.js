@@ -264,7 +264,7 @@ export const ENEMIES = {
     ai: cycle('tentacles', 'ink', 'crush', 'grow'),
   },
   beholder: {
-    name: 'Beholder', sprite: 'boss2:48', hp: [230, 230], boss: true,
+    name: 'Beholder', sprite: 'boss2:72', hp: [230, 230], boss: true,
     start: { artifact: 2 },
     moves: {
       rays: { name: 'Eye Rays', dmg: 3, times: 5 },
@@ -379,16 +379,16 @@ export const ENEMIES = {
     },
     ai: cycle('wings', 'breath', 'claws', 'hoard'),
   },
-  voidHorror: {
-    name: 'Void Horror', sprite: 'boss2:72', hp: [300, 300], boss: true,
+  frostTitan: {
+    name: 'Frost Titan', sprite: 'boss2:96', hp: [300, 300], boss: true,
     start: { regen: 5 },
     moves: {
-      grasp: { name: 'Void Grasp', dmg: 14, debuff: { frail: 2 } },
-      gaze: { name: 'Maddening Gaze', debuff: { weak: 2, vuln: 2 }, add: ['dazed', 2, 'draw'] },
-      consume: { name: 'Consume', dmg: 24, drain: true },
-      grow: { name: 'Grow', buff: { str: 3 }, block: 20 },
+      blizzard: { name: 'Blizzard', debuff: { weak: 2, vuln: 2 }, add: ['dazed', 2, 'draw'] },
+      fist: { name: 'Ice Fist', dmg: 14, debuff: { frail: 2 } },
+      avalanche: { name: 'Avalanche', dmg: 24 },
+      harden: { name: 'Harden', buff: { str: 3 }, block: 20 },
     },
-    ai: cycle('gaze', 'grasp', 'consume', 'grow'),
+    ai: cycle('blizzard', 'fist', 'avalanche', 'harden'),
   },
 };
 
@@ -413,7 +413,7 @@ export const ACTS = [
     easy: [['imp', 'imp', 'imp'], ['demon'], ['hellhound', 'hellhound'], ['efreet']],
     hard: [['pitFiend'], ['devil', 'imp'], ['giant'], ['demon', 'imp'], ['hellhound', 'hellhound', 'imp'], ['efreet', 'imp']],
     elites: [['blackKnight'], ['fireTitan'], ['shadowCat']],
-    bosses: ['redDragon', 'voidHorror'],
+    bosses: ['redDragon', 'frostTitan'],
   },
 ];
 
