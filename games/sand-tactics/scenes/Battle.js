@@ -3,7 +3,7 @@ import { PALETTE, hex } from '../../../shared/core/palette.js';
 import { text, button, panel } from '../../../shared/core/ui.js';
 import { sfx } from '../../../shared/core/sfx.js';
 import {
-  WIDTH, HEIGHT, store, go, modal, toast, setBackground, openHowTo, TEAM_COLOR, fit, money,
+  WIDTH, HEIGHT, store, go, modal, toast, setBackground, openHowTo, TEAM_COLOR, fit, money, tapZone,
 } from './common.js';
 import * as G from '../logic/game.js';
 import { UNITS, UNIT_ORDER, TERRAIN, SIDES, displayHp, isRanged } from '../logic/data.js';
@@ -303,7 +303,9 @@ export class Battle extends Phaser.Scene {
     this.input.on('pointermove', (p) => {
       if (!down || !p.isDown) return;
       const dx = p.x - down.x; const dy = p.y - down.y;
-      if (!down.drag && Math.hypot(dx, dy) > 10) down.drag = true;
+      // A map that already fits the screen can't scroll, so be forgiving with shaky taps there.
+      const canScroll = this.mapW > WIDTH || this.mapH > VIEW_H;
+      if (!down.drag && Math.hypot(dx, dy) > (canScroll ? 10 : 24)) down.drag = true;
       if (down.drag) this.scrollTo(down.sx - dx, down.sy - dy);
     });
     this.input.on('pointerup', (p) => {
@@ -563,6 +565,7 @@ export class Battle extends Phaser.Scene {
     const reach = this.ui.reach;
     const path = G.pathTo(reach, G.idx(s, x, y));
     this.clearHighlights();
+    this.clearPanel(); // no Cancel / Act here while the unit is walking
     this.busy = true;
     if (path.length > 1) { sfx('move'); await this.animateMove(u, path, true); }
     this.busy = false;
@@ -640,7 +643,6 @@ export class Battle extends Phaser.Scene {
 
   undoMove() {
     const u = G.unitById(this.s, this.ui.id);
-    sfx('tap');
     if (u) {
       const v = this.views.get(u.id);
       const [cx, cy] = this.cellCenter(u.x, u.y);
@@ -715,7 +717,7 @@ export class Battle extends Phaser.Scene {
       row.add(text(this, WIDTH - 30, y + 14, money(d.cost), { origin: [1, 0.5], color: ok ? PALETTE.gold : PALETTE.orange }));
       row.add(fit(text(this, 74, y + 33, `Move ${d.move}${d.range[1] > 1 ? `  Range ${d.range[0]}-${d.range[1]}` : ''}  ${shortRole(t)}`, { origin: [0, 0.5], color: PALETTE.lavender }), WIDTH - 104));
       const z = this.add.zone(20, y + 2, WIDTH - 40, rowH - 4).setOrigin(0).setInteractive({ useHandCursor: true });
-      z.on('pointerup', () => {
+      tapZone(z, () => {
         if (!ok) { sfx('error'); toast(this, full ? 'Unit limit reached' : 'Not enough funds', 600, PALETTE.orange, 700, 120); return; }
         c.destroy();
         this.doBuild(p, t);
@@ -752,6 +754,11 @@ export class Battle extends Phaser.Scene {
   }
 
   endTurn() {
+    // Only once per turn, and only by the human whose turn it is (guards double taps on End Turn).
+    if (!this.isHumanTurn() || this.busy) return;
+    this.busy = true;
+    this.clearPanel();
+    this.coachUpdate(); // hides the hint strip while the turn changes hands
     (this.sideScroll ||= {})[this.s.turn] = { ...this.scroll };
     this.clearHighlights();
     this.ui = { mode: 'idle' };
@@ -768,9 +775,18 @@ export class Battle extends Phaser.Scene {
     const s = this.s;
     if (s.over) { this.showResult(); return; }
     const side = s.turn;
-    if (s.controllers[side] === 'cpu') { if (!this.fast) await this.banner(`${SIDES[side].name}'s turn`, side); this.runCpu(); return; }
+    if (s.controllers[side] === 'cpu') {
+      this.busy = true;
+      this.clearPanel();
+      if (!this.fast) await this.banner(`${SIDES[side].name}'s turn`, side);
+      this.runCpu();
+      return;
+    }
+    this.busy = true;
     const twoPlayers = s.controllers[0] === 'human' && s.controllers[1] === 'human';
     const begin = () => {
+      this.busy = false;
+      this.skipping = false;
       // Look where this commander was looking at the end of their last turn (or at their HQ).
       const back = this.sideScroll?.[side];
       const focus = G.hqOf(s, side) || G.unitsOf(s, side)[0];
@@ -787,11 +803,14 @@ export class Battle extends Phaser.Scene {
     };
     if (twoPlayers && announce) {
       this.clearPanel();
+      this.busy = false;
       modal(this, `${SIDES[side].name}'s turn`, [`Day ${s.day}. Pass the phone to the ${SIDES[side].name} commander.`], [['Start turn', () => { sfx('power'); begin(); }]]);
     } else if (announce) { await this.banner(`Day ${s.day}: your turn`, side); begin(); } else begin();
   }
 
+  /** Turn banner across the map. A tap on the map ends it early. */
   banner(msg, side) {
+    this.skipping = false;
     return new Promise((res) => {
       const y = TOP + VIEW_H / 2;
       const bg = this.add.rectangle(WIDTH / 2, y, WIDTH, 56, side === 0 ? 0x2c4a80 : 0x6e2224, 0.92).setDepth(60);
@@ -800,8 +819,18 @@ export class Battle extends Phaser.Scene {
       bg.setScale(1, 0); t.setAlpha(0);
       this.tweens.add({ targets: bg, scaleY: 1, duration: 120 });
       this.tweens.add({ targets: t, alpha: 1, duration: 120 });
-      this.time.delayedCall(this.fast ? 300 : 900, () => {
-        this.tweens.add({ targets: [bg, t], alpha: 0, duration: 150, onComplete: () => { bg.destroy(); t.destroy(); res(); } });
+      const hold = this.fast ? 300 : 750;
+      let waited = 0;
+      const done = () => {
+        this.skipping = false;
+        this.tweens.add({ targets: [bg, t], alpha: 0, duration: 120, onComplete: () => { bg.destroy(); t.destroy(); res(); } });
+      };
+      const tick = this.time.addEvent({
+        delay: 50, loop: true,
+        callback: () => {
+          waited += 50;
+          if (waited >= hold || this.skipping) { tick.remove(); done(); }
+        },
       });
     });
   }
@@ -810,8 +839,8 @@ export class Battle extends Phaser.Scene {
     this.clearPanel();
     const side = this.s.turn;
     this.pText(12, 566, `${SIDES[side].army} are moving...`, { color: TEAM_COLOR[side] });
-    this.pText(12, 594, 'Tap the map to skip animations.', { color: PALETTE.lavender });
-    const b = this.pButton(296, 614, 112, 40, this.fast ? 'Fast: on' : 'Fast: off', () => {
+    this.pText(12, 590, 'Tap the map to skip animations.', { color: PALETTE.lavender });
+    const b = this.pButton(296, 620, 112, 36, this.fast ? 'Fast: on' : 'Fast: off', () => {
       this.fast = !this.fast; save.set('fast', this.fast); b.setLabel(this.fast ? 'Fast: on' : 'Fast: off');
     }, { fill: PALETTE.indigo, color: PALETTE.cream });
   }
@@ -821,6 +850,7 @@ export class Battle extends Phaser.Scene {
     const side = s.turn;
     const P = aiParams(Math.min(getSkill(), s.cpuCap ?? 1));
     this.busy = true;
+    this.skipping = false;
     this.cpuRunning = true;
     this.coachUpdate();
     this.showCpuPanel();
@@ -830,6 +860,7 @@ export class Battle extends Phaser.Scene {
     while (!s.over && s.turn === side && guard++ < 300) {
       if (!this.scene.isActive()) return;
       while (this.modalOpen() && this.scene.isActive()) await new Promise((r) => setTimeout(r, 150));
+      if (this.leaving) return; // Save and quit: stop here, the next step runs after Continue
       // Cap the thinking per turn: past the budget the computer decides unit by unit.
       const t0 = performance.now();
       const step = aiStep(s, side, P, { quick: think > 1200 });
@@ -1134,7 +1165,9 @@ export class Battle extends Phaser.Scene {
   }
 
   confirmResign() {
-    modal(this, 'Resign?', ['The battle counts as lost.'], [['Resign', () => {
+    const vsCpu = this.s.controllers.includes('cpu');
+    const me = SIDES[this.s.turn].name; const other = SIDES[1 - this.s.turn].name;
+    modal(this, 'Resign?', [vsCpu ? 'The battle counts as lost.' : `${me} gives up and ${other} wins.`], [['Resign', () => {
       const side = this.s.controllers[0] === 'human' && this.s.controllers[1] === 'cpu' ? 0 : this.s.turn;
       G.resign(this.s, side);
       saveBattle(this.s);
@@ -1143,6 +1176,7 @@ export class Battle extends Phaser.Scene {
   }
 
   quit() {
+    this.leaving = true;
     if (this.s.over) clearBattle(); else saveBattle(this.s);
     go(this, 'Menu');
   }
@@ -1174,8 +1208,10 @@ export class Battle extends Phaser.Scene {
     const buttons = [];
     if (!vsCpu) {
       title = `${SIDES[s.winner].name} wins!`;
-      lines.push({ text: `${reason} on day ${s.day}.`, color: TEAM_COLOR[s.winner] });
-      buttons.push(['Rematch', () => this.restart()], ['Menu', () => go(this, 'Menu')]);
+      const loser = SIDES[1 - s.winner].name;
+      const why = s.reason === 'resign' ? `${loser} resigned` : s.reason === 'hq' ? `${loser}'s HQ captured` : s.reason === 'rout' ? `All ${loser} units destroyed` : reason;
+      lines.push({ text: `${why} on day ${s.day}.`, color: TEAM_COLOR[s.winner] });
+      buttons.push(['Rematch', () => this.restart()], ['Menu', () => go(this, 'Menu', { view: 'versus' })]);
     } else if (won) {
       title = 'Victory!';
       lines.push({ text: `${reason} on day ${s.day}.`, color: PALETTE.gold });
@@ -1190,7 +1226,7 @@ export class Battle extends Phaser.Scene {
         buttons.push(['Menu', () => go(this, 'Menu', { view: 'campaign' })]);
       } else {
         recordSkirmish(s.mapId, true);
-        buttons.push(['Play again', () => this.restart()], ['Menu', () => go(this, 'Menu')]);
+        buttons.push(['Play again', () => this.restart()], ['Menu', () => go(this, 'Menu', { view: 'skirmish' })]);
       }
     } else {
       title = 'Defeat';
@@ -1199,7 +1235,13 @@ export class Battle extends Phaser.Scene {
       if (s.mode === 'skirmish') recordSkirmish(s.mapId, false);
       buttons.push(['Try again', () => this.restart()], ['Menu', () => go(this, 'Menu', s.mode === 'campaign' ? { view: 'campaign' } : undefined)]);
     }
-    if (st) lines.push({ text: `Built ${st.built}, destroyed ${st.kills}, lost ${st.lost}, captured ${st.captured}`, color: PALETTE.lavender });
+    if (vsCpu && st) lines.push({ text: `Built ${st.built}, destroyed ${st.kills}, lost ${st.lost}, captured ${st.captured}`, color: PALETTE.lavender });
+    if (!vsCpu) {
+      for (const side of [0, 1]) {
+        const x = s.stats[side];
+        lines.push({ text: `${SIDES[side].name}: built ${x.built}, destroyed ${x.kills}, captured ${x.captured}`, color: TEAM_COLOR[side] });
+      }
+    }
     sfx(won ? 'win' : 'lose');
     this.time.delayedCall(400, () => modal(this, title, lines, buttons));
   }

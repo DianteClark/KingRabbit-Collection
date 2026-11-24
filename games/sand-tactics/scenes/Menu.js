@@ -3,7 +3,7 @@ import { PALETTE, hex } from '../../../shared/core/palette.js';
 import { text, button, panel } from '../../../shared/core/ui.js';
 import { isMuted, setMuted, sfx } from '../../../shared/core/sfx.js';
 import {
-  WIDTH, go, modal, shadowTitle, setBackground, store, openHowTo, header, fit,
+  WIDTH, go, modal, shadowTitle, setBackground, store, openHowTo, header, fit, tapZone, money,
 } from './common.js';
 import { loadBattle, clearBattle, campaign, getRecord, saveBattle } from '../save.js';
 import { skillLabel, resetSkill } from '../adaptive.js';
@@ -125,7 +125,7 @@ export class Menu extends Phaser.Scene {
       const sub = locked ? `Win mission ${i} to unlock` : `${m.rows[0].length}x${m.rows.length}  ${'*'.repeat(Math.ceil((i + 1) / 2))}  ${m.survive ? 'Hold out' : 'Rout or take HQ'}`;
       cont.add(text(this, 28, y + 40, sub, { origin: [0, 0.5], color: PALETTE.lavender }));
       const z = this.add.zone(14, y, WIDTH - 28, cardH).setOrigin(0).setInteractive({ useHandCursor: true });
-      z.on('pointerup', () => {
+      tapZone(z, () => {
         if (locked) { sfx('error'); return; }
         sfx('tap');
         this.briefing(m);
@@ -163,12 +163,12 @@ export class Menu extends Phaser.Scene {
         text(this, 110, y + 96, r.w + r.l ? `Won ${r.w}, lost ${r.l}` : 'Not played yet', { origin: [0, 0.5], color: r.w ? PALETTE.leaf : PALETTE.lavender });
       }
       const z = this.add.zone(14, y, WIDTH - 28, cardH).setOrigin(0).setInteractive({ useHandCursor: true });
-      z.on('pointerup', () => {
+      tapZone(z, () => {
         sfx('tap');
         const saved = loadBattle();
         const lines = [kind === 'versus' ? 'Blue moves first. Hand the phone over when you end your turn.' : 'Capture the CPU\'s HQ or destroy all its units.'];
-        lines.push({ text: `Starting funds ${m.funds[0]}. Every building pays 1000 a day.`, color: PALETTE.lavender });
-        lines.push({ text: 'Blue moves first, so Blue gets no income on day 1 and Red starts with 1000 extra.', color: PALETTE.lavender });
+        lines.push({ text: `Starting funds ${money(m.funds[0])}. Every building pays 1,000 a day.`, color: PALETTE.lavender });
+        lines.push({ text: 'Blue moves first, so Blue gets no income on day 1 and Red starts with 1,000 extra.', color: PALETTE.lavender });
         if (saved && !saved.over) lines.push({ text: 'This replaces your battle in progress.', color: PALETTE.orange });
         modal(this, m.name, lines, [['Start', () => this.start(m, kind)], ['Back', null]], { row: true });
       });
