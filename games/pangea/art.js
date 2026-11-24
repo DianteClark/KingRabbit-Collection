@@ -100,22 +100,22 @@ export function drawTerrain(scene, rt, s) {
   dual('features', 4, (t) => t && t.f === 'mountain');
   // Lone mountains get a proper peak.
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (s.tiles[y * w + x].f === 'mountain') put('features', 272, 64, x * 16, y * 16);
-  // Improvements and resources.
+  rt.endDraw();
+  // Improvements (farms half see-through so fields don't drown the map) and resources.
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
       const t = s.tiles[y * w + x];
-      if (t.imp && IMP_COL[t.imp] != null) put('upgrades', IMP_COL[t.imp] * 16, 16, x * 16, y * 16);
-      if (t.r) put('resources', RES_COL[t.r] * 16, 16, x * 16, y * 16);
+      if (t.imp && IMP_COL[t.imp] != null) { const [k, f] = frame(scene, 'upgrades', IMP_COL[t.imp] * 16, 16); rt.stamp(k, f, x * 16 + 8, y * 16 + 8, { alpha: t.imp === 'farm' ? 0.5 : 1 }); }
+      if (t.r) { const [k, f] = frame(scene, 'resources', RES_COL[t.r] * 16, 16); rt.stamp(k, f, x * 16 + 8, y * 16 + 8); }
     }
   }
-  rt.endDraw();
 }
 
 /**
  * Fog: clouds over unexplored tiles (soft edges toward explored land) and a dark veil over tiles
  * that were seen before but aren't watched right now.
  */
-export function drawFog(scene, rt, s, explored, visible) {
+export function drawFog(scene, rt, s, explored, visible, veil) {
   const { w, h } = s;
   rt.clear();
   rt.beginDraw();
@@ -132,10 +132,15 @@ export function drawFog(scene, rt, s, explored, visible) {
     }
   }
   rt.endDraw();
+  // The veil is drawn solid on its own texture, which is shown see-through (no seams between tiles).
+  veil.clear();
   for (let y = 0; y < h; y++) {
-    for (let x = 0; x < w; x++) {
+    let run = -1;
+    for (let x = 0; x <= w; x++) {
       const i = y * w + x;
-      if (explored[i] && !visible[i]) rt.fill(0x0c0a1c, 0.42, x * 16, y * 16, 16, 16);
+      const on = x < w && explored[i] && !visible[i];
+      if (on && run < 0) run = x;
+      if (!on && run >= 0) { veil.fill(0x0c0a1c, 1, run * 16, y * 16, (x - run) * 16, 16); run = -1; }
     }
   }
 }

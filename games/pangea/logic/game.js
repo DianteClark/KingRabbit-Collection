@@ -223,7 +223,7 @@ export function cityYield(s, ct) {
   let prodMul = 1 + pct.prod / 100;
   if (mood.net <= -5) prodMul *= 0.75;
   const food = tot[0] + add.food;
-  const prod = Math.max(1, Math.round((tot[1] + add.prod) * prodMul));
+  const prod = Math.max(1, Math.round((tot[1] + add.prod + Math.floor(ct.pop / 2)) * prodMul));
   const gold = Math.round((tot[2] + add.gold + Math.floor(ct.pop / 2)) * (1 + pct.gold / 100));
   const sci = Math.round((ct.pop + 1 + add.sci) * (1 + pct.sci / 100));
   const eat = ct.pop * 2;

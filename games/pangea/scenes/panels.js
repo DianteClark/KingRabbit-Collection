@@ -118,9 +118,10 @@ function cityHtml(g, ct) {
   const y = G.cityYield(s, ct);
   const mine = ct.owner === g.me;
   if (!mine) {
-    const def = G.militaryAt(s, ct.x, ct.y);
+    const seen = g.vis ? g.vis[G.idx(s, ct.x, ct.y)] : true;
+    const def = seen ? G.militaryAt(s, ct.x, ct.y) : null;
     return `<p class="pg-p">${esc(s.civs[ct.owner].name)} city, size ${ct.pop}.${ct.capital ? ' Their capital.' : ''}</p>
-      <p class="pg-p">${def ? `Defended by a ${esc(UNITS[def.type].name)} (health ${def.hp}/10).` : 'No defender is in sight.'}${ct.blds.includes('walls') ? ' It has walls.' : ''}</p>
+      <p class="pg-p">${!seen ? 'Move a unit closer to see who defends it.' : def ? `Defended by a ${esc(UNITS[def.type].name)} (health ${def.hp}/10).` : 'No defender! A unit could walk in.'}${ct.blds.includes('walls') ? ' It has walls.' : ''}</p>
       ${ct.wonders.length ? `<p class="pg-p">Wonders: ${ct.wonders.map((w) => esc(WONDERS[w].name)).join(', ')}</p>` : ''}`;
   }
   const parts = [];
@@ -132,6 +133,7 @@ function cityHtml(g, ct) {
   // Queue.
   parts.push('<h3 class="pg-h3">Building</h3>');
   if (!ct.queue.length) parts.push('<p class="pg-p" style="color:var(--orange)">Nothing! Pick something below.</p>');
+  if (ct.queue[0] && UNITS[ct.queue[0].id]?.pop && ct.pop < 2 && y.surplus <= 0) parts.push('<p class="pg-p" style="color:var(--orange)">The Settler waits for size 2, but the city isn\'t growing. Try the Food focus.</p>');
   let acc = 0;
   ct.queue.forEach((q, i) => {
     const cost = G.itemCost(q);
@@ -492,23 +494,25 @@ export function showOffer(g, offer, onAnswer) {
   return p;
 }
 
-export function showHandoff(s, c, onReady) {
+export function showHandoff(s, c, onReady, onMenu) {
   document.querySelector('.pg-cover')?.remove();
   const cv = s.civs[c];
   const el = document.createElement('div');
   el.className = 'pg-cover';
   el.innerHTML = `${face(cv.avatar)}<div style="font-size:32px;color:${COLORS[cv.color].hex}">${esc(cv.name)}</div>
     <div>Turn ${s.turn}. Pass the phone to the ${esc(cv.name)} player.</div>
-    <button class="pg-btn gold" type="button">I'm ready</button>`;
+    <button class="pg-btn gold" type="button" data-go="ready">I'm ready</button>
+    <button class="pg-btn" type="button" data-go="menu">Main menu</button>`;
   for (const t of ['pointerdown', 'pointerup', 'mousedown', 'mouseup', 'touchstart', 'touchend']) el.addEventListener(t, (e) => e.stopPropagation());
   let done = false;
-  el.querySelector('button').addEventListener('click', () => {
-    if (done) return;
+  el.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-go]');
+    if (!b || done) return;
     done = true;
-    sfx('select');
+    sfx(b.dataset.go === 'ready' ? 'select' : 'tap');
     el.remove();
     lastClose = Date.now();
-    onReady();
+    if (b.dataset.go === 'ready') onReady(); else onMenu?.();
   });
   document.body.appendChild(el);
 }
@@ -553,7 +557,7 @@ export function showSetup({ mode, skillText, onStart, onClose }) {
     st.picks.length = st.players;
   };
   ensurePicks();
-  const chips = (act, opts, cur) => `<div class="pg-chips">${opts.map(([v, l]) => `<button class="pg-btn ${v === cur ? 'on' : ''}" data-act="${act}" data-v="${v}">${l}</button>`).join('')}</div>`;
+  const chips = (act, opts, cur) => `<div class="pg-chips ${opts.length === 4 ? 'four' : opts.length === 2 ? 'two' : ''}">${opts.map(([v, l]) => `<button class="pg-btn ${v === cur ? 'on' : ''}" data-act="${act}" data-v="${v}">${l}</button>`).join('')}</div>`;
   const html = () => {
     const parts = [];
     if (!hot) {

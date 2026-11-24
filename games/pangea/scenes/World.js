@@ -90,12 +90,13 @@ export class World extends Phaser.Scene {
     this.unitLayer = this.add.container(0, 0);
     this.fogRT = this.add.renderTexture(0, 0, s.w * T, s.h * T).setOrigin(0);
     this.fogRT.setTint(0x7c82b4);
+    this.veilRT = this.add.renderTexture(0, 0, s.w * T, s.h * T).setOrigin(0).setAlpha(0.42);
     this.labelLayer = this.add.container(0, 0);
     this.cursor = this.add.rectangle(0, 0, T, T).setStrokeStyle(1, hex(PALETTE.gold)).setOrigin(0).setVisible(false);
     this.tweens.add({ targets: this.cursor, alpha: 0.35, yoyo: true, repeat: -1, duration: 420 });
     this.pathG = this.add.graphics();
     this.fx = this.add.container(0, 0);
-    this.world.add([this.terrainRT, this.borderG, this.rangeG, this.cityLayer, this.unitLayer, this.fogRT, this.labelLayer, this.cursor, this.pathG, this.fx]);
+    this.world.add([this.terrainRT, this.borderG, this.rangeG, this.cityLayer, this.unitLayer, this.veilRT, this.fogRT, this.labelLayer, this.cursor, this.pathG, this.fx]);
   }
 
   redrawAll() {
@@ -111,7 +112,7 @@ export class World extends Phaser.Scene {
     if (this.terrainSig() !== this.terrainKey) { drawTerrain(this, this.terrainRT, s); this.terrainKey = this.terrainSig(); }
     this.vis = G.visibleSet(s, this.me);
     this.ex = s.civs[this.me].explored;
-    drawFog(this, this.fogRT, s, this.ex, this.vis);
+    drawFog(this, this.fogRT, s, this.ex, this.vis, this.veilRT);
     this.drawBorders();
     this.refreshCities();
     this.refreshUnits();
@@ -160,7 +161,7 @@ export class World extends Phaser.Scene {
       const known = !!this.ex[G.idx(s, ct.x, ct.y)];
       v.img.setVisible(known);
       v.label.setVisible(known);
-      v.txt.setText(`${ct.capital ? '*' : ''}${ct.name} ${ct.pop}`);
+      v.txt.setText(z < 2 ? `${ct.pop}` : `${ct.capital ? '*' : ''}${ct.name} ${ct.pop}`); // zoomed out: just the size
       v.bg.setSize(v.txt.width + 8, v.txt.height + 2).setFillStyle(hex(COLORS[s.civs[ct.owner].color].dark), 0.92).setStrokeStyle(1, hex(COLORS[s.civs[ct.owner].color].hex));
       v.label.setPosition(ct.x * T + T / 2, ct.y * T - 1).setScale(1 / z);
     }
@@ -386,8 +387,17 @@ export class World extends Phaser.Scene {
 
   /** A row of evenly spaced buttons across the panel. items: [label, fn, opts]. */
   pRow(y, items, h = 40) {
-    const gap = 6; const left = 8; const w = Math.floor((WIDTH - left * 2 - gap * (items.length - 1)) / items.length);
-    return items.map(([label, fn, opts], i) => this.pButton(left + w / 2 + i * (w + gap), y, w, h, label, fn, opts));
+    // items: [label, fn, opts, weight=1]; widths share the row by weight.
+    const gap = 6; const left = 8;
+    const total = items.reduce((a, it) => a + (it[3] ?? 1), 0);
+    const unit = (WIDTH - left * 2 - gap * (items.length - 1)) / total;
+    let x = left;
+    return items.map(([label, fn, opts, wt = 1]) => {
+      const w = Math.floor(unit * wt);
+      const b = this.pButton(x + w / 2, y, w, h, label, fn, opts);
+      x += w + gap;
+      return b;
+    });
   }
 
   refreshPanel() {
@@ -465,11 +475,13 @@ export class World extends Phaser.Scene {
     }
     if (u.goto) out.push(['Stop', () => { u.goto = null; this.changed(); }]);
     if (!UNITS[u.type].civ && !u.fort) out.push(['Fortify', () => { G.fortify(s, u); sfx('place'); this.afterOrder(); }]);
-    if (UNITS[u.type].civ && !u.sleep && u.type !== 'settler') out.push(['Sleep', () => { G.fortify(s, u); this.afterOrder(); }]);
     if ((u.fort || u.sleep || u.job) && !u.goto) out.push(['Wake', () => { u.fort = false; u.sleep = false; u.job = null; this.changed(); }]);
+    if (u.type === 'worker' && !u.sleep && !u.job && out.length < 3) out.push(['Sleep', () => { G.fortify(s, u); this.afterOrder(); }]);
     out.push(['Skip', () => { G.skip(s, u); this.afterOrder(); }]);
-    if (out.length < 4) out.push(['Disband', () => this.askDisband(u), { fill: PALETTE.indigo, color: PALETTE.cream }]);
-    const items = out.slice(0, 4);
+    out.push(['Disband', () => this.askDisband(u), { fill: PALETTE.indigo, color: PALETTE.cream }]);
+    // Three orders plus a close button (back to the Tech / Empire / Rivals buttons).
+    const items = out.slice(0, 3);
+    items.push(['X', () => this.select(null), { fill: PALETTE.cream }, 0.5]);
     const btns = this.pRow(BOTTOM + 62, items);
     items.forEach(([label], i) => {
       if (label === 'Found City' && !G.canFoundAt(s, u.owner, u.x, u.y)) btns[i].setEnabled(false);
@@ -558,6 +570,7 @@ export class World extends Phaser.Scene {
     // Own units on the tile: select (tap again to switch between the two that can share a tile).
     const mine = s.units.filter((o) => o.x === x && o.y === y && o.owner === this.me);
     if (ct && ct.owner === this.me && (!mine.length || (u && u.x === x && u.y === y && mine.length === 1))) { sfx('tap'); P.showCity(this, ct.id); return; }
+    if (mine.length === 1 && u && u.id === mine[0].id && !ct) { this.select(null); return; } // tap again to let go
     if (mine.length) {
       const cur = mine.findIndex((o) => o.id === this.sel);
       const pick = mine[(cur + 1) % mine.length];
@@ -793,26 +806,30 @@ export class World extends Phaser.Scene {
   runOthers() {
     const s = this.s;
     this.refreshHud();
-    if (s.over) { this.busy = false; this.changed(); this.checkOver(); return; }
+    if (s.over) { this.aiRunning = false; this.showBanner(''); this.busy = false; this.changed(); this.checkOver(); return; }
     const cur = s.civs[s.cur];
     if (!cur.human) {
+      this.aiRunning = true;
       this.showBanner(`${cur.name} is moving...`);
       this.refreshPanel();
       this.time.delayedCall(this.s.civs.filter((c) => !c.human).length > 2 ? 70 : 110, () => {
+        if (!this.scene.isActive()) return;
         AI.playTurn(s, s.cur);
         G.endTurn(s);
+        saveGame(s);
         this.refreshWorld();
         this.runOthers();
       });
       return;
     }
     this.showBanner('');
+    this.aiRunning = false;
     this.busy = false;
     saveGame(s);
     if (s.hotseat && s.cur !== this.me) {
       this.me = s.cur;
       this.hideWorld(true);
-      P.showHandoff(s, s.cur, () => { this.hideWorld(false); this.beginTurn(); });
+      P.showHandoff(s, s.cur, () => { this.hideWorld(false); this.beginTurn(); }, () => this.leave());
       return;
     }
     this.me = s.cur;
@@ -825,10 +842,10 @@ export class World extends Phaser.Scene {
   resumeTurn() {
     const s = this.s;
     if (!s.civs[s.cur].human) { this.busy = true; this.runOthers(); return; }
-    if (s.hotseat && !this.fresh) {
+    if (s.hotseat) {
       this.me = s.cur;
       this.hideWorld(true);
-      P.showHandoff(s, s.cur, () => { this.hideWorld(false); this.beginTurn(true); });
+      P.showHandoff(s, s.cur, () => { this.hideWorld(false); this.beginTurn(true); }, () => this.leave());
       return;
     }
     this.me = s.cur;
@@ -888,7 +905,8 @@ export class World extends Phaser.Scene {
   prompts() {
     const s = this.s;
     if (this.coach.active()) { this.coach.refresh(); return; }
-    if (!s.civs[this.me].research && G.availableTechs(s, this.me).length && G.citiesOf(s, this.me).length) {
+    if (!s.civs[this.me].research && G.availableTechs(s, this.me).length && G.citiesOf(s, this.me).length && this.lastTechPrompt !== s.turn) {
+      this.lastTechPrompt = s.turn; // once a turn, so closing the panel always gets you back to the map
       P.showTech(this, { onClose: () => this.prompts() });
       return;
     }
@@ -941,7 +959,8 @@ export class World extends Phaser.Scene {
   }
 
   leave() {
-    if (this.busy) return;
+    // Leaving is fine between rival turns (each one is saved whole), not mid-animation.
+    if (this.busy && !this.aiRunning) return;
     if (!this.s.over) saveGame(this.s);
     P.closeAll();
     document.querySelector('.pg-cover')?.remove();

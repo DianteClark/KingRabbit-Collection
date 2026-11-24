@@ -112,7 +112,10 @@ function jobValue(s, c, i, kind) {
   const t = s.tiles[i];
   const ct = G.cityById(s, t.c);
   if (!ct) return -1;
-  if (kind === 'farm') return (t.t === 'grass' || t.t === 'plains' ? 3 : 1.5) + (t.r ? 1 : 0);
+  if (kind === 'farm') {
+    const surplus = G.cityYield(s, ct).surplus;
+    return (surplus >= 3 ? 1 : t.t === 'grass' || t.t === 'plains' ? 3 : 1.5) + (t.r ? 1 : 0);
+  }
   if (kind === 'mine') return 3 + (t.r ? 1.5 : 0);
   if (kind === 'chop') {
     const forests = G.cityRadiusTiles(s, ct).filter((k) => s.tiles[k].f === 'forest').length;
@@ -508,8 +511,13 @@ export function playTurn(s, c, P = aiParams(s.civs[c].skill)) {
     if (P.smartBuild >= 0.75) {
       const joy = G.joyOf(s, c).net;
       const q = ct.queue[0];
-      const big = q && (q.kind === 'wonder' || q.id === 'settler');
-      ct.focus = joy >= 1 && ct.pop < 4 && !big ? 'food' : big || joy < 0 ? 'prod' : 'balanced';
+      const big = q && (q.kind === 'wonder' || (q.id === 'settler' && ct.pop >= 2));
+      ct.focus = q?.id === 'settler' && ct.pop < 2 ? 'food' : joy >= 1 && ct.pop < 4 && !big ? 'food' : big || joy < 0 ? 'prod' : 'balanced';
+    }
+    // A settler waiting for a city that can't grow: build something else first.
+    if (ct.queue[0]?.id === 'settler' && ct.pop < 2 && G.cityYield(s, ct).surplus <= 0) {
+      ct.queue.shift();
+      if (!ct.queue.length) { const item = chooseBuild(s, ct, P, { ...ctx, targetCities: 0 }); if (item && item.id !== 'settler') G.enqueue(s, ct, item); }
     }
     // Emergency: an undefended city under threat switches to a defender.
     if (threat > 0 && defendersIn(s, ct) === 0 && ct.queue[0]?.kind !== 'unit') {
