@@ -94,6 +94,18 @@ change, after battles and menus, and at most once a second while walking.
   clearer directions after the starter, tapping a person's sprite (not just their tile) talks to them, and the camera
   keeps the speakers above the dialogue box.
 
+## Detail sweep (v1.2)
+
+- Header and bottom-bar taps no longer move the dialogue on (only map taps and A do); the back button waits while a
+  battle is starting or someone is talking.
+- Battle actions run once per turn however fast the taps come (`ready` guard), and closed panels ignore stray clicks.
+- The d-pad stops when its own finger lifts anywhere (even off the game) and ignores other fingers.
+- A trailing save after you stop walking, and on page hide; resuming in a tamer's sight (or with an ambush pending)
+  replays the challenge.
+- Type wheel on one line, coin counter and Hall of Fame names fit, nicknamed pets show their species on their page,
+  shop says "Buy 5", tamer win jingle, the Champion line on the title knows when the PetDex is complete.
+- No borrowed franchise names: Nurse Hazel; tamer titles Kid, Student, Walker, Climber, Veteran (checked by a test).
+
 ## Ideas for later
 
 A held-item slot, more areas (a lake town with Surf-free water

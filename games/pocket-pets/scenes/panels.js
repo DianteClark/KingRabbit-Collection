@@ -40,6 +40,7 @@ export function sheet({ title, sub = '', html = '', foot = '', cls = '', wrap = 
     set(part, h) { const n = el.querySelector(`.pp-${part}`); if (n) n.innerHTML = h; },
   };
   el.addEventListener('click', (e) => {
+    if (!el.isConnected) return; // a second tap on a sheet that just closed
     const b = e.target.closest('[data-act]');
     if (b && !b.disabled) {
       const act = b.dataset.act;
@@ -58,6 +59,9 @@ export function sheet({ title, sub = '', html = '', foot = '', cls = '', wrap = 
 
 // ---------------------------------------------------------------- bits
 
+/** The type wheel on one line, plus the link that closes the loop. */
+const wheelHtml = () => `<div class="pp-wheel">${WHEEL.map((t) => typeTag(t)).join('<span>&gt;</span>')}</div>
+  <p class="pp-p pp-loop">...and ${TYPE_INFO[WHEEL[WHEEL.length - 1]].name} beats ${TYPE_INFO[WHEEL[0]].name}, closing the wheel.</p>`;
 const typeTag = (t) => `<span class="pp-type" style="background:${TYPE_INFO[t].color}">${TYPE_INFO[t].name}</span>`;
 const stTag = (st) => (st ? `<span class="pp-st" style="background:${STATUS_INFO[st].color}">${STATUS_INFO[st].short}</span>` : '');
 const pic = (sp, big = false) => `<div class="pp-pic ${big ? 'big' : ''}"><img alt="" src="${URLS.pets[sp] || ''}"></div>`;
@@ -143,7 +147,7 @@ export function summaryPanel(state, idx, { onChange, readOnly = false } = {}) {
     <div style="display:flex;gap:12px;align-items:center;margin-bottom:8px">
       ${pic(pet.sp, true)}
       <div class="grow">
-        <div>${typeTag(sp.type)}${stTag(pet.st)}</div>
+        <div>${typeTag(sp.type)}${stTag(pet.st)}${pet.nick ? ` <span style="color:#c9d3ab">${esc(sp.name)}</span>` : ''}</div>
         <div style="margin-top:4px">Level ${pet.lv} &middot; HP ${pet.hp}/${s.hp}</div>
         ${bar(pet.hp / s.hp, hpColor(pet.hp / s.hp))}
         <div class="meta" style="color:#c9d3ab;margin-top:4px">${next ? `${next} XP to level ${pet.lv + 1}` : 'Top level!'}</div>
@@ -241,7 +245,7 @@ export function shopPanel(state, stock, name, { onChange } = {}) {
       <div class="meta" style="white-space:normal">${esc(it.desc)} You have ${state.bag[id] || 0}.</div></div>
       <div style="display:flex;flex-direction:column;gap:6px">
         <button class="pp-btn small gold" data-act="buy" data-id="${id}" data-n="1" ${state.coins < it.price ? 'disabled' : ''}>Buy 1</button>
-        <button class="pp-btn small" data-act="buy" data-id="${id}" data-n="5" ${state.coins < it.price * 5 ? 'disabled' : ''}>x5</button>
+        <button class="pp-btn small" data-act="buy" data-id="${id}" data-n="5" ${state.coins < it.price * 5 ? 'disabled' : ''}>Buy 5</button>
       </div></div>`;
   }).join('') + (ids.length < 9 ? '<p class="pp-p" style="color:#c9d3ab">More goods arrive as you earn badges.</p>' : '');
   const sub = () => `<span class="pp-coins">${state.coins} coins</span>`;
@@ -265,8 +269,7 @@ export function shopPanel(state, stock, name, { onChange } = {}) {
 
 export function dexPanel(state) {
   const c = G.dexCounts(state);
-  const wheel = WHEEL.map((t) => typeTag(t)).join('<span>&gt;</span>') + `<span>&gt;</span>${typeTag(WHEEL[0])}`;
-  const html = `<div class="pp-wheel">${wheel}</div>
+  const html = `${wheelHtml()}
     <div class="pp-dex">${DEX_ORDER.map((sp, i) => {
     const caught = state.dex.caught[sp]; const seen = state.dex.seen[sp];
     const cls = caught ? 'caught' : seen ? 'seen' : 'unseen';
@@ -372,8 +375,7 @@ export function nicknamePanel(pet, cb, { title = 'Nickname' } = {}) {
 
 /** A one-off tip card. lines: strings (may hold the type wheel via wheel: true). */
 export function tipPanel(title, lines, cb, { wheel = false } = {}) {
-  const w = WHEEL.map((t) => typeTag(t)).join('<span>&gt;</span>') + `<span>&gt;</span>${typeTag(WHEEL[0])}`;
-  const html = `${wheel ? `<div class="pp-wheel">${w}</div>` : ''}${lines.map((l) => `<p class="pp-p">${esc(l)}</p>`).join('')}`;
+  const html = `${wheel ? wheelHtml() : ''}${lines.map((l) => `<p class="pp-p">${esc(l)}</p>`).join('')}`;
   const panel = sheet({
     title, html, noX: true, wrap: 'center',
     foot: '<button class="pp-btn gold" data-act="ok">Got it</button>',

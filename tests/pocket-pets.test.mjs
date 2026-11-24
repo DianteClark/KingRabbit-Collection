@@ -75,6 +75,9 @@ test('data: names avoid a certain famous franchise', () => {
   const banned = ['poke', 'pika', 'chu', 'charm', 'squirt', 'bulba', 'eevee', 'ball', 'trainer', 'gym', 'pidg', 'ratt', 'vulpix', 'poliwag', 'seedot', 'potion of'];
   const all = [...Object.values(D.SPECIES).map((s) => s.name), ...Object.values(D.MOVES).map((m) => m.name), ...Object.values(D.ITEMS).map((i) => i.name)];
   for (const n of all) for (const b of banned) assert.ok(!n.toLowerCase().includes(b), `${n} contains ${b}`);
+  // People: no borrowed character names or trainer classes either.
+  const people = Object.values(W.MAPS).flatMap((m) => m.npcs || []).flatMap((n) => [n.name, n.title || '']);
+  for (const p of people) for (const b of ['joy', 'jenny', 'oak', 'lass', 'picnicker', 'hiker', 'bug catcher', 'bug kid', 'ace trainer', 'youngster']) assert.ok(!p.toLowerCase().includes(b), `${p} contains ${b}`);
 });
 
 // ---------------------------------------------------------------- pets
