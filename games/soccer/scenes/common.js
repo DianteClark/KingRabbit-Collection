@@ -1,16 +1,20 @@
 // UI helpers shared by the Pocket Soccer screens (same look as game-night/scenes/common.js).
 import { PALETTE, hex } from '../../../shared/core/palette.js';
 import { text, button, panel, fadeTo } from '../../../shared/core/ui.js';
-import { WIDTH, HEIGHT } from '../../../shared/core/boot.js';
+import { LANDSCAPE } from '../../../shared/core/boot.js';
+
+// Pocket Soccer is a landscape game: everything is laid out for 640x360.
+export const WIDTH = LANDSCAPE.WIDTH;
+export const HEIGHT = LANDSCAPE.HEIGHT;
 import { showHowTo } from '../../../shared/core/howto.js';
 import { RULES } from '../rules.js';
 import { skillLabel } from '../adaptive.js';
 
 /** Top bar: back button + title + gold "?" How to Play button. */
 export function header(scene, title, onBack) {
-  button(scene, 34, 34, 52, 40, '<', onBack, { size: 32, fill: PALETTE.cream });
-  const t = text(scene, WIDTH / 2, 34, title, { size: 32, color: PALETTE.cream });
-  button(scene, WIDTH - 34, 34, 52, 40, '?', () => openHowTo(scene), { size: 32, fill: PALETTE.gold });
+  button(scene, 34, 28, 52, 40, '<', onBack, { size: 32, fill: PALETTE.cream });
+  const t = text(scene, WIDTH / 2, 28, title, { size: 32, color: PALETTE.cream });
+  button(scene, WIDTH - 34, 28, 52, 40, '?', () => openHowTo(scene), { size: 32, fill: PALETTE.gold });
   return t;
 }
 
@@ -39,14 +43,19 @@ export function shadowTitle(scene, x, y, str, color = PALETTE.gold, shadow = PAL
 export function modal(scene, title, lines, buttons, { depth = 50 } = {}) {
   const c = scene.add.container(0, 0).setDepth(depth);
   const dim = scene.add.rectangle(0, 0, WIDTH, HEIGHT, hex(PALETTE.ink), 0.6).setOrigin(0).setInteractive();
-  const h = 112 + lines.length * 24 + buttons.length * 60;
-  const top = Math.round((HEIGHT - h) / 2);
-  const box = panel(scene, 30, top, 300, h);
+  // Landscape: with three or more buttons they sit side by side to keep the panel short.
+  const wide = buttons.length >= 3;
+  const h = 112 + lines.length * 24 + (wide ? 60 : buttons.length * 56);
+  const top = Math.max(4, Math.round((HEIGHT - h) / 2));
+  const pw = wide ? 520 : 340;
+  const box = panel(scene, (WIDTH - pw) / 2, top, pw, h);
   c.add([dim, box]);
-  c.add(text(scene, WIDTH / 2, top + 38, title, { size: 32, color: PALETTE.gold }));
+  c.add(text(scene, WIDTH / 2, top + 36, title, { size: 32, color: PALETTE.gold }));
   lines.forEach((l, i) => c.add(text(scene, WIDTH / 2, top + 78 + i * 24, l, { color: PALETTE.cream })));
   buttons.forEach(([label, fn, fill, color], i) => {
-    c.add(button(scene, WIDTH / 2, top + 78 + lines.length * 24 + 22 + i * 60, 220, 46, label, fn, {
+    const bx = wide ? WIDTH / 2 + (i - (buttons.length - 1) / 2) * 164 : WIDTH / 2;
+    const by = top + 78 + lines.length * 24 + 22 + (wide ? 0 : i * 56);
+    c.add(button(scene, bx, by, wide ? 156 : 240, 46, label, fn, {
       fill: fill ?? (i === 0 ? PALETTE.gold : PALETTE.lavender), color: color ?? PALETTE.night,
     }));
   });

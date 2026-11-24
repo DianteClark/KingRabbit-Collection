@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { PALETTE, hex } from '../../../shared/core/palette.js';
 import { text, button } from '../../../shared/core/ui.js';
-import { WIDTH } from '../../../shared/core/boot.js';
+import { WIDTH, HEIGHT } from './common.js';
 import { sfx } from '../../../shared/core/sfx.js';
 import { modal, setBackground, openHowTo, go } from './common.js';
 import { kitTexture, ANIM } from '../sprites.js';
@@ -15,7 +15,10 @@ import { sound } from '../sound.js';
 
 // Drawn at 2x like the match. Goal line at GY, the mouth is GOAL_W * 2 wide.
 const S = 2;
-const GY = 300;
+const GY = 140;
+// The goal and kick play out on the left; the tally, messages and buttons sit in a right column.
+const CX = 210;
+const RX = 530;
 const MOUTH = GOAL_W * S;
 const SPOT_Y = GY + PEN_D * S;
 const AIM_RANGE = 1.18;   // the sweeping marker goes a little past the posts
@@ -35,49 +38,48 @@ export class Penalties extends Phaser.Scene {
 
   create() {
     setBackground(this, '#4aa33a');
-    this.add.tileSprite(0, 0, WIDTH, 640, 'grassTile').setOrigin(0).setTileScale(S);
+    this.add.tileSprite(0, 0, WIDTH, HEIGHT, 'grassTile').setOrigin(0).setTileScale(S);
     const g = this.add.graphics();
     g.fillStyle(0xffffff);
-    g.fillRect(0, GY, WIDTH, S);                                         // goal line
-    g.fillRect(WIDTH / 2 - 68 * S, GY, S, 52 * S);                       // box sides
-    g.fillRect(WIDTH / 2 + 68 * S, GY, S, 52 * S);
-    g.fillRect(WIDTH / 2 - 40 * S, GY, S, 18 * S);                       // six-yard box
-    g.fillRect(WIDTH / 2 + 40 * S, GY, S, 18 * S);
-    g.fillRect(WIDTH / 2 - 40 * S, GY + 18 * S, 80 * S + S, S);
-    g.fillRect(WIDTH / 2 - S, SPOT_Y - S, S * 2, S * 2);                 // spot
-    this.add.image(WIDTH / 2, GY + S, 'goalTop').setOrigin(0.5, 1).setScale(S);
+    g.fillRect(0, GY, 420, S);                                           // goal line
+    g.fillRect(CX - 68 * S, GY, S, 52 * S);                       // box sides
+    g.fillRect(CX + 68 * S, GY, S, 52 * S);
+    g.fillRect(CX - 40 * S, GY, S, 18 * S);                       // six-yard box
+    g.fillRect(CX + 40 * S, GY, S, 18 * S);
+    g.fillRect(CX - 40 * S, GY + 18 * S, 80 * S + S, S);
+    g.fillRect(CX - S, SPOT_Y - S, S * 2, S * 2);                 // spot
+    this.add.image(CX, GY + S, 'goalTop').setOrigin(0.5, 1).setScale(S);
 
     const [gk0, gk1] = keeperKits(this.home, this.away);
     this.kits = {
       shooter: [kitTexture(this, this.home.shirt, this.home.shorts, 1), kitTexture(this, this.away.shirt, this.away.shorts, 3)],
       keeper: [kitTexture(this, gk0, '#1c1618', 0), kitTexture(this, gk1, '#1c1618', 2)],
     };
-    this.keeper = this.add.image(WIDTH / 2, GY + 4, this.kits.keeper[1], '0_36').setOrigin(0.5, 14 / 16).setScale(S);
-    this.shooter = this.add.image(WIDTH / 2, SPOT_Y + 26, this.kits.shooter[0], '4_1').setOrigin(0.5, 14 / 16).setScale(S);
-    this.ballShadow = this.add.ellipse(WIDTH / 2, SPOT_Y, 10, 4, 0x000000, 0.35);
-    this.ball = this.add.image(WIDTH / 2, SPOT_Y - 4, 'ball').setScale(S);
+    this.keeper = this.add.image(CX, GY + 4, this.kits.keeper[1], '0_36').setOrigin(0.5, 14 / 16).setScale(S);
+    this.shooter = this.add.image(CX, SPOT_Y + 26, this.kits.shooter[0], '4_1').setOrigin(0.5, 14 / 16).setScale(S);
+    this.ballShadow = this.add.ellipse(CX, SPOT_Y, 10, 4, 0x000000, 0.35);
+    this.ball = this.add.image(CX, SPOT_Y - 4, 'ball').setScale(S);
     this.marker = this.add.graphics().setDepth(10);
 
-    // Top bar and kick tally
-    this.add.rectangle(0, 0, WIDTH, 52, hex(PALETTE.night), 0.92).setOrigin(0);
-    text(this, WIDTH / 2, 26, 'Penalties', { size: 32, color: PALETTE.cream });
-    button(this, WIDTH - 26, 26, 40, 38, '?', () => openHowTo(this), { size: 32, fill: PALETTE.gold });
-    this.add.rectangle(0, 52, WIDTH, 96, hex(PALETTE.ink), 0.55).setOrigin(0);
+    // Top bar, then the right column: kick tally, messages, buttons.
+    this.add.rectangle(0, 0, WIDTH, 40, hex(PALETTE.night), 0.92).setOrigin(0);
+    text(this, CX, 20, 'Penalties', { size: 32, color: PALETTE.cream });
+    button(this, WIDTH - 26, 20, 40, 34, '?', () => openHowTo(this), { size: 32, fill: PALETTE.gold });
+    this.add.rectangle(420, 40, WIDTH - 420, HEIGHT - 40, hex(PALETTE.ink), 0.6).setOrigin(0);
     this.tally = this.add.graphics();
     this.rows = [0, 1].map((side) => {
       const t = side === 0 ? this.home : this.away;
-      text(this, 12, 74 + side * 36, t.short, { color: PALETTE.cream, origin: [0, 0.5] });
-      return text(this, WIDTH - 14, 74 + side * 36, '0', { size: 32, color: PALETTE.gold, origin: [1, 0.5] });
+      text(this, 430, 64 + side * 34, t.short, { color: PALETTE.cream, origin: [0, 0.5] });
+      return text(this, WIDTH - 10, 64 + side * 34, '0', { size: 32, color: PALETTE.gold, origin: [1, 0.5] });
     });
-    this.add.rectangle(0, 152, WIDTH, 72, hex(PALETTE.ink), 0.45).setOrigin(0);
-    this.add.rectangle(0, 470, WIDTH, 32, hex(PALETTE.ink), 0.45).setOrigin(0);
-    text(this, WIDTH / 2, 168, `Full time ${this.score[0]} - ${this.score[1]}`, { color: PALETTE.cream });
-    this.msg = text(this, WIDTH / 2, 202, '', { size: 32, color: PALETTE.gold });
-    this.help = text(this, WIDTH / 2, 486, '', { color: PALETTE.cream });
+    text(this, RX, 136, `Full time ${this.score[0]} - ${this.score[1]}`, { color: PALETTE.cream });
+    this.msg = text(this, RX, 180, '', { size: 32, color: PALETTE.gold });
+    this.add.rectangle(0, 318, 420, 30, hex(PALETTE.ink), 0.45).setOrigin(0);
+    this.help = text(this, CX, 333, '', { color: PALETTE.cream });
 
     // Controls: one Shoot button when you take a kick, Left / Stay / Right when you keep.
-    this.shootBtn = button(this, WIDTH / 2, 560, 200, 64, 'SHOOT', () => this.strike(), { size: 32, fill: PALETTE.red, color: PALETTE.cream });
-    this.diveBtns = [-1, 0, 1].map((d, i) => button(this, 70 + i * 110, 560, 100, 64, ['LEFT', 'STAY', 'RIGHT'][i], () => this.pickDive(d), { fill: PALETTE.lavender }));
+    this.shootBtn = button(this, RX, 270, 180, 72, 'SHOOT', () => this.strike(), { size: 32, fill: PALETTE.red, color: PALETTE.cream });
+    this.diveBtns = [-1, 0, 1].map((d, i) => button(this, RX - 68 + i * 68, 270, 64, 72, ['LEFT', 'STAY', 'RIGHT'][i], () => this.pickDive(d), { fill: PALETTE.lavender }));
     this.input.keyboard?.on('keydown-SPACE', () => this.strike());
     this.input.keyboard?.on('keydown-LEFT', () => this.pickDive(-1));
     this.input.keyboard?.on('keydown-DOWN', () => this.pickDive(0));
@@ -94,11 +96,11 @@ export class Penalties extends Phaser.Scene {
       const kicks = this.so.kicks[side];
       const n = Math.max(5, kicks.length);
       for (let i = 0; i < n; i++) {
-        const x = 80 + i * (n > 5 ? 200 / n : 40); const y = 74 + side * 36;
-        g.fillStyle(hex(PALETTE.ink)).fillCircle(x, y, 11);
+        const x = 482 + i * (n > 5 ? 110 / (n - 1) : 22); const y = 64 + side * 34;
+        g.fillStyle(hex(PALETTE.ink)).fillCircle(x, y, 10);
         const k = kicks[i];
         const c = k === undefined ? PALETTE.indigo : k ? PALETTE.leaf : PALETTE.red;
-        g.fillStyle(hex(c)).fillCircle(x, y, 9);
+        g.fillStyle(hex(c)).fillCircle(x, y, 8);
         if (k === true) g.fillStyle(0xffffff).fillCircle(x, y, 3);
       }
       this.rows[side].setText(String(goals(this.so, side)));
@@ -107,10 +109,10 @@ export class Penalties extends Phaser.Scene {
 
   reset(side) {
     this.tweens.killAll();
-    this.ball.setPosition(WIDTH / 2, SPOT_Y - 4).setScale(S).setAlpha(1);
-    this.ballShadow.setPosition(WIDTH / 2, SPOT_Y);
-    this.keeper.setTexture(this.kits.keeper[1 - side], '0_36').setPosition(WIDTH / 2, GY + 4).setAngle(0);
-    this.shooter.setTexture(this.kits.shooter[side], '4_1').setPosition(WIDTH / 2 - 8, SPOT_Y + 30);
+    this.ball.setPosition(CX, SPOT_Y - 4).setScale(S).setAlpha(1);
+    this.ballShadow.setPosition(CX, SPOT_Y);
+    this.keeper.setTexture(this.kits.keeper[1 - side], '0_36').setPosition(CX, GY + 4).setAngle(0);
+    this.shooter.setTexture(this.kits.shooter[side], '4_1').setPosition(CX - 8, SPOT_Y + 30);
     this.marker.clear();
   }
 
@@ -145,7 +147,7 @@ export class Penalties extends Phaser.Scene {
     if (!this.aiming) return;
     this.aimT += dms / 1000;
     this.aim = Math.sin(this.aimT * 2.6) * AIM_RANGE;
-    const x = WIDTH / 2 + this.aim * MOUTH / 2;
+    const x = CX + this.aim * MOUTH / 2;
     const m = this.marker;
     m.clear();
     const inside = Math.abs(this.aim) <= 1;
@@ -194,12 +196,12 @@ export class Penalties extends Phaser.Scene {
     const sh = this.shooter;
     const kitS = sh.texture.key;
     this.tweens.add({
-      targets: sh, x: WIDTH / 2 - 2, y: SPOT_Y + 10, duration: 380,
+      targets: sh, x: CX - 2, y: SPOT_Y + 10, duration: 380,
       onUpdate: () => sh.setFrame(`4_${ANIM.run[Math.floor(this.time.now / 90) % 4]}`),
       onComplete: () => {
         sh.setTexture(kitS, `4_${ANIM.kick[2]}`);
         sound('shot');
-        const tx = WIDTH / 2 + aim * MOUTH / 2;
+        const tx = CX + aim * MOUTH / 2;
         const high = result === 'miss' && Math.abs(aim) <= 1;
         let endY = result === 'goal' ? GY - 22 : high ? GY - 70 : GY - 6;
         if (result === 'save') endY = GY - 2;
@@ -207,7 +209,7 @@ export class Penalties extends Phaser.Scene {
         this.tweens.add({ targets: this.ballShadow, x: tx, y: result === 'goal' ? GY - 14 : GY, alpha: high ? 0 : 0.35, duration: 300 });
         // Keeper dives
         const k = this.keeper;
-        const kx = WIDTH / 2 + dive * MOUTH * 0.36;
+        const kx = CX + dive * MOUTH * 0.36;
         k.setFrame(dive === 0 ? `0_${ANIM.catch[1]}` : `${dive > 0 ? 2 : 6}_${ANIM.tackle[2]}`);
         this.tweens.add({ targets: k, x: kx, y: GY + (dive === 0 ? 4 : 0), duration: 260, ease: 'Quad.easeOut' });
         this.time.delayedCall(320, () => this.outcome(result, tx));
@@ -219,8 +221,8 @@ export class Penalties extends Phaser.Scene {
     const mine = this.side === 0;
     if (result === 'save') {
       sfx('thud');
-      this.tweens.add({ targets: this.ball, x: tx + (tx < WIDTH / 2 ? -50 : 50), y: GY + 70, duration: 500, ease: 'Quad.easeOut' });
-      this.tweens.add({ targets: this.ballShadow, x: tx + (tx < WIDTH / 2 ? -50 : 50), y: GY + 74, duration: 500 });
+      this.tweens.add({ targets: this.ball, x: tx + (tx < CX ? -50 : 50), y: GY + 70, duration: 500, ease: 'Quad.easeOut' });
+      this.tweens.add({ targets: this.ballShadow, x: tx + (tx < CX ? -50 : 50), y: GY + 74, duration: 500 });
     } else if (result === 'goal') {
       sfx(mine ? 'goal' : 'lose');
       this.cameras.main.shake(150, 0.006);

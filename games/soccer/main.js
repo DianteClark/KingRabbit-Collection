@@ -8,4 +8,4 @@ import { MatchScene } from './scenes/MatchScene.js';
 import { Hud } from './scenes/Hud.js';
 import { Penalties } from './scenes/Penalties.js';
 
-startGame({ scenes: [Boot, Menu, Pick, Cup, Endless, MatchScene, Hud, Penalties] });
+startGame({ scenes: [Boot, Menu, Pick, Cup, Endless, MatchScene, Hud, Penalties], orientation: 'landscape' });

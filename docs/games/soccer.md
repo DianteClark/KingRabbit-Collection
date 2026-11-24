@@ -1,10 +1,15 @@
 # Pocket Soccer
 
-**Status:** Playable (v1.1): Quick Match, Cup, Endless, penalty shoot-outs, adaptive CPU, ends swap at half time
+**Status:** Playable (v1.2, landscape): Quick Match, Cup, Endless, penalty shoot-outs, adaptive CPU, ends swap at half time
 **Art:** SportSeries Soccer test asset by Aleksandr Makarov (`shared/assets/soccer/SportSeries-Soccer-test-asset/`)
 **Rules text:** `games/soccer/rules.js` (shown by the gold ? button)
 
-Arcade five-a-side (four outfield players and a keeper each) on a vertical pitch that scrolls with the ball. You play the Rabbits in blue: up the screen in the first half, down after the teams change ends at half time (arrow by the clock, gold goal on the mini-map).
+Arcade five-a-side (four outfield players and a keeper each), played in **landscape** (640x360 via `startGame({ orientation: 'landscape' })`) on a horizontal pitch that scrolls with the ball. You play the Rabbits in blue: toward the right-hand goal in the first half, the left-hand one after the teams change ends at half time (arrow by the clock, gold goal on the mini-map).
+
+### Landscape layout
+- Match: scoreboard bar across the top (back, score, clock + attack arrow, mini-map, help), so the mini-map covers no play. Floating stick on the left edge; SHOOT and PASS in the bottom-right corner. The camera (2x, 320x180 world pixels of a 512x312 world) leads along the pitch in the direction of play and toward the goal you attack while you have the ball, and sits the ball slightly above centre so the corner controls cover as little as possible.
+- Menus: two columns (title and settings left, modes right); Pick and Endless show you and the opponent side by side; the Cup bracket runs left to right with each team's goals in its box and the status/buttons in a right column; Penalties shows the goal on the left and the tally, messages and buttons on the right.
+- The simulation itself is orientation-free: `logic/` works in pitch coordinates (x across, y along the length). `logic/view.js` turns that onto the screen (a pure 90-degree rotation, tested) and turns the stick back into pitch directions, so the AI, physics and all the CPU-vs-CPU tests are unchanged.
 
 ## Controls
 | Input | With the ball | Without it |
@@ -18,7 +23,7 @@ Arcade five-a-side (four outfield players and a keeper each) on a vertical pitch
 - Keyboard for desktop: arrows/WASD, X/J pass, Space/K shoot.
 
 ## Rules
-Two halves (Short 60 s, Normal 90 s or Long 150 s each, shown as 90 minutes). Kick-off, throw-ins, corners and goal kicks are quick restarts (the taker plays it, CPU or you; 6 s timeout). Goals need the ball between the posts and under the bar; a ball dribbled into the goal mouth also counts. Keepers dive, catch or parry (sometimes round the post for a corner) and may only handle in their box. No offside, no fouls. Ends swap at half time; the camera leads toward whichever goal is near so it clears the scoreboard at the top and the thumb buttons at the bottom. Leaving a Cup or Endless match without finishing it (pause menu, closing the tab, reload) counts as a 3-0 defeat: the match marks itself unfinished in the save and the menu settles it next time.
+Two halves (Short 60 s, Normal 90 s or Long 150 s each, shown as 90 minutes). Kick-off, throw-ins, corners and goal kicks are quick restarts (the taker plays it, CPU or you; 6 s timeout). Goals need the ball between the posts and under the bar; a ball dribbled into the goal mouth also counts. Keepers dive, catch or parry (sometimes round the post for a corner) and may only handle in their box. No offside, no fouls. Ends swap at half time; the camera's look-ahead follows the change of direction. Leaving a Cup or Endless match without finishing it (pause menu, closing the tab, reload) counts as a 3-0 defeat: the match marks itself unfinished in the save and the menu settles it next time.
 
 ## Code layout
 | File | What |
@@ -28,9 +33,10 @@ Two halves (Short 60 s, Normal 90 s or Long 150 s each, shown as 90 minutes). Ki
 | `logic/ai.js` | Team think (chaser, cover, man-marking), formation shape that shifts with the ball, dribbling, pass/shot scoring, keeper positioning/diving, set-piece takers, CPU presets |
 | `logic/penalties.js` | Shoot-out order, early finish, sudden death, kick resolution |
 | `logic/cup.js`, `logic/teams.js` | 8-team knockout, Endless ladder, team kits and strengths |
-| `scenes/MatchScene.js` | Renders the match at 2x, camera, animations, sounds |
+| `logic/view.js` | Landscape mapping: pitch coordinates to screen and stick directions back to the pitch |
+| `scenes/MatchScene.js` | Renders the horizontal match at 2x, camera, animations, sounds |
 | `sound.js` | Local synthesized referee whistle and kick sounds (silent when the shared mute is on) |
-| `scenes/Hud.js` | Scoreboard, radar, joystick and buttons, banners, pause and full-time menus |
+| `scenes/Hud.js` | Scoreboard bar with mini-map, joystick and buttons, banners, pause and full-time menus |
 | `sprites.js` | Bakes body + recoloured shirt + head layers into one texture per kit and skin tone; grass tile and goals cut from TestField.png |
 
 Everything in `logic/` is plain JavaScript, so `tests/soccer.test.mjs` plays CPU-vs-CPU matches in node (goals happen, nothing stays pinned to an edge, the ball never sits untouched, every restart is taken, a stronger CPU wins more), drives a scripted "human" through the touch inputs, and checks the shoot-out, cup and endless rules.

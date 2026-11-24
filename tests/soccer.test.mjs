@@ -449,3 +449,42 @@ test('soccer: skill remap is monotonic and keeps the ends; adaptive steps stay s
   assert.ok(small > 0.03 && small < 0.04, `narrow win step ${small}`);
   assert.ok(big > 0.06 && big < 0.07, `thrashing step ${big}`);
 });
+
+// ---------------------------------------------------------------- landscape view
+
+test('soccer: landscape view - pitch runs horizontally, you attack right then left', async () => {
+  const V = await import(base + 'view.js');
+  // Goal lines are left and right, touchlines top and bottom.
+  assert.equal(V.toScreen(0, 0).x - V.toScreen(0, C.L).x, C.L, 'length is horizontal');
+  assert.equal(V.toScreen(C.W, 0).y - V.toScreen(0, 0).y, C.W, 'width is vertical');
+  assert.ok(V.goalScreenX(0) > V.goalScreenX(C.L), 'goal at y = 0 is on the right');
+  // Side 0 attacks y = 0 in the first half: rightwards on screen; after the swap, leftwards.
+  const m = new Match({ skills: [0.5, 0.5], seed: 1, halfSeconds: 60 });
+  const toward = (end) => V.dirToScreen(0, C.attackDir(end)).x;
+  assert.ok(toward(m.ends[0]) > 0);
+  m.swapEnds();
+  assert.ok(toward(m.ends[0]) < 0);
+  // A pure rotation (no mirror): right-hand rule preserved, lengths kept.
+  const a = V.dirToScreen(1, 0); const b = V.dirToScreen(0, 1);
+  assert.equal(a.x * b.y - a.y * b.x, 1);
+  // Stick conversion is the exact inverse.
+  for (const [sx, sy] of [[1, 0], [0, -1], [0.6, 0.8], [-1, 0]]) {
+    const d = V.dirToPitch(sx, sy); const back = V.dirToScreen(d.x, d.y);
+    assert.ok(Math.abs(back.x - sx) < 1e-9 && Math.abs(back.y - sy) < 1e-9);
+  }
+  // Pushing the stick right moves the player toward the goal it attacks in the first half.
+  const d = V.dirToPitch(1, 0);
+  assert.equal(Math.sign(d.y), C.attackDir(0));
+});
+
+test('soccer: holding the stick right in the first half runs at the right-hand goal', async () => {
+  const V = await import(base + 'view.js');
+  const m = new Match({ skills: [0.5, 0.2], humanSide: 0, seed: 8, halfSeconds: 60 });
+  const right = V.dirToPitch(1, 0);
+  const input = { mx: right.x, my: right.y, pass: false, shoot: false };
+  for (let i = 0; i < 60 * 3; i++) { m.step(DT, input); m.events.length = 0; }
+  const p = m.active;
+  const before = V.toScreen(p.x, p.y).x;
+  for (let i = 0; i < 30; i++) { m.step(DT, input); m.events.length = 0; }
+  if (m.active === p && p.stunT <= 0) assert.ok(V.toScreen(p.x, p.y).x > before, 'moves right on screen');
+});
