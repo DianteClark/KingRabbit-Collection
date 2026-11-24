@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { PALETTE, hex } from '../../../shared/core/palette.js';
 import { text } from '../../../shared/core/ui.js';
 import { WIDTH } from '../../../shared/core/boot.js';
-import { header, go, setBackground, toast, modal } from './common.js';
+import { header, go, setBackground, toast, modal, fitLine } from './common.js';
 import { getBest, submitBest } from '../save.js';
 import { sfx } from '../../../shared/core/sfx.js';
 
@@ -38,7 +38,7 @@ export class BlockBreaker extends Phaser.Scene {
     g.fillStyle(hex(PALETTE.indigo)).fillRect(F.x - 6, F.y - 6, F.w + 12, F.h + 12);
     g.fillStyle(hex(PALETTE.ink)).fillRect(F.x, F.y, F.w, F.h + 6);
     for (let x = F.x + 16; x < F.x + F.w; x += 32) for (let y = F.y + 16; y < F.y + F.h; y += 32) g.fillStyle(hex(PALETTE.night)).fillRect(x, y, 2, 2);
-    this.hint = text(this, WIDTH / 2, F.y + F.h - 90, 'Drag to move - tap to launch', { color: PALETTE.lavender });
+    this.hint = text(this, WIDTH / 2, F.y + F.h - 90, 'Drag to move, tap to launch', { color: PALETTE.lavender });
 
     this.paddle = { x: WIDTH / 2, w: 72, img: this.add.image(WIDTH / 2, PADDLE_Y, 'blocks', 'paddle').setScale(3) };
     this.bricks = [];
@@ -47,8 +47,12 @@ export class BlockBreaker extends Phaser.Scene {
     this.score = 0; this.lives = 3; this.level = 0; this.over = false;
 
     this.input.on('pointermove', (p) => { if (p.isDown) this.dragTo(p); });
-    this.input.on('pointerdown', (p) => { this.dragStart = { px: p.x, x: this.paddle.x }; });
-    this.input.on('pointerup', (p, over) => { if (!over.length && !this.clearing && this.balls.some((b) => b.stuck)) this.launch(); });
+    this.input.on('pointerdown', (p, over) => { this.dragStart = over.length ? null : { px: p.x, x: this.paddle.x }; });
+    // Launch on a tap; lifting the finger after lining up the paddle with a drag doesn't launch.
+    this.input.on('pointerup', (p, over) => {
+      const tap = this.dragStart && Math.abs(p.x - this.dragStart.px) < 12;
+      if (tap && !over.length && !this.clearing && this.balls.some((b) => b.stuck)) this.launch();
+    });
 
     this.loadLevel(0);
   }
@@ -107,7 +111,7 @@ export class BlockBreaker extends Phaser.Scene {
   }
 
   updateHud() {
-    this.hud.setText(`Score ${this.score}   Lives ${this.lives}   Lv ${this.level + 1}   Best ${Math.max(getBest('blockbreaker'), this.score)}`);
+    fitLine(this.hud, [`Score ${this.score}`, `Lives ${this.lives}`, `Lv ${this.level + 1}`, `Best ${Math.max(getBest('blockbreaker'), this.score)}`]);
   }
 
   update(_, ms) {

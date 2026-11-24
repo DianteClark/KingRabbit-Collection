@@ -46,7 +46,7 @@ export class WildCards extends Phaser.Scene {
       skip: 'First card is a Skip: you miss a turn', reverse: 'First card is a Reverse: Righty starts',
       draw2: 'First card is a Draw Two: you draw 2', wild: 'First card is Wild: you pick the colour',
     }[this.r.startEffect];
-    if (fx) toast(this, fx, 400);
+    if (fx) toast(this, fx, 440);
     this.draw();
     this.time.delayedCall(fx ? 900 : 0, () => this.next());
   }
@@ -87,14 +87,17 @@ export class WildCards extends Phaser.Scene {
 
     const hand = r.hands[0];
     const myTurn = r.turn === 0 && !this.over && !this.busy;
-    const rows = Math.max(1, Math.ceil(hand.length / 9));
+    // Up to 3 rows; very big hands squeeze more cards into each row instead of a 4th row.
+    const per = Math.max(9, Math.ceil(hand.length / 3));
+    const rows = Math.max(1, Math.ceil(hand.length / per));
+    const rowGap = rows > 2 ? 70 : 84;   // 3 rows stay clear of the Keep it / UNO buttons
     hand.forEach((c, i) => {
-      const row = Math.floor(i / 9); const col = i % 9;
-      const inRow = Math.min(9, hand.length - row * 9);
+      const row = Math.floor(i / per); const col = i % per;
+      const inRow = Math.min(per, hand.length - row * per);
       const spacing = inRow > 1 ? Math.min(52, 300 / (inRow - 1)) : 0;
       const x = WIDTH / 2 - ((inRow - 1) * spacing) / 2 + col * spacing;
       const ok = myTurn && (this.drawn < 0 ? canPlay(r, c) : i === this.drawn);
-      const y = 600 - (rows - 1 - row) * 84 - (ok ? 12 : 0);
+      const y = 600 - (rows - 1 - row) * rowGap - (ok ? 12 : 0);
       const img = this.add.image(x, y, 'wild', frameOf(c)).setScale(3).setInteractive({ useHandCursor: true });
       if (myTurn && !ok) img.setTint(0x9a9a9a);
       img.on('pointerup', () => this.humanPlay(i));
@@ -114,7 +117,7 @@ export class WildCards extends Phaser.Scene {
     // Call "UNO!" on your turn while you hold two cards, before you play the second-to-last one.
     if (r.turn === 0 && !this.over && !this.busy && r.hands[0].length === 2 && !this.calledUno) {
       this.actionBtns.add(button(this, WIDTH - 60, 392, 96, 40, 'UNO!', () => {
-        this.calledUno = true; toast(this, 'You: UNO!', 400); this.drawButtons();
+        this.calledUno = true; toast(this, 'You: UNO!', 440); this.drawButtons();
       }, { fill: PALETTE.gold }));
     }
     if (this.catchable !== undefined) {
@@ -147,9 +150,14 @@ export class WildCards extends Phaser.Scene {
   }
 
   announce(ev) {
+    const you = ev.target === 0;
     const tgt = ev.target !== undefined ? NAMES[ev.target] : '';
-    const msg = { skip: `${tgt} is skipped!`, reverse: 'Direction reversed!', draw2: `${tgt} draws 2 and is skipped!` }[ev.effect];
-    if (msg) toast(this, msg, 400);
+    const msg = {
+      skip: you ? 'You are skipped!' : `${tgt} is skipped!`,
+      reverse: 'Direction reversed!',
+      draw2: you ? 'You draw 2 and miss a turn!' : `${tgt} draws 2 and is skipped!`,
+    }[ev.effect];
+    if (msg) toast(this, msg, 440);
   }
 
   cpuTurn() {
@@ -160,7 +168,7 @@ export class WildCards extends Phaser.Scene {
       sfx('card');
       const d = drawOne(this.r);
       if (canPlay(this.r, this.r.hands[p][d])) i = d;
-      else { toast(this, `${NAMES[p]} draws`, 400); passTurn(this.r); this.busy = false; this.next(); return; }
+      else { toast(this, `${NAMES[p]} draws`, 440); passTurn(this.r); this.busy = false; this.next(); return; }
     }
     const card = this.r.hands[p][i];
     const rest = this.r.hands[p].filter((_, k) => k !== i);
@@ -171,7 +179,7 @@ export class WildCards extends Phaser.Scene {
     this.announce(ev);
     // CPUs usually remember to call Uno (always on Hard); when they forget you get a moment to catch them.
     if (this.r.hands[p].length === 1) {
-      if (Math.random() < this.cfg.uno) toast(this, `${NAMES[p]}: UNO!`, 430);
+      if (Math.random() < this.cfg.uno) toast(this, `${NAMES[p]}: UNO!`, 190);
       else {
         this.catchable = p;
         this.time.delayedCall(2600, () => { if (this.catchable === p) { this.catchable = undefined; this.drawButtons(); } });
@@ -187,7 +195,7 @@ export class WildCards extends Phaser.Scene {
     if (p === undefined) return;
     this.catchable = undefined;
     penalty(this.r, p, 2);
-    toast(this, `Caught ${NAMES[p]}! They draw 2`, 430);
+    toast(this, `Caught ${NAMES[p]}! They draw 2`, 190);
     this.draw();
   }
 
@@ -196,12 +204,12 @@ export class WildCards extends Phaser.Scene {
     const prevColor = this.r.discard[this.r.discard.length - 2]?.color;
     const finishWith = (challenge) => {
       const out = resolveWild4(this.r, challenge);
-      const t = NAMES[target]; const o = NAMES[ev.player];
+      const draws = (p, n) => (p === 0 ? `You draw ${n}` : `${NAMES[p]} draws ${n}`);
       toast(this, {
-        accepted: `${t} draws 4 and is skipped`,
-        caught: `Illegal +4! ${o} draws 4 instead`,
-        failed: `Challenge failed: ${t} draws 6`,
-      }[out], 400);
+        accepted: `${draws(target, 4)} and ${target === 0 ? 'miss a turn' : 'is skipped'}`,
+        caught: `Illegal +4! ${draws(ev.player, 4)} instead`,
+        failed: `Challenge failed: ${draws(target, 6)}`,
+      }[out], 440);
       this.busy = false;
       this.next();
     };
@@ -225,8 +233,8 @@ export class WildCards extends Phaser.Scene {
   humanPlay(i) {
     if (this.over || this.busy || this.r.turn !== 0) return;
     const c = this.r.hands[0][i];
-    if (this.drawn >= 0 && i !== this.drawn) { toast(this, 'Play the card you drew, or keep it', 400); return; }
-    if (!canPlay(this.r, c)) { toast(this, "That card doesn't match", 400); return; }
+    if (this.drawn >= 0 && i !== this.drawn) { toast(this, 'Play the card you drew, or keep it', 440); return; }
+    if (!canPlay(this.r, c)) { toast(this, "That card doesn't match", 440); return; }
     const commit = (color) => {
       const goingToOne = this.r.hands[0].length === 2;
       this.drawn = -1;
@@ -236,7 +244,7 @@ export class WildCards extends Phaser.Scene {
       this.announce(ev);
       if (goingToOne && !this.calledUno && Math.random() < 0.75) {
         penalty(this.r, 0, 2);
-        toast(this, "Caught! You didn't call UNO: +2", 430);
+        toast(this, "Caught! You didn't call UNO: +2", 190);
       }
       this.calledUno = false;   // a new call is needed the next time you get down to two cards
       if (ev.effect === 'wild4') { this.handleWild4(ev); return; }
@@ -256,7 +264,7 @@ export class WildCards extends Phaser.Scene {
       this.status.setText('You drew a playable card: play it or keep it');
       this.draw();
     } else {
-      toast(this, 'No luck - turn passes', 400);
+      toast(this, 'No luck - turn passes', 440);
       passTurn(this.r);
       this.next();
     }

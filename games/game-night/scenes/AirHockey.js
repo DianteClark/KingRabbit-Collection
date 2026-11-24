@@ -41,7 +41,8 @@ export class AirHockey extends Phaser.Scene {
     this.cpu = { x: WIDTH / 2, y: R.y + 70, vx: 0, vy: 0, img: this.add.image(0, 0, 'airhockey', 'red').setScale(5) };
     this.target = { x: this.me.x, y: this.me.y };
 
-    this.input.on('pointerdown', (p) => { this.target = { x: p.x, y: p.y - 30 }; });
+    // Taps on the header buttons don't pull the mallet toward them.
+    this.input.on('pointerdown', (p, over) => { if (!over.length) this.target = { x: p.x, y: p.y - 30 }; });
     this.input.on('pointermove', (p) => { if (p.isDown) this.target = { x: p.x, y: p.y - 30 }; });
 
     this.scores = [0, 0];

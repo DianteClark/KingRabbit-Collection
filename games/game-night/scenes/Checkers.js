@@ -87,7 +87,9 @@ export class Checkers extends Phaser.Scene {
   tap(i) {
     if (i < 0 || this.over || this.busy || this.isCpu()) return;
     const mine = this.board[i] && side(this.board[i]) === this.turn;
-    if (mine && this.moves.some((m) => m.from === i)) { this.selected = i; this.draw(); return; }
+    if (mine && this.moves.some((m) => m.from === i)) { this.selected = i; sfx('select'); this.draw(); return; }
+    // Must-capture: tapping a piece that can't move while another must jump gets a buzz.
+    if (mine) { sfx('error'); this.selected = -1; this.draw(); return; }
     if (this.selected >= 0) {
       // Two jump routes can end on the same square: take the one that captures the most.
       const m = this.moves.filter((x) => x.from === this.selected && x.to === i)

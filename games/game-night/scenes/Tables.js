@@ -52,7 +52,7 @@ export class Tables extends Phaser.Scene {
     this.checkers = this.add.container(0, 0).setDepth(10);
 
     // Bear-off tray (tap target) + dice + buttons
-    this.offZone = this.add.rectangle(WIDTH / 2, BOTTOM + 30, 300, 34, hex(PALETTE.indigo)).setInteractive();
+    this.offZone = this.add.rectangle(WIDTH / 2, BOTTOM + 30, 300, 40, hex(PALETTE.indigo)).setInteractive();
     this.offText = text(this, WIDTH / 2, BOTTOM + 30, '', { color: PALETTE.cream });
     this.offZone.on('pointerup', () => this.tapTarget('off'));
     this.diceImgs = [0, 1, 2, 3].map((k) => this.add.image(124 + k * 34, BOTTOM + 84, 'tables', 'd1').setScale(2.5).setVisible(false));
@@ -148,6 +148,7 @@ export class Tables extends Phaser.Scene {
     const seen = new Map();
     for (const r of this.seqs) {
       const m = r.moves[0];
+      if (!m) continue;   // no legal move this roll
       seen.set(`${m.from}>${m.to}>${m.die}`, m);
     }
     return [...seen.values()];
@@ -161,6 +162,7 @@ export class Tables extends Phaser.Scene {
       if (choice.length) { this.doStep(choice.sort((a, b) => a.die - b.die)[0]); return; }
     }
     this.selected = steps.some((m) => m.from === pt) ? pt : null;
+    if (this.selected !== null) sfx('select');
     this.draw();
   }
 
@@ -278,7 +280,7 @@ export class Tables extends Phaser.Scene {
       if (this.selected !== null) {
         this.markPoint(this.selected, PALETTE.gold, 0.7);
         for (const m of steps.filter((x) => x.from === this.selected)) {
-          if (m.to === 'off') this.hl.lineStyle(3, hex(PALETTE.gold)).strokeRect(WIDTH / 2 - 150, BOTTOM + 13, 300, 34);
+          if (m.to === 'off') this.hl.lineStyle(3, hex(PALETTE.gold)).strokeRect(WIDTH / 2 - 150, BOTTOM + 10, 300, 40);
           else this.markPoint(m.to, PALETTE.cream, 0.55);
         }
       }

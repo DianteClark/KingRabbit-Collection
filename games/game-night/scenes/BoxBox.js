@@ -110,7 +110,9 @@ export class BoxBox extends Phaser.Scene {
   }
 
   undo() {
-    if (this.done || !this.history.length) return;
+    if (this.done) return;
+    if (!this.history.length) { sfx('error'); return; }
+    sfx('flip');
     this.state = this.history.pop();
     this.moves--;
     this.draw();
@@ -137,7 +139,7 @@ export class BoxBox extends Phaser.Scene {
   /** Grid of all levels: solved ones show your fewest moves, locked ones are greyed out. */
   pickLevel() {
     if (this.picker) return;
-    const c = this.add.container(0, 0).setDepth(50);
+    const c = this.add.container(0, 0).setDepth(100);
     this.picker = c;
     const close = () => { c.destroy(); this.picker = null; };
     c.add(this.add.rectangle(0, 0, WIDTH, 640, hex(PALETTE.ink), 0.6).setOrigin(0).setInteractive().on('pointerup', close));

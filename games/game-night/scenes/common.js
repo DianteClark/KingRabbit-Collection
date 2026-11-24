@@ -33,6 +33,8 @@ export function openHowTo(scene) {
 
 /** Go to another scene with a quick fade. */
 export function go(scene, key, data) {
+  // A second tap during the fade would queue a second scene start.
+  if (scene.cameras.main.fadeEffect.isRunning) return;
   fadeTo(scene, () => scene.scene.start(key, data));
 }
 
@@ -47,16 +49,30 @@ export function shadowTitle(scene, x, y, str, color = PALETTE.gold, shadow = PAL
  * Returns the container so callers can destroy it.
  */
 export function modal(scene, title, lines, buttons) {
-  const c = scene.add.container(0, 0).setDepth(50);
+  // Above everything in the scene, including hold-buttons (depth 60-61) used by the arcade games.
+  const c = scene.add.container(0, 0).setDepth(100);
   const dim = scene.add.rectangle(0, 0, WIDTH, HEIGHT, hex(PALETTE.ink), 0.6).setOrigin(0).setInteractive();
-  const h = 120 + lines.length * 24 + buttons.length * 64;
+  // Long titles wrap onto a second line instead of running past the panel.
+  const head = text(scene, WIDTH / 2, 0, title, { size: 32, color: PALETTE.gold, wrap: 268 });
+  const extra = Math.max(0, head.height - 40);
+  const h = 120 + extra + lines.length * 24 + buttons.length * 64;
   const top = Math.round((HEIGHT - h) / 2);
   const box = panel(scene, 30, top, 300, h);
-  c.add([dim, box]);
-  c.add(text(scene, WIDTH / 2, top + 40, title, { size: 32, color: PALETTE.gold }));
-  lines.forEach((l, i) => c.add(text(scene, WIDTH / 2, top + 80 + i * 24, l, { color: PALETTE.cream })));
+  head.setY(Math.round(top + 40 + extra / 2));
+  c.add([dim, box, head]);
+  lines.forEach((l, i) => c.add(text(scene, WIDTH / 2, top + 80 + extra + i * 24, l, { color: PALETTE.cream, wrap: 280 })));
+  let used = false;
   buttons.forEach(([label, fn, fill, color], i) => {
-    c.add(button(scene, WIDTH / 2, top + 80 + lines.length * 24 + 24 + i * 64, 220, 48, label, fn, {
+    // One press per popup: a quick double tap can't fire two buttons (or one twice).
+    const once = () => {
+      if (used) return;
+      used = true;
+      // Swallow taps for a moment so a double tap doesn't land on the board underneath.
+      const shield = scene.add.zone(0, 0, WIDTH, HEIGHT).setOrigin(0).setDepth(101).setInteractive();
+      scene.time.delayedCall(300, () => shield.destroy());
+      fn();
+    };
+    c.add(button(scene, WIDTH / 2, top + 80 + extra + lines.length * 24 + 24 + i * 64, 220, 48, label, once, {
       fill: fill ?? (i === 0 ? PALETTE.gold : PALETTE.lavender), color: color ?? PALETTE.night,
     }));
   });
@@ -65,10 +81,17 @@ export function modal(scene, title, lines, buttons) {
   return c;
 }
 
-/** Short message that pops up and fades away. */
+/** Short message that pops up and fades away, on a dark plate so it reads on any background. */
 export function toast(scene, msg, y = HEIGHT - 60) {
-  const t = text(scene, WIDTH / 2, y, msg, { color: PALETTE.gold }).setDepth(40);
-  scene.tweens.add({ targets: t, alpha: 0, delay: 1100, duration: 300, onComplete: () => t.destroy() });
+  // A newer message replaces one still showing in the same spot instead of printing over it.
+  const live = (scene.__toasts ||= new Map());
+  const old = live.get(y);
+  if (old?.active) { scene.tweens.killTweensOf(old); old.destroy(); }
+  const t = text(scene, WIDTH / 2, y, msg, { color: PALETTE.gold, wrap: 320 });
+  const plate = scene.add.rectangle(WIDTH / 2, y, Math.ceil(t.width) + 16, Math.ceil(t.height) + 8, hex(PALETTE.ink), 0.8);
+  const c = scene.add.container(0, 0, [plate, t]).setDepth(40);
+  live.set(y, c);
+  scene.tweens.add({ targets: c, alpha: 0, delay: 1100, duration: 300, onComplete: () => c.destroy() });
 }
 
 /** Pop a sprite in from nothing to its target scale. */
@@ -97,7 +120,8 @@ export function dpad(scene, x, y, onDir, { size = 56, gap = 4 } = {}) {
 /** Swipe detection inside an area. onSwipe('up'|'down'|'left'|'right'); onTap(x, y) for short taps. */
 export function swipeArea(scene, rect, { onSwipe, onTap, min = 24 }) {
   let start = null;
-  scene.input.on('pointerdown', (p) => {
+  scene.input.on('pointerdown', (p, over) => {
+    if (over.length) { start = null; return; }   // on a button or under a popup
     if (p.x >= rect.x && p.x < rect.x + rect.w && p.y >= rect.y && p.y < rect.y + rect.h) start = { x: p.x, y: p.y };
   });
   scene.input.on('pointerup', (p) => {
@@ -133,4 +157,17 @@ export function holdButton(scene, x, y, w, h, label, { fill = PALETTE.lavender, 
     wasPressed() { const v = state.pressed; state.pressed = false; return v; },
     container: c,
   };
+}
+
+/**
+ * Set a one-line HUD from parts, keeping it on screen: tighter spacing first, then the
+ * trailing parts are dropped (they're the least important, e.g. "Best").
+ */
+export function fitLine(t, parts, maxW = 348) {
+  for (let keep = parts.length; keep >= 1; keep--) {
+    for (const gap of ['   ', '  ']) {
+      t.setText(parts.slice(0, keep).join(gap));
+      if (t.width <= maxW) return;
+    }
+  }
 }

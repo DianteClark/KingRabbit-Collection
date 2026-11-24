@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { PALETTE, hex } from '../../../shared/core/palette.js';
 import { text } from '../../../shared/core/ui.js';
 import { WIDTH } from '../../../shared/core/boot.js';
-import { header, go, setBackground, toast, modal, holdButton } from './common.js';
+import { header, go, setBackground, toast, modal, holdButton, fitLine } from './common.js';
 import { getBest, submitBest } from '../save.js';
 import { sfx } from '../../../shared/core/sfx.js';
 import { getSkill, tune, reportResult } from '../adaptive.js';
@@ -30,7 +30,7 @@ export class MoleRunner extends Phaser.Scene {
   create() {
     setBackground(this, PALETTE.lavender);
     header(this, 'Mole Runner', () => go(this, 'Menu'));
-    this.hud = text(this, WIDTH / 2, 66, '', { color: PALETTE.night });
+    this.hud = text(this, WIDTH / 2, 68, '', { color: PALETTE.night });
     this.tileLayer = this.add.container(0, 0).setDepth(2);
 
     const y = 520;
@@ -97,7 +97,7 @@ export class MoleRunner extends Phaser.Scene {
   }
 
   updateHud() {
-    this.hud.setText(`Level ${this.levelIdx + 1}   Gems ${this.gemsLeft}   Lives ${this.lives}   Score ${this.score}`);
+    fitLine(this.hud, [`Score ${this.score}`, `Gems ${this.gemsLeft}`, `Lives ${this.lives}`, `Level ${this.levelIdx + 1}`]);
   }
 
   occupiedBy(exclude) {

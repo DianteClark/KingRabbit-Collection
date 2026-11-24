@@ -65,22 +65,31 @@ export class Menu extends Phaser.Scene {
     c.face.add([
       icon,
       text(this, 0, 14, t.name, { color: ready ? PALETTE.night : PALETTE.lavender }),
-      text(this, 0, 34, ready ? this.subtitle(t) : 'Coming soon', { color: ready ? PALETTE.indigo : PALETTE.lavender }),
+      this.fitSub(ready ? this.subtitle(t) : ['Coming soon'], ready),
     ]);
     return c;
   }
 
+  /** The first of the subtitle options that fits inside the tile. */
+  fitSub(options, ready) {
+    const t = text(this, 0, 34, '', { color: ready ? PALETTE.indigo : PALETTE.lavender });
+    for (const o of options) { t.setText(o); if (t.width <= TILE_W - 12) break; }
+    return t;
+  }
+
+  /** Subtitle options, longest first (long records drop the CPU level, then squeeze). */
   subtitle(t) {
     if (t.score === 'record') {
       const r = getRecord(t.id);
-      return t.modes.includes('cpu') ? `W${r.w} L${r.l}  CPU ${skillLabel(t.id)}` : `Won ${r.w}`;
+      if (!t.modes.includes('cpu')) return [`Won ${r.w}`];
+      const lv = skillLabel(t.id);
+      return [`W${r.w} L${r.l}  CPU ${lv}`, `W${r.w} L${r.l} CPU${lv}`, `W${r.w} L${r.l}`];
     }
     const b = getBest(t.id);
     if (t.modes.includes('cpu') && t.id === 'yacht') {
-      const r = getRecord(t.id);
-      return `Best ${b}  CPU ${skillLabel(t.id)}`;
+      return [`Best ${b}  CPU ${skillLabel(t.id)}`, `Best ${b} CPU${skillLabel(t.id)}`, `Best ${b}`];
     }
-    return b ? `Best ${b}` : 'No score yet';
+    return [b ? `Best ${b}` : 'No score yet'];
   }
 
   open(t) {

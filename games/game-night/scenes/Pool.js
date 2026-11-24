@@ -48,7 +48,7 @@ export class Pool extends Phaser.Scene {
     this.aiming = null;
     this.placing = false;
     this.ballLayer = this.add.container(0, 0).setDepth(5);
-    text(this, WIDTH / 2, T.y + T.h + 44, 'Drag back from the cue ball, release to shoot', { color: PALETTE.lavender });
+    text(this, WIDTH / 2, T.y + T.h + 44, 'Drag back from the ball, let go to shoot', { color: PALETTE.lavender });
 
     this.input.on('pointerdown', (p, over) => this.aimStart(p, over));
     this.input.on('pointermove', (p) => this.aimMove(p));
@@ -114,8 +114,9 @@ export class Pool extends Phaser.Scene {
     }
     [0, 1].forEach((p) => {
       const g = this.groups[p];
-      this.info[p].setText(`${this.name(p)}${this.turn === p ? ' <' : ''}\n${g ? `${g} ${this.remaining(p)}` : 'open table'}`);
-      this.info[p].setColor(this.turn === p ? PALETTE.gold : PALETTE.cream);
+      const now = this.turn === p && !this.over;
+      this.info[p].setText(`${now ? '> ' : ''}${this.name(p)}${now ? ' <' : ''}\n${g ? `${g} ${this.remaining(p)}` : 'open table'}`);
+      this.info[p].setColor(now ? PALETTE.gold : PALETTE.cream);
     });
   }
 
@@ -129,7 +130,7 @@ export class Pool extends Phaser.Scene {
     this.eightPocket = -1;
     this.calledPocket = -1;
     let msg = this.isCpu() ? 'CPU is lining up...' : `${this.name(this.turn)} to shoot`;
-    if (!this.isCpu() && this.ballInHand) msg = 'Ball in hand: drag the cue ball, then shoot';
+    if (!this.isCpu() && this.ballInHand) msg = 'Ball in hand: drag the cue ball';
     else if (!this.isCpu() && this.onEight(this.turn)) msg = 'On the 8: tap a pocket to call it';
     this.status.setText(msg);
     this.redraw();
