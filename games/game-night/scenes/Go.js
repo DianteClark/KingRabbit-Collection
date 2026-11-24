@@ -109,7 +109,14 @@ export class Go extends Phaser.Scene {
 
   tap(i) {
     if (this.counting) {
-      if (i >= 0 && this.st.board[i]) { this.dead = toggleDead(this.st.board, this.dead, i); this.drawCounting(); }
+      if (i < 0 || !this.st.board[i]) return;
+      // Against the computer, it decides about its own stones, and you can't revive a group
+      // it can see is dead. You can still give up your own groups.
+      if (this.mode === 'cpu') {
+        if (this.st.board[i] === 2) { toast(this, 'The CPU decides about its own stones', 900); return; }
+        if (this.dead.has(i) && this.cpuDead.has(i)) { toast(this, 'That group has no way to live', 900); return; }
+      }
+      this.dead = toggleDead(this.st.board, this.dead, i); this.drawCounting();
       return;
     }
     if (i < 0 || this.over || this.busy || this.isCpu()) return;
@@ -163,8 +170,9 @@ export class Go extends Phaser.Scene {
     // Both passed: agree which stones are dead before counting.
     this.counting = true;
     this.dead = suggestDead(this.st.board);
+    this.cpuDead = new Set(this.dead);
     this.passBtn.setLabel('Score');
-    this.status.setText('Tap groups to mark them dead');
+    this.status.setText(this.mode === 'cpu' ? 'Dead stones are marked. Tap Score' : 'Tap groups to mark them dead');
     this.drawCounting();
   }
 

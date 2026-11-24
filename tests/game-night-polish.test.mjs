@@ -101,3 +101,16 @@ test('sea battle: a line of hits is chased along its length', () => {
     assert.equal(c, 46);
   }
 });
+
+test('dominoes: the last round winner leads with any tile', async () => {
+  const D = await import('../games/game-night/logic/dominoes.js');
+  for (const leader of [0, 1]) {
+    const r = D.newRound(Math.random, leader);
+    assert.equal(r.turn, leader);
+    const opts = D.playable(r, leader);
+    assert.equal(opts.length, 7);
+    assert.equal(D.playable(r, 1 - leader).length, 0);
+  }
+  const first = D.newRound(Math.random, null);
+  assert.equal(D.playable(first, first.turn).length, 1);
+});

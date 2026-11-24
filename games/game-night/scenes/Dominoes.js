@@ -66,11 +66,13 @@ export class Dominoes extends Phaser.Scene {
     this.handZones = this.add.container(0, 0);
     this.drawBtn = button(this, WIDTH / 2, 606, 220, 44, 'Draw', () => this.humanDraw(), { fill: PALETTE.gold });
     this.scores = [0, 0];
+    this.lastWinner = null;
     this.newRound();
   }
 
   newRound() {
-    this.r = newRound();
+    // The winner of the last round leads with any tile; the first round (and after a block) the highest double leads.
+    this.r = newRound(Math.random, this.lastWinner ?? null);
     this.voids = new Set();   // numbers you've shown you don't have (the CPU remembers on Hard)
     this.over = false;
     this.busy = false;
@@ -165,14 +167,14 @@ export class Dominoes extends Phaser.Scene {
     if (res) { this.endRound(res); return; }
     if (this.r.turn === 1) {
       const lead = this.r.hands[1][this.r.lead.i];
-      this.status.setText(this.r.center ? 'CPU is playing...' : lead && lead[0] === lead[1] ? 'CPU leads with the highest double' : 'CPU leads its heaviest tile');
+      this.status.setText(this.r.center ? 'CPU is playing...' : this.r.lead.i === null ? 'CPU won last round and leads' : lead && lead[0] === lead[1] ? 'CPU leads with the highest double' : 'CPU leads its heaviest tile');
       this.busy = true;
       this.refresh();
       this.time.delayedCall(800, () => this.cpuStep());
     } else {
       const opts = playable(this.r, 0);
       const lead = this.r.hands[0][this.r.lead.i];
-      if (!this.r.center) this.status.setText(lead && lead[0] === lead[1] ? 'You lead: tap your highest double' : 'No doubles out: lead your heaviest tile');
+      if (!this.r.center) this.status.setText(this.r.lead.i === null ? 'You won last round: lead any tile' : lead && lead[0] === lead[1] ? 'You lead: tap your highest double' : 'No doubles out: lead your heaviest tile');
       else this.status.setText(opts.length ? 'Tap a glowing tile, then where to play it' : 'No match: draw from the boneyard');
       this.refresh();
     }
@@ -231,6 +233,7 @@ export class Dominoes extends Phaser.Scene {
     this.over = true;
     this.refresh();
     if (res.winner !== null) this.scores[res.winner] += res.points;
+    this.lastWinner = res.winner;
     sfx(res.winner === 0 ? 'win' : res.winner === 1 ? 'lose' : 'place');
     const matchOver = this.scores.some((s) => s >= TARGET);
     const blocked = !this.r.hands[0].length || !this.r.hands[1].length ? '' : 'Blocked! ';
@@ -241,7 +244,7 @@ export class Dominoes extends Phaser.Scene {
         const youWon = this.scores[0] >= TARGET;
         record('dominoes', youWon ? 'w' : 'l', Math.min(1, Math.abs(this.scores[0] - this.scores[1]) / 100));
         const m = modal(this, youWon ? 'You win the match!' : 'CPU wins the match', lines, [
-          ['New match', () => { m.destroy(); this.scores = [0, 0]; this.newRound(); }],
+          ['New match', () => { m.destroy(); this.scores = [0, 0]; this.lastWinner = null; this.newRound(); }],
           ['Menu', () => go(this, 'Menu')],
         ]);
       } else {

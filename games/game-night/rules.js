@@ -42,7 +42,7 @@ export const RULES = {
     sections: [
       { heading: 'Goal', text: 'Surround more of the board than your opponent. Your score is your stones plus the empty points you completely surround. White gets 6.5 extra points (komi) for moving second.' },
       { heading: 'How to play', items: ['Black plays first. Players take turns placing one stone on an empty point. Stones never move.', 'A stone or connected group with no empty neighbouring points (liberties) is captured and removed.', 'Suicide is not allowed: you can\'t play where your stone would have no liberties, unless it captures.', 'Ko: you can\'t make a move that recreates the board position from just before your last turn.', 'You may pass instead of playing. Two passes in a row end the game.'] },
-      { heading: 'Counting', items: ['After both pass, groups that can\'t avoid capture are marked dead (red X). The game suggests them; tap a group to change it.', 'Tap Score to remove the dead stones and count.'] },
+      { heading: 'Counting', items: ['After both pass, groups that can\'t avoid capture are marked dead (red X). In 2-player games, tap a group to change it. Against the CPU, the marking is fixed, except that you may give up your own groups.', 'Tap Score to remove the dead stones and count.'] },
     ],
   },
   Tables: {
@@ -60,7 +60,7 @@ export const RULES = {
     title: 'Dominoes',
     sections: [
       { heading: 'Goal', text: 'Be first to play all your tiles. First to 100 points wins the match.' },
-      { heading: 'Starting', items: ['Each player draws 7 tiles; the rest form the boneyard.', 'Whoever holds the highest double leads with it. That first double is the spinner. (If nobody has a double, the heaviest tile leads.)'] },
+      { heading: 'Starting', items: ['Each player draws 7 tiles; the rest form the boneyard.', 'In the first round, whoever holds the highest double leads with it. (If nobody has a double, the heaviest tile leads.) After that, the winner of the last round leads with any tile they like; after a blocked tie the highest double leads again.', 'If the opening tile is a double, it becomes the spinner.'] },
       { heading: 'Playing', items: ['Play a tile whose end matches an open end of the layout.', 'Tiles can go on the left and right of the spinner. Once both of those sides are covered, the top and bottom of the spinner open too, so you can build in all four directions.', 'Tap a glowing tile, then tap the glowing spot where you want it. Tiles fit only where the numbers match.', 'If you can\'t play, draw from the boneyard until you can. If the boneyard is empty, pass.'] },
       { heading: 'Scoring', items: ['Domino! The first player out scores the pips left in the opponent\'s hand.', 'If nobody can play (blocked), the lighter hand wins and scores the other hand\'s pips.'] },
     ],

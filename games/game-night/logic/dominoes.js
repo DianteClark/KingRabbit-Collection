@@ -26,12 +26,14 @@ export const pips = (hand) => hand.reduce((s, [a, b]) => s + a + b, 0);
 const isDouble = (t) => t[0] === t[1];
 const weight = (t) => (isDouble(t) ? 100 + t[0] : t[0] + t[1]);
 
-export function newRound(rng = Math.random) {
+/** leader: winner of the previous round (0/1) leads with any tile; null = highest double leads. */
+export function newRound(rng = Math.random, leader = null) {
   const bones = shuffle(fullSet(), rng);
   const hands = [bones.splice(0, 7), bones.splice(0, 7)];
   // Find the lead tile: highest double, else heaviest tile.
   let best = -1; let lead = null;
   hands.forEach((h, p) => h.forEach((t, i) => { const w = weight(t); if (w > best) { best = w; lead = { p, i }; } }));
+  if (leader === 0 || leader === 1) lead = { p: leader, i: null };
   return {
     hands, boneyard: bones, center: null, spinner: false,
     arms: { left: [], right: [], up: [], down: [] },
@@ -59,7 +61,7 @@ export function ends(r) {
 
 /** Sides where hand tile `tile` (at hand index i of player p) may be played. */
 export function placements(r, tile, p, i) {
-  if (!r.center) return r.lead.p === p && r.lead.i === i ? ['center'] : [];
+  if (!r.center) return r.lead.p === p && (r.lead.i === null || r.lead.i === i) ? ['center'] : [];
   return ends(r).filter((e) => tile[0] === e.value || tile[1] === e.value).map((e) => e.side);
 }
 
