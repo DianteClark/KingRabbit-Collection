@@ -23,9 +23,9 @@ export const GAMES = [
   { id: 'soccer', title: 'Pocket Soccer', tagline: '5-a-side arcade football', cat: 'action', status: 'playable', landscape: true },
   { id: 'robbox', title: 'Robbox', tagline: 'Program a robot through 40 puzzles', cat: 'classic', status: 'playable' },
   { id: 'alchemist', title: "Alchemist's Shop", tagline: 'Brew potions, keep customers happy', cat: 'sim', status: 'playable' },
+  { id: 'star-drifter', title: 'Star Drifter', tagline: 'Crew a ship across a hostile galaxy', cat: 'strategy', status: 'playable' },
   // In development
   { id: 'megaboy', title: 'MegaBoy Run', tagline: 'Run, jump, blast, steal boss weapons', cat: 'action', status: 'soon', landscape: true },
-  { id: 'star-drifter', title: 'Star Drifter', tagline: 'Crew a ship across a hostile galaxy', cat: 'strategy', status: 'soon' },
   { id: 'pangea', title: 'Pangea', tagline: 'Found cities, grow an empire', cat: 'strategy', status: 'soon' },
   { id: 'darkhold', title: 'Darkhold', tagline: 'A dungeon crawl by torchlight', cat: 'adventure', status: 'soon' },
   { id: 'town-builder', title: 'Tiny Town Builder', tagline: 'Zone, build and grow a little city', cat: 'sim', status: 'soon' },
