@@ -12,7 +12,7 @@ const pctBar = (v, color) => `<div class="tb-bar"><i style="width:${Math.max(0, 
 let open = [];
 let lastClose = 0;
 /** True while a panel is open or was closed a moment ago (so the closing tap never reaches the map). */
-export const blocking = () => open.length > 0 || Date.now() - lastClose < 300;
+export const blocking = () => open.length > 0 || Date.now() - lastClose < 250;
 export const anyOpen = () => open.length > 0;
 export function closeAll() { [...open].forEach((p) => p.close(true)); }
 
@@ -276,7 +276,7 @@ export function showResult(g, won, reason) {
   const p = sheet({
     title: won ? 'Scenario won' : 'Scenario lost', g, wrap: 'center', noX: true, html,
     foot: won ? '<button class="tb-btn cream" data-act="title">Title</button><button class="tb-btn gold" data-act="keep">Keep building</button>'
-      : '<button class="tb-btn cream" data-act="title">Title</button><button class="tb-btn cream" data-act="keep">Look around</button><button class="tb-btn gold" data-act="retry">Try again</button>',
+      : '<button class="tb-btn cream" data-act="title">Title</button><button class="tb-btn cream" data-act="keep">Keep playing</button><button class="tb-btn gold" data-act="retry">Try again</button>',
     handlers: {
       keep: () => { p.close(true); S.keepGoing(s); g.save(); g.refreshHud(); },
       title: () => { closeAll(); g.toTitle(); },

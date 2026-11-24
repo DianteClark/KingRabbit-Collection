@@ -45,7 +45,8 @@ export class Title extends Phaser.Scene {
       const d = `${['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][Math.floor(run.t) % 12]} Y${Math.floor(run.t / 12) + 1}`;
       const name = run.mode === 'sandbox' ? 'Sandbox' : SCENARIOS[run.mode]?.name || 'City';
       button(this, WIDTH / 2, y, 280, 48, 'Continue', () => this.continueRun(), { fill: PALETTE.gold });
-      text(this, WIDTH / 2, y + 36, `${name}, ${d}, ${(run.pop || 0).toLocaleString('en-US')} people`, { color: PALETTE.lavender });
+      const tag = run.result?.over ? (run.result.won ? ' (won)' : ' (lost)') : '';
+      text(this, WIDTH / 2, y + 36, `${name}${tag}, ${d}, ${(run.pop || 0).toLocaleString('en-US')} people`, { color: PALETTE.lavender });
       y += 74;
     }
     button(this, WIDTH / 2, y, 280, 48, 'New Sandbox', () => this.startNew('sandbox'), { fill: run ? PALETTE.lavender : PALETTE.gold });
