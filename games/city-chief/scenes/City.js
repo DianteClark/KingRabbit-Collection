@@ -39,6 +39,9 @@ export class City extends Phaser.Scene {
     this.cameras.main.setBackgroundColor('#1c1618');
     this.world = this.add.container(0, 0);
     this.drawMap();
+    // Night falls over the buildings (cars, lights and markers stay bright on top).
+    this.night = this.add.rectangle(0, 0, MW, MH, 0x0b0a24, 0).setOrigin(0);
+    this.world.add(this.night);
     this.vehLayer = this.add.container(0, 0);
     this.fxLayer = this.add.container(0, 0);
     this.markLayer = this.add.container(0, 0);
@@ -323,6 +326,9 @@ export class City extends Phaser.Scene {
       for (const e of events) this.onEvent(e);
       if (Math.floor(s.minute / 60) !== this.lastSaveHour) { this.lastSaveHour = Math.floor(s.minute / 60); this.save(); }
     }
+    const h = (s.minute % 1440) / 60;
+    const dark = h >= 20 || h < 5 ? 1 : h >= 18 ? (h - 18) / 2 : h < 7 ? (7 - h) / 2 : 0;
+    this.night.fillAlpha = dark * 0.42;
     this.stepCivilians(gm);
     this.stepWalkers(gm);
     this.stepAmbulances(gm);
