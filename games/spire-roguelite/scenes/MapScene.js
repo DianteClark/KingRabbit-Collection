@@ -13,7 +13,7 @@ export const ACT_COLORS = [
 
 const VIEW_TOP = 88;
 const ROW_H = 50;
-const TOP_PAD = 70;
+const TOP_PAD = 116 + 88; // room for the act title below the fixed top bar (VIEW_TOP)
 const NODE_ICON = {
   fight: ['sk:14,1', 2], elite: ['bld:4,6', 1], event: ['sk:2,1', 2], rest: ['img:campfire', 2],
   shop: ['bld:0,3', 1], treasure: ['img:chest', 2],
@@ -32,7 +32,7 @@ export class MapScene extends Phaser.Scene {
     const colors = ACT_COLORS[(run.act - 1) % 3];
     setBackground(this, colors.bg);
     this.content = this.add.container(0, 0);
-    const contentH = TOP_PAD + ROWS * ROW_H + 70;
+    const contentH = TOP_PAD + ROWS * ROW_H + 80;
     this.drawGround(colors, contentH);
     this.drawPaths();
     this.drawNodes();
@@ -44,16 +44,16 @@ export class MapScene extends Phaser.Scene {
     relicRow(this, run, 20, 66, many ? { scale: 1, gap: 20, maxW: WIDTH - 24 } : { scale: 2, gap: 34 });
 
     button(this, WIDTH - 40, HEIGHT - 24, 64, 32, 'Key', () => this.showKey(), { fill: PALETTE.sand }).setDepth(40);
-    const scroller = dragScroll(this, this.content, VIEW_TOP, HEIGHT, contentH);
+    const scroller = dragScroll(this, this.content, VIEW_TOP, HEIGHT, contentH - VIEW_TOP);
     this.scroller = scroller;
     // Start with the current row in view.
     const cur = run.pos !== null && run.pos !== undefined ? run.map.nodes[run.pos] : null;
     const focusY = cur ? nodeY(cur) : nodeY({ row: 0, jy: 0 });
-    scroller.scrollTo(Math.max(0, focusY - (HEIGHT - VIEW_TOP) / 2 - VIEW_TOP + 120));
+    scroller.scrollTo(Math.max(0, focusY - (HEIGHT - 150)));
 
     const title = run.mode === 'endless' && run.loop ? `${actInfo(run).name} +${run.loop}` : actInfo(run).name;
-    this.content.add(text(this, WIDTH / 2, 14, title, { color: PALETTE.gold }));
-    this.content.add(text(this, WIDTH / 2, 34, `Act ${run.act}${run.mode === 'endless' ? ` - loop ${run.loop + 1}` : ' of 3'} - Floor ${run.floor}`, { color: PALETTE.lavender }));
+    this.content.add(text(this, WIDTH / 2, VIEW_TOP + 14, title, { color: PALETTE.gold }));
+    this.content.add(text(this, WIDTH / 2, VIEW_TOP + 34, `Act ${run.act}${run.mode === 'endless' ? ` - loop ${run.loop + 1}` : ' of 3'} - Floor ${run.floor}`, { color: PALETTE.lavender }));
     if (!run.path?.length && run.act === 1 && run.loop === 0) {
       this.time.delayedCall(400, () => toast(this, 'Tap a glowing room to begin', HEIGHT - 64));
     }

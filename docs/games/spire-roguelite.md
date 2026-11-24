@@ -43,6 +43,11 @@ A Slay the Spire-style deckbuilding roguelite for portrait phones. Pick a hero, 
 
 The bot plans each turn with a small beam search but builds its deck naively, so a person who drafts with a plan should win more often than it does.
 
+## UI details
+- The run is saved the moment an action resolves (before its animation), so closing the page mid-animation loses nothing; a fight that was already won resumes straight into its rewards.
+- Status badges wrap to the space each enemy has and collapse into a "+n" marker (tap the enemy for the full list); the player's badges stack upward, away from the buttons.
+- Screens that rebuild after a tap (rewards, shop, events) ignore taps for a moment, so a fast double tap can't take the next item by accident. Popups block every tap underneath, and the map doesn't scroll behind them.
+
 ## Next ideas
 - Card animations per type (slash, spell burst) and more enemy special moves
 - More events, a fourth hero, ascension-style difficulty levels

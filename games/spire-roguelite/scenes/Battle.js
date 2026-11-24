@@ -70,6 +70,8 @@ export class Battle extends Phaser.Scene {
     this.input.on('pointermove', (p) => this.onMove(p));
     this.input.on('pointerup', (p) => this.onUp(p));
 
+    // Closed the game in the moment between the last blow and the reward screen: finish now.
+    if (this.c.s.over) { this.refresh(); this.time.delayedCall(300, () => this.checkOver()); return; }
     // Play any events left from creating the fight (relic effects at the start), then show the hand.
     const evs = this.c.takeEvents();
     this.refresh();
@@ -166,8 +168,8 @@ export class Battle extends Phaser.Scene {
     this.player = unit(this, PLAYER.x, PLAYER.y, h.sprite, 4);
     this.add.zone(PLAYER.x, PLAYER.y - 32, 64, 72).setInteractive().on('pointerup', () => this.tapPlayer());
     this.pBar = this.hpBar(PLAYER.x, PLAYER.y + 12, 84);
-    this.pBlock = this.blockBadge(PLAYER.x - 46, PLAYER.y + 12);
-    this.pStatus = this.add.container(118, PLAYER.y - 10);
+    this.pBlock = this.blockBadge(PLAYER.x - 40, PLAYER.y + 12);
+    this.pStatus = this.add.container(112, PLAYER.y - 10);
   }
 
   drawControls() {
@@ -185,23 +187,56 @@ export class Battle extends Phaser.Scene {
     }
   }
 
-  statusRow(container, st, { maxPerRow = 4, center = true } = {}) {
+  /**
+   * Status badges (icon + number). Rows wrap at maxW pixels; enemy rows are centred and go down,
+   * the player's rows are left-aligned and stack upward (away from the buttons).
+   */
+  statusRow(container, st, { maxW = 150, center = true, up = false, maxRows = 2 } = {}) {
     container.removeAll(true);
     const entries = Object.entries(st).filter(([k, n]) => n && STATUSES[k] && k !== 'strUp');
-    const w = 34;
+    const rows = [[]];
+    let used = 0;
+    let hidden = 0;
+    const MORE_W = 24; // room for a "+n" marker when not everything fits
     entries.forEach(([k, n], i) => {
-      const row = Math.floor(i / maxPerRow);
-      const col = i % maxPerRow;
-      const inRow = Math.min(maxPerRow, entries.length - row * maxPerRow);
-      const x = center ? (col - (inRow - 1) / 2) * w : col * w;
+      if (hidden) { hidden++; return; }
       const debuff = STATUSES[k].kind === 'debuff' || (k === 'str' && n < 0);
-      const bg = this.add.rectangle(x - 7, row * 20, 18, 18, hex(debuff ? PALETTE.plum : PALETTE.ink), 0.9);
-      const ic = icon(this, x - 7, row * 20, STATUSES[k].art, 1);
-      const showN = !['bulwark'].includes(k);
-      const t = showN ? outlined(this, x + 4, row * 20 + 2, String(n), { origin: [0, 0.5], color: debuff ? '#ffb0e0' : PALETTE.cream }) : null;
-      container.add([bg, ic]);
-      if (t) container.add(t);
+      const t = k === 'bulwark' ? null : outlined(this, 0, 0, String(n), { origin: [0, 0.5], color: debuff ? '#ffb0e0' : PALETTE.cream });
+      const w = 18 + (t ? t.width + 3 : 0) + 5;
+      if (used + w > maxW && rows[rows.length - 1].length) { rows.push([]); used = 0; }
+      const lastRow = rows.length === maxRows;
+      const more = entries.length - i - 1;
+      if (rows.length > maxRows || (lastRow && more > 0 && used + w + MORE_W > maxW)) {
+        t?.destroy();
+        if (rows.length > maxRows) rows.pop();
+        hidden = 1;
+        return;
+      }
+      rows[rows.length - 1].push({ k, debuff, t, w });
+      used += w;
     });
+    if (hidden) {
+      const t = outlined(this, 0, 0, `+${hidden}`, { origin: [0, 0.5], color: PALETTE.sand });
+      rows[rows.length - 1].push({ more: true, t, w: t.width + 5 });
+    }
+    rows.forEach((row, r) => {
+      const total = row.reduce((sum, e) => sum + e.w, 0) - 5;
+      let x = center ? -total / 2 : 0;
+      const y = (up ? -r : r) * 20;
+      for (const e of row) {
+        if (e.more) { e.t.setPosition(x, y + 2); container.add(e.t); x += e.w; continue; }
+        container.add(this.add.rectangle(x + 9, y, 18, 18, hex(e.debuff ? PALETTE.plum : PALETTE.ink), 0.9));
+        container.add(icon(this, x + 9, y, STATUSES[e.k].art, 1));
+        if (e.t) { e.t.setPosition(x + 20, y + 2); container.add(e.t); }
+        x += e.w;
+      }
+    });
+  }
+
+  /** How wide an enemy's status rows may be before they reach its neighbour. */
+  enemyStatusW() {
+    const n = this.c.s.enemies.length;
+    return n <= 1 ? 170 : n === 2 ? 124 : n === 3 ? 104 : 82;
   }
 
   drawIntent(view) {
@@ -215,7 +250,7 @@ export class Battle extends Phaser.Scene {
     if (main === 'attack') {
       parts.push(icon(this, 0, 0, 'ui:3,2', 2).setTint(INTENT_TINT.attack));
       const label = it.times > 1 ? `${it.dmg}x${it.times}` : `${it.dmg}`;
-      parts.push(outlined(this, 0, 0, label, { size: label.length <= 3 ? 32 : 16, color: '#ffd0c8' }));
+      parts.push(outlined(this, 0, 0, label, { size: label.length <= (this.c.s.enemies.length >= 3 ? 2 : 3) ? 32 : 16, color: '#ffd0c8' }));
     } else if (main === 'defend') {
       parts.push(icon(this, 0, 0, 'ui:2,1', 2).setTint(INTENT_TINT.defend));
     } else if (main === 'buff') parts.push(this.arrow(true));
@@ -297,13 +332,13 @@ export class Battle extends Phaser.Scene {
       v.c.setVisible(true);
       v.bar.set(e.hp, e.maxHp, e.block > 0);
       v.blk.set(e.block);
-      this.statusRow(v.statuses, e.st);
+      this.statusRow(v.statuses, e.st, { maxW: this.enemyStatusW() });
       this.drawIntent(v);
     }
     const p = s.player;
     this.pBar.set(p.hp, p.maxHp, p.block > 0);
     this.pBlock.set(p.block);
-    this.statusRow(this.pStatus, p.st, { maxPerRow: 6, center: false });
+    this.statusRow(this.pStatus, p.st, { maxW: WIDTH - 118, center: false, up: true, maxRows: 3 });
     this.energyText.setText(`${s.energy}/${this.c.maxEnergy()}`);
     this.orb.setFillStyle(hex(s.energy > 0 ? PALETTE.gold : PALETTE.indigo));
     this.drawBtn.setLabel(String(s.draw.length));
@@ -554,6 +589,7 @@ export class Battle extends Phaser.Scene {
       this.tweens.add({ targets: view, x: tv ? tv.x : WIDTH / 2, y: tv ? FEET_Y - 40 : 330, scale: 0.4, alpha: 0, duration: 200, onComplete: () => view.destroy() });
     }
     const evs = this.c.takeEvents();
+    saveRun(this.run); // save right away, so closing the page mid-animation loses nothing
     this.animate(evs, () => this.afterAction());
     this.syncHand();
   }
@@ -590,6 +626,7 @@ export class Battle extends Phaser.Scene {
     this.time.delayedCall(260, () => {
       this.c.endTurn();
       const evs = this.c.takeEvents();
+      saveRun(this.run);
       this.animate(evs, () => {
         this.hint.setText('');
         this.refresh();
@@ -627,7 +664,9 @@ export class Battle extends Phaser.Scene {
     if (!this.c.usePotion(slot, target)) { sfx('error'); return; }
     sfx('power');
     this.hint.setText('');
-    this.animate(this.c.takeEvents(), () => this.afterAction());
+    const evs = this.c.takeEvents();
+    saveRun(this.run);
+    this.animate(evs, () => this.afterAction());
     this.syncHand();
   }
 
@@ -711,8 +750,8 @@ export class Battle extends Phaser.Scene {
     const debuff = s.kind === 'debuff' || (ev.st === 'str' && ev.n < 0);
     this.unitFloat(ev.who, `${s.name} ${ev.n > 0 ? '+' : ''}${ev.n}`, debuff ? '#e6a0ff' : '#9be36b', 16);
     // Statuses change intents and card numbers right away.
-    if (ev.who === 'p') this.statusRow(this.pStatus, this.c.p.st, { maxPerRow: 6, center: false });
-    else { const v = this.enemyViews.get(ev.who); if (v) this.statusRow(v.statuses, v.e.st); }
+    if (ev.who === 'p') this.statusRow(this.pStatus, this.c.p.st, { maxW: WIDTH - 118, center: false, up: true, maxRows: 3 });
+    else { const v = this.enemyViews.get(ev.who); if (v) this.statusRow(v.statuses, v.e.st, { maxW: this.enemyStatusW() }); }
   }
 
   showHeal(ev) {

@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { PALETTE, hex, text, button, WIDTH, HEIGHT, route, setBackground, icon, potionIcon, sfx, topBar, runMenu, showCards, modal, toast, go } from './common.js';
+import { PALETTE, hex, text, button, WIDTH, HEIGHT, route, setBackground, icon, potionIcon, sfx, topBar, runMenu, showCards, modal, toast, go, tapCooldown } from './common.js';
 import { wideCard } from './cardview.js';
 import { RELICS } from '../logic/relics.js';
 import { CARDS } from '../logic/cards.js';
@@ -70,7 +70,7 @@ export class Reward extends Phaser.Scene {
     sfx('card');
     const rw = this.run.rewards;
     const c = this.add.container(0, 0).setDepth(50);
-    c.add(this.add.rectangle(0, 0, WIDTH, HEIGHT, hex(PALETTE.night), 0.97).setOrigin(0).setInteractive());
+    c.add(this.add.rectangle(0, 0, WIDTH, HEIGHT, hex(PALETTE.night)).setOrigin(0).setInteractive());
     c.add(text(this, WIDTH / 2, 30, 'Choose a card', { size: 32, color: PALETTE.gold }));
     c.add(text(this, WIDTH / 2, 62, 'Tap one, then Take it (or skip)', { color: PALETTE.lavender }));
     let y = 84;
@@ -119,7 +119,7 @@ export class Reward extends Phaser.Scene {
     this.items.add(button(this, WIDTH / 2, HEIGHT - 40, 240, 44, 'Skip', () => { chooseBossRelic(this.run, null); route(this, this.run); }, { fill: PALETTE.lavender }));
   }
 
-  save() { saveRun(this.run); this.bar.refresh(); }
+  save() { saveRun(this.run); this.bar.refresh(); tapCooldown(this); }
 
   abandon() {
     this.run.screen = 'dead';

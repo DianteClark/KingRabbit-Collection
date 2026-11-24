@@ -28,6 +28,17 @@ export function go(scene, key, data) {
   fadeTo(scene, () => scene.scene.start(key, data));
 }
 
+/**
+ * Ignore taps for a moment. Used after a tap rebuilds the screen, so a quick double tap can't
+ * land on whatever button appears in the same spot.
+ */
+export function tapCooldown(scene, ms = 300) {
+  scene.input.enabled = false;
+  const back = () => { scene.input.enabled = true; };
+  scene.time.delayedCall(ms, back);
+  scene.events.once('shutdown', back);
+}
+
 /** Save the run and show whatever screen it is on now. */
 export function route(scene, run) {
   if (scene._leaving) return;
@@ -111,14 +122,15 @@ export function overlayOpened(scene, c) {
   c.once('destroy', () => { scene._overlays = Math.max(0, (scene._overlays || 1) - 1); });
 }
 
-export function modal(scene, title, body, buttons, { width = 316, art } = {}) {
+export function modal(scene, title, body, buttons, { width = 316, art, content, disabled = [] } = {}) {
   const c = scene.add.container(0, 0).setDepth(100).setScrollFactor(0);
   overlayOpened(scene, c);
   const dim = scene.add.rectangle(0, 0, WIDTH, HEIGHT, hex(PALETTE.ink), 0.65).setOrigin(0).setInteractive();
   const bodyText = body ? text(scene, WIDTH / 2, 0, body, { wrap: width - 36, color: PALETTE.cream }) : null;
   const artH = art ? 72 : 0;
   const bodyH = bodyText ? bodyText.height + 16 : 0;
-  const h = 64 + artH + bodyH + buttons.length * 52 + 8;
+  const contentH = content ? content.h + 12 : 0;
+  const h = 64 + artH + bodyH + contentH + buttons.length * 52 + 8;
   const top = Math.round((HEIGHT - h) / 2);
   const left = Math.round((WIDTH - width) / 2);
   c.add([dim, box(scene, left, top, width, h)]);
@@ -126,10 +138,13 @@ export function modal(scene, title, body, buttons, { width = 316, art } = {}) {
   let y = top + 54;
   if (art) { const a = icon(scene, WIDTH / 2, y + 32, art.ref, art.scale || 4); if (art.tint) a.setTint(art.tint); c.add(a); y += artH; }
   if (bodyText) { bodyText.setOrigin(0.5, 0).setPosition(WIDTH / 2, y); c.add(bodyText); y += bodyH; }
+  if (content) { content.setPosition(Math.round((WIDTH - content.w) / 2), y); c.add(content); y += contentH; }
   buttons.forEach(([label, fn, fill, color], i) => {
-    c.add(button(scene, WIDTH / 2, y + 22 + i * 52, Math.min(240, width - 40), 42, label, () => fn?.(c), {
+    const b = button(scene, WIDTH / 2, y + 22 + i * 52, Math.min(240, width - 40), 42, label, () => fn?.(c), {
       fill: fill ?? (i === 0 ? PALETTE.gold : PALETTE.lavender), color: color ?? PALETTE.night,
-    }));
+    });
+    if (disabled.includes(i)) b.setEnabled(false);
+    c.add(b);
   });
   c.setAlpha(0);
   scene.tweens.add({ targets: c, alpha: 1, duration: 120 });
@@ -189,9 +204,9 @@ export function topBar(scene, run, opts = {}) {
     c.add([frame, img]);
     slots.push(img);
   }
-  const deck = button(scene, 302, 22, 40, 32, '', () => opts.onDeck?.(), { fill: PALETTE.sand });
-  const deckIcon = icon(scene, -8, 0, 'sk:19,1', 1);
-  const deckN = text(scene, 8, 0, '', { color: PALETTE.night });
+  const deck = button(scene, 300, 22, 48, 32, '', () => opts.onDeck?.(), { fill: PALETTE.sand });
+  const deckIcon = icon(scene, -13, 0, 'sk:19,1', 1);
+  const deckN = text(scene, 9, 0, '', { color: PALETTE.night });
   deck.face.add([deckIcon, deckN]);
   c.add(deck);
   c.add(button(scene, WIDTH - 18, 22, 28, 32, '?', () => openHowTo(scene), { fill: PALETTE.gold }));
@@ -249,7 +264,7 @@ export function relicRow(scene, run, x, y, { scale = 2, gap = 34, maxW = WIDTH -
 export function relicList(scene, run) {
   const c = scene.add.container(0, 0).setDepth(110).setScrollFactor(0);
   overlayOpened(scene, c);
-  c.add(scene.add.rectangle(0, 0, WIDTH, HEIGHT, hex(PALETTE.night), 0.97).setOrigin(0).setInteractive());
+  c.add(scene.add.rectangle(0, 0, WIDTH, HEIGHT, hex(PALETTE.night)).setOrigin(0).setInteractive());
   c.add(text(scene, WIDTH / 2, 24, `Relics (${run.relics.length})`, { color: PALETTE.gold }));
   const list = scene.add.container(0, 0);
   let y = 50;

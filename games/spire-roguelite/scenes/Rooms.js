@@ -2,7 +2,7 @@
 import Phaser from 'phaser';
 import {
   PALETTE, hex, text, button, WIDTH, HEIGHT, route, go, setBackground, icon, unit, potionIcon, sfx, topBar, runMenu,
-  showCards, pickCard, modal, toast, relicInfo,
+  showCards, pickCard, modal, toast, relicInfo, tapCooldown,
 } from './common.js';
 import { handCard, wideCard } from './cardview.js';
 import { ACT_COLORS } from './MapScene.js';
@@ -165,6 +165,7 @@ export class Event extends Phaser.Scene {
     sfx('select');
     saveRun(this.run);
     this.bar.refresh();
+    tapCooldown(this);
     this.showOutcome(out);
   }
 
@@ -179,7 +180,7 @@ export class Event extends Phaser.Scene {
       const cards = pickable(run, mode);
       const open = () => pickCard(this, {
         cards, title: `${verbs[mode]} a card`, verb: verbs[mode], preview: mode === 'upgrade' ? upgradedCopy : null,
-        onPick: (card) => { eventPick(run, card.uid); sfx('power'); saveRun(run); this.showOutcome(out); },
+        onPick: (card) => { eventPick(run, card.uid); sfx('power'); saveRun(run); tapCooldown(this); this.showOutcome(out); },
         cancelLabel: 'Back',
       });
       if (!cards.length) { eventPick(run, null); this.showOutcome(out); return; }
@@ -193,7 +194,7 @@ export class Event extends Phaser.Scene {
         const zone = this.add.zone(WIDTH / 2, y + w.h / 2, WIDTH - 24, w.h).setInteractive({ useHandCursor: true });
         zone.on('pointerup', () => {
           const m = modal(this, `Take ${CARDS[id].name}?`, null, [
-            ['Take it', () => { m.destroy(); eventTakeOffer(run, id); sfx('power'); saveRun(run); this.showOutcome(out); }],
+            ['Take it', () => { m.destroy(); eventTakeOffer(run, id); sfx('power'); saveRun(run); tapCooldown(this); this.showOutcome(out); }],
             ['Back', () => m.destroy(), PALETTE.lavender],
           ]);
         });
@@ -276,7 +277,7 @@ export class Shop extends Phaser.Scene {
     return c;
   }
 
-  buyFlow(title, body, kind, i, art) {
+  buyFlow(title, body, kind, i, art, content) {
     const it = this.run.shop[kind][i];
     const afford = this.run.gold >= it.price;
     const blocked = kind === 'potions' && !canGetPotion(this.run) ? 'Your potion belt is full' : '';
@@ -286,21 +287,19 @@ export class Shop extends Phaser.Scene {
         m.destroy();
         sfx('coin');
         saveRun(this.run);
+        tapCooldown(this);
         this.draw();
-      }, afford && !blocked ? PALETTE.gold : PALETTE.indigo, afford && !blocked ? PALETTE.night : PALETTE.lavender],
+      }, PALETTE.gold, PALETTE.night],
       ['Back', () => m.destroy(), PALETTE.lavender],
-    ], { art, width: 340 });
+    ], { art, width: 340, content, disabled: afford && !blocked ? [] : [0] });
     return m;
   }
 
   inspectCard(i) {
     sfx('select');
     const it = this.run.shop.cards[i];
-    const m = this.buyFlow(CARDS[it.id].name + (it.sale ? ' (on sale!)' : ''), null, 'cards', i);
-    const w = wideCard(this, { id: it.id, up: false }, WIDTH - 40);
-    // Put the readable card just above the modal box.
-    w.setPosition(20, 120 - Math.max(0, w.h - 80));
-    m.add(w);
+    const w = wideCard(this, { id: it.id, up: false }, 316);
+    this.buyFlow(it.sale ? 'On sale!' : 'Buy this card?', null, 'cards', i, null, w);
   }
 
   inspectRelic(i) {
@@ -321,7 +320,7 @@ export class Shop extends Phaser.Scene {
     const run = this.run;
     pickCard(this, {
       cards: run.deck, title: 'Remove a card', subtitle: `Costs ${run.removeCost} gold`, verb: 'Remove it',
-      onPick: (card) => { if (shopRemove(run, card.uid)) { sfx('capture'); saveRun(run); this.draw(); } },
+      onPick: (card) => { if (shopRemove(run, card.uid)) { sfx('capture'); saveRun(run); tapCooldown(this); this.draw(); } },
     });
   }
 }
