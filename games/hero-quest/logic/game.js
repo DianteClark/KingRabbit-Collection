@@ -66,6 +66,7 @@ export class Game {
     if (!r) throw new Error(`No room ${id}`);
     const prevArea = this.room?.area;
     this.room = r;
+    this.flags[`seen:${id}`] = true;
     if (prevArea && prevArea !== r.area) this.visitCleared = {};
     const p = this.p;
     p.x = px; p.y = py; if (dir) p.dir = dir;

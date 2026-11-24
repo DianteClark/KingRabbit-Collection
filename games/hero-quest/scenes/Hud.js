@@ -10,6 +10,7 @@ import { skillLabel } from '../adaptive.js';
 import { ITEM } from '../art.js';
 import { VIEW } from './Play.js';
 import { DUNGEONS } from '../logic/constants.js';
+import { ROOMS } from '../logic/data.js';
 
 const BAR_H = 44;
 const PAD_TOP = VIEW.y + VIEW.h;            // 464: the touch controls live below the room
@@ -289,13 +290,14 @@ export class Hud extends Phaser.Scene {
     if (this.modal || this.dialog || this.play.busy) return;
     this.scene.pause('Play');
     const m = this.openModal((c) => {
-      const top = 132; const h = 392;
+      const top = 52; const h = 556;
       c.add(panel(this, 30, top, 300, h));
-      c.add(text(this, WIDTH / 2, top + 36, 'Paused', { size: 32, color: PALETTE.gold }));
+      c.add(text(this, WIDTH / 2, top + 30, 'Paused', { size: 32, color: PALETTE.gold }));
       const s = this.g.s;
       const done = DUNGEONS.filter((d) => s.flags[`boss:${d}`]).length;
-      c.add(text(this, WIDTH / 2, top + 72, `Dungeons ${done}/3   Hearts ${s.maxHp / 2}`, { color: PALETTE.cream }));
-      c.add(text(this, WIDTH / 2, top + 96, `Enemy pace ${skillLabel()}/10`, { color: PALETTE.lavender }));
+      c.add(text(this, WIDTH / 2, top + 64, `Dungeons ${done}/3   Hearts ${s.maxHp / 2}`, { color: PALETTE.cream }));
+      c.add(text(this, WIDTH / 2, top + 86, `Enemy pace ${skillLabel()}/10`, { color: PALETTE.lavender }));
+      this.drawMap(c, WIDTH / 2, top + 178);
       const rows = [
         ['Resume', () => m.close(), PALETTE.gold],
         ['How to Play', () => { m.close(); this.help(); }],
@@ -304,10 +306,35 @@ export class Hud extends Phaser.Scene {
         ['All Games', () => { this.play.saveNow(); window.location.href = '../'; }],
       ];
       rows.forEach(([label, fn, fill], i) => {
-        const b = button(this, WIDTH / 2, top + 140 + i * 54, 220, 44, label, () => fn(b), { fill: fill || PALETTE.lavender });
+        const b = button(this, WIDTH / 2, top + 270 + i * 54, 220, 44, label, () => fn(b), { fill: fill || PALETTE.lavender });
         c.add(b);
       });
     }, () => this.scene.resume('Play'));
+  }
+
+  /** 3x3 map of the area you're in: rooms you've seen, where you are, the boss. */
+  drawMap(c, cx, cy) {
+    const g = this.g;
+    const area = g.room.area === 'in' ? 'ow' : g.room.area;
+    const cw = 40; const ch = 30; const gap = 4;
+    const gr = this.add.graphics();
+    c.add(gr);
+    const name = { ow: 'Fernwick Vale', d1: 'Mossy Hollow', d2: 'Ember Lab', d3: 'Hollow Keep' }[area];
+    c.add(text(this, cx, cy - 64, name, { color: PALETTE.sand }));
+    for (let y = 0; y < 3; y++) {
+      for (let x = 0; x < 3; x++) {
+        const id = `${area}:${x},${y}`;
+        const r = ROOMS[id];
+        if (!r) continue;
+        const px = cx + (x - 1) * (cw + gap) - cw / 2; const py = cy + (y - 1) * (ch + gap) - ch / 2;
+        const seen = g.flags[`seen:${id}`];
+        const here = g.room.id === id;
+        gr.fillStyle(hex(PALETTE.ink)).fillRect(px - 1, py - 1, cw + 2, ch + 2);
+        gr.fillStyle(hex(here ? PALETTE.gold : seen ? PALETTE.lavender : PALETTE.indigo)).fillRect(px, py, cw, ch);
+        if (r.boss && seen) c.add(text(this, px + cw / 2, py + ch / 2, g.flags[`boss:${area}`] ? 'ok' : '!', { color: PALETTE.red }));
+        if (here) c.add(this.add.image(px + cw / 2, py + ch / 2, 'items', itemFrame('sword')));
+      }
+    }
   }
 
   help() {
