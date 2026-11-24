@@ -200,17 +200,19 @@ export class Game {
     return true;
   }
 
-  randomSpot() {
-    for (let k = 0; k < 40; k++) {
+  randomSpot(e = null) {
+    for (let k = 0; k < 60; k++) {
       const x = 2 + Math.floor(this.rng() * (COLS - 4)); const y = 2 + Math.floor(this.rng() * (ROWS - 4));
-      if (this.passable(x, y, 'enemy')) return [center(x), center(y)];
+      if (!this.passable(x, y, 'enemy')) continue;
+      if (e && !this.boxFree({ x: center(x), y: center(y), w: e.w, h: e.h }, 'enemy', e)) continue;
+      return [center(x), center(y)];
     }
     return [ROOM_W / 2, ROOM_H / 2];
   }
 
   farSpot(e, minDist) {
     for (let k = 0; k < 40; k++) {
-      const s = this.randomSpot();
+      const s = this.randomSpot(e);
       if (Math.hypot(s[0] - this.p.x, s[1] - this.p.y) >= minDist) return s;
     }
     return [e.x, e.y];
@@ -646,8 +648,11 @@ export class Game {
     const area = this.room.area;
     const [cx, cy] = this.clampInside(x, y);
     if (!this.flags[`hc:${area}`]) this.addPickup('heartC', cx, cy, { keep: true });
-    else this.addPickup(area === 'd3' ? 'crown' : 'orb', ROOM_W / 2, ROOM_H / 2, { keep: true });
+    else this.addPickup(this.finalPrize(), ROOM_W / 2, ROOM_H / 2, { keep: true });
   }
+
+  /** The Crown waits in the keep until you've carried it home once; after that it's the way out. */
+  finalPrize() { return this.room.area === 'd3' && !this.s.done ? 'crown' : 'orb'; }
 
   clampInside(x, y) {
     let tx = clamp(Math.floor(x / TILE), 1, COLS - 2); let ty = clamp(Math.floor(y / TILE), 1, ROWS - 2);
@@ -868,7 +873,7 @@ export class Game {
       case 'heartC':
         this.flags[`hc:${area}`] = true;
         this.give('heart');
-        this.addPickup(area === 'd3' ? 'crown' : 'orb', ROOM_W / 2, ROOM_H / 2, { keep: true });
+        this.addPickup(this.finalPrize(), ROOM_W / 2, ROOM_H / 2, { keep: true });
         break;
       case 'orb':
         this.emit({ type: 'sfx', name: 'win' });

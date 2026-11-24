@@ -220,7 +220,7 @@ const BEHAVIOUR = {
     }
     // hover: drift toward a target point, now and then throw or teleport
     e.anim = 'walk';
-    if (!e.target || e.t <= 0) { e.target = g.randomSpot(); e.t = 1.4; }
+    if (!e.target || e.t <= 0) { e.target = g.randomSpot(e); e.t = 1.4; }
     const tx = e.target[0] - e.x; const ty = e.target[1] - e.y; const td = Math.hypot(tx, ty);
     if (td > 2) {
       const sp = 40 * T.speed * fast;
