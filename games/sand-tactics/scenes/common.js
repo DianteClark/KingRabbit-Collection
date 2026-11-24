@@ -32,7 +32,8 @@ export function header(scene, title, onBack, { y = 24 } = {}) {
   return t;
 }
 
-export function go(scene, key, data) { fadeTo(scene, () => scene.scene.start(key, data)); }
+// Always pass data: Phaser reuses a scene's previous data when start() gets none (the menu would reopen its last view).
+export function go(scene, key, data = {}) { fadeTo(scene, () => scene.scene.start(key, data)); }
 
 export function setBackground(scene, color) {
   scene.cameras.main.setBackgroundColor(color).fadeIn(150);
@@ -93,3 +94,20 @@ export function modal(scene, title, lines, buttons, { width = 324, extra = 0, co
 export function fit(t, w) { if (t.width > w) t.setScale(w / t.width); return t; }
 
 export const money = (n) => `${Math.round(n)}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+
+/**
+ * Make an interactive zone fire fn on a real tap: the press must start on it and not wander off
+ * (a drag that ends on it, or the release of an earlier tap, does nothing). Fires once per press.
+ */
+export function tapZone(zone, fn) {
+  let down = null;
+  zone.on('pointerdown', (p) => { down = { x: p.x, y: p.y }; });
+  zone.on('pointerout', () => { down = null; });
+  zone.on('pointerup', (p) => {
+    if (!down) return;
+    const moved = Math.hypot(p.x - down.x, p.y - down.y);
+    down = null;
+    if (moved <= 12) fn(p);
+  });
+  return zone;
+}
