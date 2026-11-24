@@ -20,19 +20,19 @@ export class Cup extends Phaser.Scene {
     if (!cup) { this.intro(); return; }
     this.bracket(cup);
     if (cup.champion === PLAYER_TEAM.id) {
-      text(this, WIDTH / 2, 470, 'CHAMPIONS!', { size: 32, color: PALETTE.gold });
-      text(this, WIDTH / 2, 500, `Cups won: ${save.get('cupsWon') || 0}`, { color: PALETTE.cream });
-      button(this, WIDTH / 2, 560, 240, 52, 'New cup', () => this.start(), { fill: PALETTE.gold });
+      text(this, WIDTH / 2, 500, 'CHAMPIONS!', { size: 32, color: PALETTE.gold });
+      text(this, WIDTH / 2, 526, `Cups won: ${save.get('cupsWon') || 0}`, { color: PALETTE.cream });
+      button(this, WIDTH / 2, 584, 240, 52, 'New cup', () => this.start(), { fill: PALETTE.gold });
       sfx('win');
     } else if (!cup.alive) {
-      text(this, WIDTH / 2, 470, `Out in the ${ROUND_NAMES[cup.round]}`, { color: PALETTE.orange });
-      text(this, WIDTH / 2, 500, 'Your cup run is over', { color: PALETTE.cream });
-      button(this, WIDTH / 2, 560, 240, 52, 'New cup', () => this.start(), { fill: PALETTE.gold });
+      text(this, WIDTH / 2, 500, `Out in the ${ROUND_NAMES[cup.round]}`, { color: PALETTE.orange });
+      text(this, WIDTH / 2, 526, 'Your cup run is over', { color: PALETTE.cream });
+      button(this, WIDTH / 2, 584, 240, 52, 'New cup', () => this.start(), { fill: PALETTE.gold });
     } else {
       const opp = teamById(opponentOf(cup));
-      text(this, WIDTH / 2, 474, `${ROUND_NAMES[cup.round]}: you vs ${opp.name}`, { color: PALETTE.cream });
-      button(this, WIDTH / 2, 530, 260, 56, `Play ${ROUND_NAMES[cup.round]}`, () => go(this, 'MatchScene', matchData('cup', opp.id)), { fill: PALETTE.gold });
-      button(this, WIDTH / 2, 600, 200, 40, 'Abandon run', () => {
+      text(this, WIDTH / 2, 498, `${ROUND_NAMES[cup.round]}: you vs ${opp.name}`, { color: PALETTE.cream });
+      button(this, WIDTH / 2, 546, 260, 52, `Play ${ROUND_NAMES[cup.round]}`, () => go(this, 'MatchScene', matchData('cup', opp.id)), { fill: PALETTE.gold });
+      button(this, WIDTH / 2, 608, 200, 36, 'Abandon run', () => {
         const m = modal(this, 'Abandon?', ['Start the cup again', 'from the quarter-finals?'], [
           ['Yes, new cup', () => { m.destroy(); this.start(); }],
           ['Keep playing', () => m.destroy()],
@@ -58,8 +58,8 @@ export class Cup extends Phaser.Scene {
   /** Each round as a column of ties; your team highlighted, losers dimmed. */
   bracket(cup) {
     const colX = [62, 180, 298];
-    const top = 92;
-    const rowsH = 340;
+    const top = 86;
+    const rowsH = 368;
     ['QF', 'SF', 'Final'].forEach((n, r) => text(this, colX[r], top, n, { color: r === cup.round && cup.alive && !cup.champion ? PALETTE.gold : PALETTE.lavender }));
     for (let r = 0; r < 3; r++) {
       const list = cup.rounds[r];
@@ -68,7 +68,7 @@ export class Cup extends Phaser.Scene {
         const n = 8 >> r;
         for (let i = 0; i < n; i++) {
           const y = top + 30 + (rowsH / n) * (i + 0.5);
-          this.add.rectangle(colX[r], y, 108, 28, hex(PALETTE.ink)).setAlpha(0.6);
+          this.add.rectangle(colX[r], y, 108, 24, hex(PALETTE.ink)).setAlpha(0.6);
           text(this, colX[r], y, '?', { color: PALETTE.indigo });
         }
         continue;
@@ -81,8 +81,8 @@ export class Cup extends Phaser.Scene {
         const mine = id === PLAYER_TEAM.id;
         const lost = nextRound ? !nextRound.includes(id) : (!cup.alive && mine && r === cup.round);
         const g = this.add.graphics();
-        g.fillStyle(hex(mine ? PALETTE.indigo : PALETTE.ink), 1).fillRect(colX[r] - 54, y - 14, 108, 28);
-        if (mine) g.lineStyle(2, hex(PALETTE.gold)).strokeRect(colX[r] - 54, y - 14, 108, 28);
+        g.fillStyle(hex(mine ? PALETTE.indigo : PALETTE.ink), 1).fillRect(colX[r] - 54, y - 12, 108, 24);
+        if (mine) g.lineStyle(2, hex(PALETTE.gold)).strokeRect(colX[r] - 54, y - 12, 108, 24);
         const c = this.add.container(0, 0, [g]);
         c.add(kitChip(this, colX[r] - 40, y, t));
         c.add(text(this, colX[r] + 8, y, t.short, { color: mine ? PALETTE.gold : PALETTE.cream }));
