@@ -68,6 +68,8 @@ export class Penalties extends Phaser.Scene {
       text(this, 12, 74 + side * 36, t.short, { color: PALETTE.cream, origin: [0, 0.5] });
       return text(this, WIDTH - 14, 74 + side * 36, '0', { size: 32, color: PALETTE.gold, origin: [1, 0.5] });
     });
+    this.add.rectangle(0, 152, WIDTH, 72, hex(PALETTE.ink), 0.45).setOrigin(0);
+    this.add.rectangle(0, 470, WIDTH, 32, hex(PALETTE.ink), 0.45).setOrigin(0);
     text(this, WIDTH / 2, 168, `Full time ${this.score[0]} - ${this.score[1]}`, { color: PALETTE.cream });
     this.msg = text(this, WIDTH / 2, 202, '', { size: 32, color: PALETTE.gold });
     this.help = text(this, WIDTH / 2, 486, '', { color: PALETTE.cream });
