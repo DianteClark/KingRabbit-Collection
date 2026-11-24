@@ -614,6 +614,16 @@ export function transfer(state, town, from, slot) {
   return true;
 }
 
+/** Two of your heroes standing next to each other can swap stacks (each keeps at least one). */
+export function exchange(state, from, to, slot) {
+  if (Math.max(Math.abs(from.x - to.x), Math.abs(from.y - to.y)) > 1 || from.owner !== to.owner) return false;
+  const st = from.army[slot];
+  if (!st || armyCount(from.army) <= 1 || !canAdd(to.army, st.type)) return false;
+  addToArmy(to.army, st.type, st.count);
+  from.army[slot] = null;
+  return true;
+}
+
 export function canHire(state, town) {
   const p = state.players[town.owner];
   if (!town.built.tavern) return { ok: false, reason: 'Build a Tavern first' };

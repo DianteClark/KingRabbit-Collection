@@ -415,3 +415,15 @@ test('adaptive: battle results move the level a little, whole games a lot', () =
   assert.ok(s1 > s0 && s2 - s1 > (s1 - s0) * 3);
   assert.deepEqual(A.tune({ easy: { a: 0 }, normal: { a: 1 }, hard: { a: 3 } }, 0.75), { a: 2 });
 });
+
+test('heroes next to each other can swap stacks', () => {
+  const { st, hero } = openState();
+  const other = G.createHero(st, 0, 2, 2);
+  hero.army = [{ type: 'pikeman', count: 5 }, { type: 'archer', count: 3 }, null, null, null];
+  other.army = [{ type: 'griffin', count: 2 }, null, null, null, null];
+  assert.ok(G.exchange(st, hero, other, 1));
+  assert.equal(other.army[1].type, 'archer');
+  assert.equal(G.exchange(st, hero, other, 0), false, 'keeps its last stack');
+  other.x = 5;
+  assert.equal(G.exchange(st, other, hero, 0), false, 'too far apart');
+});

@@ -5,7 +5,7 @@ import { sfx } from '../../../shared/core/sfx.js';
 import {
   WIDTH, HEIGHT, store, go, modal, toast, resourceBar, bar, setBackground, openHowTo,
 } from './common.js';
-import { openHeroPanel, levelUpFlow } from './heroPanel.js';
+import { openHeroPanel, levelUpFlow, openExchange } from './heroPanel.js';
 import * as G from '../logic/game.js';
 import { aiTurn, aiParams } from '../logic/ai.js';
 import { autoResolve, TACTIC_PRESETS } from '../logic/combat.js';
@@ -426,7 +426,14 @@ export class Adventure extends Phaser.Scene {
     if (!G.isExplored(s, 0, x, y)) { this.info('Unexplored'); return; }
     const h = this.hero();
     const own = G.heroAt(s, x, y);
-    if (own && own.owner === 0 && own.id !== this.selected) { this.select(own.id); return; }
+    if (own && own.owner === 0 && own.id !== this.selected) {
+      if (h && Math.max(Math.abs(h.x - own.x), Math.abs(h.y - own.y)) <= 1) {
+        openExchange(this, h, own, () => { this.refreshUi(); saveGame(this.s); });
+        return;
+      }
+      this.select(own.id);
+      return;
+    }
     const o = this.objectAtTile(x, y);
     // Own town: tapping its buildings opens it; tapping its gate walks there (or opens it if you're in).
     if (o && o.kind === 'town' && o.owner === 0) {

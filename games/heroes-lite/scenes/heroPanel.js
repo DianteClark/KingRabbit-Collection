@@ -5,6 +5,7 @@ import { sfx } from '../../../shared/core/sfx.js';
 import { WIDTH, HEIGHT, modal, creatureSlot, bar, toast } from './common.js';
 import { sprite, artifactFrame, spellFrame, unitFrame } from '../frames.js';
 import * as G from '../logic/game.js';
+import { exchange } from '../logic/game.js';
 import { CREATURES, ARTIFACTS, SPELLS, SKILLS, LEVEL_WORD, FACTIONS, expForLevel } from '../logic/data.js';
 
 const STAT_NAME = { atk: 'Attack', def: 'Defense', pow: 'Power', know: 'Knowledge' };
@@ -118,4 +119,28 @@ export async function levelUpFlow(scene, h) {
     const pick = await new Promise((res) => modal(scene, 'Level up!', lines, btns.map(([l, i]) => [l, () => res(i)])));
     G.applyLevelUp(scene.s, h, pick);
   }
+}
+
+/** Swap stacks between two neighbouring heroes. */
+export function openExchange(scene, a, b, onClose) {
+  const c = scene.add.container(0, 0).setDepth(100);
+  const draw = () => {
+    c.removeAll(true);
+    c.add(scene.add.rectangle(0, 0, WIDTH, HEIGHT, hex(PALETTE.ink), 0.7).setOrigin(0).setInteractive());
+    c.add(panel(scene, 6, 130, WIDTH - 12, 360));
+    c.add(text(scene, WIDTH / 2, 160, 'Meeting', { size: 32, color: PALETTE.gold }));
+    [a, b].forEach((h, k) => {
+      const y = 200 + k * 120;
+      c.add(sprite(scene, 30, y + 2, ['heroIcons', h.portrait[0], h.portrait[1], 16, 16], 2));
+      c.add(text(scene, 52, y, `${h.name}, level ${h.level}`, { origin: [0, 0.5], color: PALETTE.sand }));
+      h.army.forEach((st, i) => c.add(creatureSlot(scene, 44 + i * 68, y + 52, st, { size: 60, onTap: st ? () => {
+        if (exchange(scene.s, h, k ? a : b, i)) sfx('place'); else { sfx('error'); toast(scene, 'Each hero keeps one stack', 470); }
+        draw();
+      } : null })));
+    });
+    c.add(text(scene, WIDTH / 2, 434, 'Tap a stack to send it across', { color: PALETTE.lavender }));
+    c.add(button(scene, WIDTH / 2, 466, 200, 36, 'Done', () => { c.destroy(); onClose?.(); }, { fill: PALETTE.gold }));
+  };
+  draw();
+  return c;
 }

@@ -37,7 +37,8 @@ export const RULES = {
       items: [
         'Attack and Defense boost every creature in the army. Spell Power makes spells stronger; Knowledge gives 10 mana per point.',
         'Win battles to gain experience. Each level gives +1 to a skill and a choice of two abilities, like Offense, Archery, Logistics or Necromancy.',
-        'An army holds up to 5 stacks. Artifacts give lasting bonuses. A beaten hero is gone, and the winner takes its artifacts.',
+        'An army holds up to 5 stacks. Tap one of your heroes standing next to the selected hero to swap troops.',
+        'Artifacts give lasting bonuses. A beaten hero is gone, and the winner takes its artifacts.',
       ],
     },
     {
