@@ -53,14 +53,14 @@ export const RULES = {
       { heading: 'Hitting and the bar', items: ['Landing on a blot hits it: it goes to the bar in the middle.', 'A checker on the bar must re-enter in the opponent\'s home board before any other move.'] },
       { heading: 'Bearing off', items: ['Once all your checkers are home, move them off with exact rolls.', 'A higher roll may bear off your furthest-back checker.'] },
       { heading: 'Winning', items: ['Single game: 1 point.', 'Gammon: the loser hasn\'t borne off any checkers (2 points).', 'Backgammon: also has a checker on the bar or in your home board (3 points).'] },
-      { heading: 'Controls', text: 'Tap Roll, tap a highlighted point to pick a checker, then tap where it goes. Undo takes back the turn so far.' },
+      { heading: 'Controls', text: 'Tap Roll, tap a highlighted point to pick a checker, then tap where it goes. Undo takes back the turn so far; the turn passes a moment after your last move. Gold outlines show the computer\'s last moves.' },
     ],
   },
   Dominoes: {
     title: 'Dominoes',
     sections: [
       { heading: 'Goal', text: 'Be first to play all your tiles. First to 100 points wins the match.' },
-      { heading: 'Starting', items: ['Each player draws 7 tiles; the rest form the boneyard.', 'Whoever holds the highest double leads with it. That first double is the spinner.'] },
+      { heading: 'Starting', items: ['Each player draws 7 tiles; the rest form the boneyard.', 'Whoever holds the highest double leads with it. That first double is the spinner. (If nobody has a double, the heaviest tile leads.)'] },
       { heading: 'Playing', items: ['Play a tile whose end matches an open end of the layout.', 'Tiles can go on the left and right of the spinner. Once both of those sides are covered, the top and bottom of the spinner open too, so you can build in all four directions.', 'Tap a glowing tile, then tap the glowing spot where you want it. Tiles fit only where the numbers match.', 'If you can\'t play, draw from the boneyard until you can. If the boneyard is empty, pass.'] },
       { heading: 'Scoring', items: ['Domino! The first player out scores the pips left in the opponent\'s hand.', 'If nobody can play (blocked), the lighter hand wins and scores the other hand\'s pips.'] },
     ],
@@ -77,7 +77,7 @@ export const RULES = {
     title: 'Yacht Dice',
     sections: [
       { heading: 'Goal', text: 'Score the most points over 13 rounds by filling each box of the scorecard once. Play solo for a high score, or against the computer or a friend (take turns; most points wins).' },
-      { heading: 'Each round', items: ['Roll five dice up to three times. Tap dice to hold them between rolls.', 'Then pick one empty box to score in. You can take 0 in any box.'] },
+      { heading: 'Each round', items: ['Roll five dice up to three times. Tap dice to hold them between rolls.', 'Then tap one empty box to score in. You can take 0 in any box (tap it twice, so a slip can\'t waste a box).'] },
       { heading: 'Boxes', items: ['Ones to Sixes: total of that number. 63 or more in these six earns a 35 point bonus.', '3 of a Kind / 4 of a Kind: total of all dice.', 'Full House (3 + 2): 25.', 'Small Straight (4 in a row): 30. Large Straight (5 in a row): 40.', 'Yacht (5 of a kind): 50.', 'Chance: total of all dice.'] },
       { heading: 'Extra Yachts', items: ['Each extra Yacht after scoring 50 in the Yacht box is worth +100.', 'Joker rule: if the Yacht box is already filled, you must use the matching upper box if it\'s open. Otherwise you may score any lower box at full value (Full House 25, Straights 30 and 40).'] },
     ],
@@ -108,6 +108,7 @@ export const RULES = {
     sections: [
       { heading: 'Goal', text: 'Hit the puck into the computer\'s goal at the top. First to 7 goals wins.' },
       { heading: 'Controls', items: ['Drag anywhere in your half to move your blue mallet.', 'Your mallet can\'t cross the centre line.', 'Swing through the puck to hit it harder, and bank shots off the side walls.'] },
+      { heading: 'After a goal', text: 'The player who let the goal in gets the puck on their side.' },
     ],
   },
   BlockBreaker: {
@@ -125,6 +126,7 @@ export const RULES = {
       { heading: 'Goal', text: 'Blast every rock to clear the wave. Waves get bigger and faster.' },
       { heading: 'Controls', items: ['< and > rotate the ship. Go fires the thruster. Fire shoots.', 'Your ship drifts in space and wraps around the screen edges, and so do the rocks.'] },
       { heading: 'Rocks', items: ['Big rocks split into two medium ones, and medium rocks split into two small ones.', 'Big 20, medium 50, small 100 points.', 'Touching a rock costs a ship. You have three, and you blink (safe) for a moment after respawning.'] },
+      { heading: 'Saucer and extra ships', items: ['From wave 2 a flying saucer crosses now and then, shooting at you. Hit it for 1000 points, but don\'t ram it.', 'You earn an extra ship every 10,000 points.'] },
     ],
   },
   Bowling: {
@@ -142,7 +144,7 @@ export const RULES = {
       { heading: 'Shooting', items: ['Put your finger down and drag back away from the cue ball, like pulling a slingshot. The dotted line shows where it will go and the bar shows power.', 'Let go to shoot.'] },
       { heading: 'Groups', items: ['The table is open after the break. Your first legal pot after that decides your group.', 'Keep shooting as long as you pot a ball of your group.'] },
       { heading: 'Fouls (ball in hand)', items: ['Potting the cue ball (scratch), missing every ball, hitting the other group (or the 8) first, or no ball reaching a rail or pocket after contact.', 'After a foul the other player gets ball in hand: drag the cue ball anywhere, then shoot.'] },
-      { heading: 'The 8 ball', items: ['Once your group is cleared, tap a pocket to call it, then sink the 8 there to win.', 'You lose if the 8 goes in early, in a different pocket, or you scratch on it.', 'An 8 potted on the break is just put back on its spot.'] },
+      { heading: 'The 8 ball', items: ['Once your group is cleared, tap a pocket to call it, then sink the 8 there to win.', 'You lose if the 8 goes in early (including on the same shot as your last ball), in a different pocket, or you scratch on it.', 'An 8 potted on the break is just put back on its spot.'] },
     ],
   },
   Tanks: {
