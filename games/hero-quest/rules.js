@@ -28,7 +28,7 @@ export const RULES = {
       heading: 'Dungeons',
       items: [
         'Small keys open locked doors in their own dungeon. The Boss Key opens the big red door.',
-        'Push blocks onto floor switches. A block that gets stuck in a corner goes back to its start when you leave the room.',
+        'Push blocks onto floor switches. Stuck? Pause and choose Reset blocks (or leave the room) to put them back.',
         'Crystals switch things on when hit - some are only reachable with the boomerang.',
         'Cracked walls and rocks crumble when you bomb them.',
         'Some doors shut behind you until every enemy in the room is beaten.',
@@ -40,10 +40,12 @@ export const RULES = {
         'Green slimes hop about. Blue slimes lunge when you line up with them. Red slimes follow you and split in two.',
         'Gremlins keep their distance and throw rocks - block with your shield.',
         'Golems charge when you line up. Dodge and let them crash into a wall: dazed golems take double damage.',
+        'A yellow ! over an enemy means it is about to lunge, charge or throw - step out of its line or face it with your shield.',
         'The boomerang stuns most enemies for a moment.',
+        'Bosses: the Slime King squats before it jumps and only hurts when it lands - hit it while it rests. Each boss has a weakness; look for it.',
       ],
     },
-    { heading: 'Saving', text: 'Your adventure saves itself as you go. Continue from the title screen to carry on from the last entrance you used.' },
+    { heading: 'Saving and the pause menu', text: 'Your adventure saves itself as you go. Continue from the title screen to carry on from the last entrance you used. The pause menu (<) shows where to go next, a map of the area with the dungeons numbered, and switches for sound and music.' },
     { heading: 'Art', text: 'Characters, enemies, tiles and items from the LAS Adventure Pack and LAS Alchemist Lab by Aleksandr Makarov (iknowkingrabbit).' },
   ],
 };

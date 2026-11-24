@@ -44,7 +44,7 @@ export function talk(who, s) {
             'Elder Bram: Ah, you are awake. Listen well.',
             'Last night the Gremlin King stole the Hollow Crown and fled to his keep in the Grey Peaks.',
             'Without the Crown, Fernwick Vale will wither. You are the only one quick enough to go.',
-            'Take my old sword and shield.',
+            'Take my old sword and shield. Then go out the door, head north through Mosswood and find the Mossy Hollow. Old tools are hidden there.',
           ],
           then: 'giveSword',
         };
@@ -68,4 +68,23 @@ export function talk(who, s) {
     default:
       return { lines: ['...'] };
   }
+}
+
+/** Where to go next, in a line (pause menu and hints). */
+export function objective(s) {
+  const f = (k) => !!s.flags[k];
+  if (!s.items.sword) return 'Talk to Elder Bram.';
+  if (!f('boss:d1')) {
+    if (!f('seen:d1:1,2')) return 'Find the Mossy Hollow: go north from Fernwick through Mosswood.';
+    return 'Explore the Mossy Hollow and beat its master.';
+  }
+  if (!f('boss:d2')) {
+    if (!f('trig:ow:2,1:crystal')) return 'Go east of the fields to the river. Hit its crystal with the boomerang.';
+    return 'Explore the Ember Lab across the river and beat its master.';
+  }
+  if (!f('boss:d3')) {
+    if (!f('cell:ow:2,0:5,4')) return 'Bomb the rock sealing Hollow Keep in the Grey Peaks (north-east).';
+    return 'Storm Hollow Keep and take back the Crown.';
+  }
+  return 'The Crown is home. Look for secrets, or rest easy.';
 }

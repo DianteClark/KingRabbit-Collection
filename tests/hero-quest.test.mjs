@@ -483,3 +483,44 @@ test('the hidden cave by the lake opens with a bomb and holds a heart container'
   run(g, 1, { my: -1 });
   assert.equal(g.room.id, 'in:cave');
 });
+
+test('"Reset blocks" puts the blocks back but keeps a solved switch solved', () => {
+  const g = freshGame();
+  place(g, 'd1:2,2', 1, 6, 'right');
+  assert.ok(g.hasBlocks());
+  const b = g.blocks[0];
+  run(g, 1.2, { mx: 1 });
+  assert.notDeepEqual([b.x, b.y], [3, 6]);
+  g.flags[W.trigFlag(ROOMS['d1:2,2'], 'switch')] = true;
+  g.resetRoom();
+  assert.deepEqual([g.blocks[0].x, g.blocks[0].y], [3, 6]);
+  assert.equal(g.room.id, 'd1:2,2');
+  assert.ok(Math.abs(g.p.x - center(1)) < 1);
+  assert.ok(g.flags[W.trigFlag(ROOMS['d1:2,2'], 'switch')]);
+  place(g, 'd1:1,2', 5, 6);
+  assert.ok(!g.hasBlocks());
+});
+
+test('boss tells: the Slime King only hurts as it lands; the Hollow King blinks away after his stun', () => {
+  const g = freshGame();
+  place(g, 'd1:1,0', 5, 8, 'up', { enemies: true });
+  const k = g.enemies[0];
+  k.spawnT = 0; k.x = g.p.x; k.y = g.p.y; k.state = 'rest'; k.t = 5;
+  const hp = g.s.hp;
+  g.contactDamage();
+  assert.equal(g.s.hp, hp, 'resting: no damage, just a shove');
+  assert.ok(g.p.kt > 0);
+  g.p.kt = 0; k.state = 'hop'; k.t = 0.6;
+  g.contactDamage();
+  assert.equal(g.s.hp, hp, 'taking off');
+  k.t = 0.2;
+  g.contactDamage();
+  assert.equal(g.s.hp, hp - 1, 'landing on you');
+
+  place(g, 'd3:1,0', 5, 8, 'up', { enemies: true });
+  const h = g.enemies[0]; h.spawnT = 0;
+  g.hitEnemy(h, 0, 'boom', h.x, h.y);
+  run(g, 3.2);
+  assert.ok(h.shield);
+  assert.ok(['vanish', 'appear', 'hover', 'windup'].includes(h.state));
+});

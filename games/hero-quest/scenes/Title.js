@@ -7,6 +7,7 @@ import { showHowTo } from '../../../shared/core/howto.js';
 import { RULES } from '../rules.js';
 import { save } from '../save.js';
 import { DUNGEONS } from '../logic/constants.js';
+import { stopMusic } from '../music.js';
 
 export const fmtTime = (sec) => {
   const s = Math.floor(sec || 0);
@@ -19,6 +20,7 @@ export class Title extends Phaser.Scene {
 
   create() {
     this.cameras.main.setBackgroundColor(PALETTE.night).fadeIn(200);
+    stopMusic();
     document.body.style.background = PALETTE.night;
     this.diorama(214);
     const t = (y, s) => { text(this, WIDTH / 2, y + 4, s, { size: 32, color: PALETTE.red }); return text(this, WIDTH / 2, y, s, { size: 32, color: PALETTE.gold }); };

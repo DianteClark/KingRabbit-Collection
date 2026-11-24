@@ -70,6 +70,7 @@ export class Game {
     if (prevArea && prevArea !== r.area) this.visitCleared = {};
     const p = this.p;
     p.x = px; p.y = py; if (dir) p.dir = dir;
+    this.entry = { x: px, y: py, dir: p.dir };
     p.kt = 0; p.attackT = 0; p.pushT = 0; p.pushing = false;
     this.enemies = []; this.shots = []; this.pickups = []; this.blocks = []; this.bombs = [];
     this.boom = null; this.broken = {}; this.npcs = [];
@@ -321,9 +322,9 @@ export class Game {
       const area = r.area;
       if (c === 'k' && this.s.keys[area] > 0) {
         this.s.keys[area]--;
-        this.openCell(tx, ty, 'Unlocked!');
+        this.openCell(tx, ty, 'Unlocked!', 'unlock');
       } else if (c === 'K' && this.s.bigKeys[area]) {
-        this.openCell(tx, ty, 'The great door opens.');
+        this.openCell(tx, ty, 'The great door opens.', 'unlock');
       } else if (!p.lockMsg) {
         p.lockMsg = true;
         this.emit({ type: 'toast', text: c === 'k' ? 'Locked. You need a small key.' : 'This door needs the Boss Key.' });
@@ -336,9 +337,9 @@ export class Game {
     }
   }
 
-  openCell(x, y, text) {
+  openCell(x, y, text, sound = 'secret') {
     this.flags[cellFlag(this.room, x, y)] = true;
-    this.emit({ type: 'sfx', name: 'power' });
+    this.emit({ type: 'sfx', name: sound });
     this.emit({ type: 'cells' });
     if (text) this.emit({ type: 'toast', text });
     this.dirty = true;
@@ -393,7 +394,7 @@ export class Game {
     }
     if (act.chest) text = 'A chest appeared!';
     if (act.bridge) text = 'A bridge appeared!';
-    this.emit({ type: 'sfx', name: 'goal' });
+    this.emit({ type: 'sfx', name: 'secret' });
     this.emit({ type: 'cells' });
     if (text) this.emit({ type: 'toast', text });
   }
@@ -494,7 +495,7 @@ export class Game {
     this.dirty = true;
     this.p.showing = item;
     this.emit({ type: 'get', item });
-    this.emit({ type: 'sfx', name: item.startsWith('gems') ? 'coin' : 'win' });
+    this.emit({ type: 'sfx', name: item.startsWith('gems') || item === 'key' || item === 'potion' ? 'coin' : 'fanfare' });
     this.say(ITEM_TEXT[item] || ['You found something.'], null, { item });
   }
 
@@ -926,11 +927,15 @@ export class Game {
 
   contactDamage() {
     const p = this.p;
-    if (p.inv > 0) return;
     for (const e of this.enemies) {
-      if (!harmful(e)) continue;
+      if (e.dead) continue;
       const box = { x: e.x, y: e.y, w: e.w - 2, h: e.h - 2 };
-      if (overlap(box, p)) { this.hurtPlayer(e.dmg, e.x, e.y); return; }
+      if (!overlap(box, p)) continue;
+      if (harmful(e)) { if (p.inv <= 0) { this.hurtPlayer(e.dmg, e.x, e.y); return; } } else if (e.boss && p.kt <= 0) {
+        // a big body you may not be hurt by still shoves you out of the way
+        const ax = p.x - e.x; const ay = p.y - e.y; const d = Math.hypot(ax, ay) || 1;
+        p.kx = (ax / d) * 110; p.ky = (ay / d) * 110; p.kt = 0.1;
+      }
     }
   }
 
@@ -942,7 +947,7 @@ export class Game {
       const r = this.room;
       if (r.area !== 'ow') this.visitCleared[r.id] = true;
       if (r.on.clear) this.fireTrigger('clear');
-      else if (r.seal || r.map.some((row) => row.includes('z'))) { this.emit({ type: 'sfx', name: 'power' }); this.emit({ type: 'cells' }); }
+      else if (r.seal || r.map.some((row) => row.includes('z'))) { this.emit({ type: 'sfx', name: 'door' }); this.emit({ type: 'cells' }); }
       this.emit({ type: 'cleared', id: r.id, hurt: this.roomHurt });
     }
   }
@@ -959,6 +964,15 @@ export class Game {
     this.enterRoom(r.room, center(r.x), center(r.y), r.dir);
     this.emit({ type: 'respawn' });
   }
+
+  /** Put the blocks back (and you at the doorway you came in by). Switches already latched stay done. */
+  resetRoom() {
+    const { x, y, dir } = this.entry;
+    this.enterRoom(this.room.id, x, y, dir);
+    this.mode = 'play';
+  }
+
+  hasBlocks() { return this.room.map.some((row) => row.includes('P')); }
 
   // ------------------------------------------------------------------ moving between rooms
 

@@ -7,6 +7,8 @@ import { paintRoom } from './painter.js';
 import { save } from '../save.js';
 import { getSkill, report } from '../adaptive.js';
 import { DIR_NAME, ITEM } from '../art.js';
+import { playMusic, jingle, tuneFor } from '../music.js';
+import { objective } from '../logic/story.js';
 
 // The room is drawn at 2x into this part of the 360x640 screen; the HUD scene owns the rest.
 export const VIEW = { x: 4, y: 48, w: ROOM_W * 2, h: ROOM_H * 2 };
@@ -58,6 +60,16 @@ export class Play extends Phaser.Scene {
     document.addEventListener('visibilitychange', flush);
     this.events.once('shutdown', () => { window.removeEventListener('pagehide', flush); document.removeEventListener('visibilitychange', flush); });
     cam.fadeIn(250);
+  }
+
+  /** Pause menu "Reset room": blocks back to their start. */
+  resetRoom() {
+    this.g.resetRoom();
+    this.g.events.length = 0;
+    this.dropLayer(this.layer);
+    this.buildRoom();
+    this.syncAll(0);
+    sfx('move');
   }
 
   /** Jump to a room (browser tests / debugging). */
@@ -157,7 +169,7 @@ export class Play extends Phaser.Scene {
     }
     for (const [id, s] of L.ents) {
       if (!seen.has(id)) {
-        s.shadow?.destroy(); s.ring?.destroy();
+        s.shadow?.destroy(); s.ring?.destroy(); s.bang?.destroy();
         s.destroy();
         L.ents.delete(id);
       }
@@ -211,13 +223,24 @@ export class Play extends Phaser.Scene {
       const d = DIR_NAME[e.dir];
       key = e.anim === 'walk' ? `${c}-Walk${d}` : e.anim === 'attack' ? `${c}-Attack${d}` : e.anim === 'hit' ? `${c}-Hit` : `${c}-Idle`;
       // the Slime King squashes on landing
-      if (e.kind === 'slimeKing') s.setScale(3 + (e.state === 'hop' ? -0.15 : 0.1), 3 + (e.state === 'hop' ? 0.25 : -0.1));
+      if (e.kind === 'slimeKing') {
+        // squats down just before it jumps (the tell), stretches tall in the air
+        const crouch = e.state === 'rest' && e.t < 0.35;
+        s.setScale(3 + (e.state === 'hop' ? -0.15 : crouch ? 0.45 : 0.1), 3 + (e.state === 'hop' ? 0.3 : crouch ? -0.45 : -0.1));
+        if (e.state === 'hop') s.y -= Math.round(Math.sin(Math.max(0, 1 - e.t / 0.7) * Math.PI) * 10);
+      }
     } else {
       const sheet = e.kind === 'gremlin' || e.kind === 'hollowKing' ? 'gremlin' : 'golem';
       key = `${sheet}-${e.anim === 'hit' ? 'hit' : e.anim === 'attack' ? 'attack' : e.anim === 'walk' ? 'walk' : 'idle'}-${e.dir}`;
       if (e.state === 'windup' && e.kind !== 'hollowKing') s.x += Math.round(Math.sin(this.time.now / 25));
     }
     if (s.anims.currentAnim?.key !== key) s.play(key, true);
+    // a "!" over anything about to lunge, charge or throw - the tell to step aside or raise the shield
+    const tell = e.state === 'windup';
+    if (tell && !s.bang) { s.bang = this.add.image(0, 0, 'bang'); this.layer.add(s.bang); }
+    if (s.bang) {
+      s.bang.setVisible(tell).setPosition(Math.round(e.x), Math.round(e.y - e.h / 2 - (e.boss ? 26 : 14))).setDepth(e.y + 400);
+    }
     // hit flash, stun shimmer
     const flash = e.inv > 0.15 && Math.floor(this.time.now / 50) % 2;
     if (flash) s.setTintFill(0xffffff);
@@ -249,11 +272,13 @@ export class Play extends Phaser.Scene {
     let key;
     if (g.mode === 'dead') key = 'A-Defeat';
     else if (p.showing && g.mode === 'dialog') key = 'U-ShowItem';
-    else if (p.attackT > 0) key = `IA-Attack-${D}`;
+    else if (p.attackT > 0) key = p.dir === 'left' ? 'IA-Attack-Right' : `IA-Attack-${D}`;
     else if (p.kt > 0) key = `${set}-Hit-${D}`;
     else if (p.pushing) key = `${set}-Push-${D}`;
     else if (p.moving) key = `${set}-Walk-${D}`;
     else key = `${set}-Idle-${D}`;
+    // The pack's left swing sweeps the wrong way; the right swing mirrored reads correctly.
+    s.setFlipX(p.attackT > 0 && p.dir === 'left' && g.mode !== 'dead');
     if (key === 'U-ShowItem') { if (s.texture.key !== 'U-ShowItem') s.setTexture('U-ShowItem', 1); s.anims.stop(); } else if (s.anims.currentAnim?.key !== key || (!s.anims.isPlaying && key.includes('Walk'))) s.play(key);
     s.setPosition(Math.round(p.x), Math.round(p.y + 5)).setDepth(p.y + 0.5);
     this.pShadow.setPosition(s.x, s.y).setDepth(-400);
@@ -278,6 +303,7 @@ export class Play extends Phaser.Scene {
     if (!this.busy) this.syncAll(dt);
     else this.animPlayer();
     if (g.dirty && time - this.lastSave > 1500) this.saveNow();
+    if (!this.busy) playMusic(g.mode === 'dead' ? null : tuneFor(g.room, g.enemies.some((e) => e.boss && !e.dead)));
   }
 
   handleEvents() {
@@ -285,7 +311,7 @@ export class Play extends Phaser.Scene {
     const evs = g.events.splice(0);
     for (const ev of evs) {
       switch (ev.type) {
-        case 'sfx': sfx(ev.name); break;
+        case 'sfx': if (!jingle(ev.name)) sfx(ev.name); break;
         case 'cells': this.repaint(); break;
         case 'toast': this.hud.toast(ev.text); break;
         case 'dialog': this.hud.showDialog(ev.lines, ev.item, () => g.closeDialog()); break;
@@ -302,10 +328,33 @@ export class Play extends Phaser.Scene {
         case 'hurt': this.hud.flashHurt(); break;
         case 'bossDown': report('boss', ev.hpFrac); g.setSkill(getSkill()); this.saveNow(); break;
         case 'cleared': if (!ev.hurt && g.room.area !== 'ow') { report('cleanRoom'); g.setSkill(getSkill()); } break;
+        case 'swing': this.slash(ev.dir); break;
         case 'room': break;
         default: break;
       }
     }
+  }
+
+  /** A white crescent sweeping through the sword's reach, so every direction reads clearly. */
+  slash(dir) {
+    const p = this.g.p;
+    const base = { right: 0, down: Math.PI / 2, left: Math.PI, up: -Math.PI / 2 }[dir];
+    const cx = p.x; const cy = p.y - 3;
+    const gr = this.add.graphics().setDepth(p.y + 1);
+    this.layer.add(gr);
+    const st = { k: 0 };
+    this.tweens.add({
+      targets: st, k: 1, duration: 170,
+      onUpdate: () => {
+        gr.clear();
+        const a0 = base - 1.1; const a1 = a0 + 2.2 * st.k;
+        for (const [r, w, c, al] of [[14, 4, 0xf9f5ef, 0.9], [11, 2, 0x8a8fc4, 0.7]]) {
+          gr.lineStyle(w, c, al * (1 - st.k * 0.4));
+          gr.beginPath(); gr.arc(cx, cy, r, Math.max(a0, a1 - 1.3), a1); gr.strokePath();
+        }
+      },
+      onComplete: () => this.tweens.add({ targets: gr, alpha: 0, duration: 80, onComplete: () => gr.destroy() }),
+    });
   }
 
   poof(x, y, scale = 1, tint = 0xffffff) {
@@ -351,6 +400,7 @@ export class Play extends Phaser.Scene {
         this.g.endTransition();
         this.syncAll(0);
         this.banner();
+        this.hintGoal();
       },
     });
   }
@@ -369,6 +419,7 @@ export class Play extends Phaser.Scene {
       this.g.endTransition();
       this.saveNow();
       this.banner();
+      this.hintGoal();
     });
   }
 
@@ -379,6 +430,22 @@ export class Play extends Phaser.Scene {
     if (!name || (!force && name === this.lastBanner)) return;
     this.lastBanner = name;
     this.hud?.banner?.(name);
+  }
+
+  /** "Next: ..." whenever the goal changes (and on the first step outside). */
+  hintGoal() {
+    const obj = objective(this.g.s);
+    if (obj === this.lastObjective || !this.g.s.items.sword) return;
+    this.lastObjective = obj;
+    this.time.delayedCall(700, () => this.hud.toast(`Next: ${obj}`));
+  }
+
+  /** A new game: Elder Bram speaks first. */
+  startIntro() {
+    const g = this.g;
+    if (g.s.items.sword || g.room.id !== 'in:elder' || g.mode !== 'play') return;
+    const elder = g.npcs.find((n) => n.who === 'elder');
+    if (elder) g.interact({ kind: 'talk', npc: elder });
   }
 
   onDeath() {
