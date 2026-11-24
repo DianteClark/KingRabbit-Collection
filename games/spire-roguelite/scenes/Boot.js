@@ -35,7 +35,11 @@ export class Boot extends Phaser.Scene {
     }
     for (const [key, b] of Object.entries(BOSS_SHEETS)) addUnit(key, b.rows, 24, b.offset, b.cols);
 
-    if (new URLSearchParams(window.location.search).has('gallery')) { this.scene.start('Gallery'); return; }
+    // Developer sprite check (?gallery=enemies|cards|relics), only in dev builds.
+    if (import.meta.env.DEV && new URLSearchParams(window.location.search).has('gallery')) {
+      import('./Gallery.js').then((m) => this.scene.add('Gallery', m.Gallery, true));
+      return;
+    }
     this.scene.start('Menu');
   }
 }

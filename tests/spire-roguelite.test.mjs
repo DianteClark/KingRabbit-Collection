@@ -355,6 +355,16 @@ test('endless mode loops the acts and enemies get tougher', () => {
   assert.ok(b.hp > n.hp && b.dmg > n.dmg, 'and gets tougher every loop');
   R.startFight(run, ['skeleton'], 'normal');
   assert.ok(run.combat.enemies[0].maxHp > 38);
+  // Loops keep the pressure on: Strength and Ritual on everything, Artifact on elites and bosses.
+  run.loop = 2;
+  R.startFight(run, ['skeleton'], 'normal');
+  const sk = run.combat.enemies[0];
+  assert.equal(sk.st.str, 2);
+  assert.equal(sk.st.ritual, 2);
+  R.startFight(run, ['ogre'], 'elite');
+  const og = run.combat.enemies[0];
+  assert.equal(og.st.str, 4);
+  assert.equal(og.st.artifact, 2);
 });
 
 test('every event choice resolves without errors', () => {

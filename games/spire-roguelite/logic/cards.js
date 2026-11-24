@@ -40,13 +40,13 @@ card('cleave', {
 });
 card('ironWave', {
   name: 'Iron Wave', cls: 'knight', type: 'attack', rarity: 'common', cost: 1, target: 'enemy', art: 'sk:17,1',
-  text: 'Gain {block} Block. Deal {dmg} damage.', v: { dmg: 5, block: 5 }, up: { dmg: 7, block: 7 },
+  text: 'Gain {block} Block. Deal {dmg} damage.', v: { dmg: 6, block: 6 }, up: { dmg: 8, block: 8 },
   play: (c, v, t) => { c.block(v.block); c.attack(t, v.dmg); },
 });
 card('twinStrike', {
   hits: 2,
   name: 'Twin Strike', cls: 'knight', type: 'attack', rarity: 'common', cost: 1, target: 'enemy', art: 'sk:14,1',
-  text: 'Deal {dmg} damage twice.', v: { dmg: 5 }, up: { dmg: 7 },
+  text: 'Deal {dmg} damage twice.', v: { dmg: 6 }, up: { dmg: 8 },
   play: (c, v, t) => c.attack(t, v.dmg, 2),
 });
 card('shieldBash', {
@@ -273,7 +273,7 @@ card('venomArrow', {
 });
 card('sidestep', {
   name: 'Sidestep', cls: 'ranger', type: 'skill', rarity: 'starter', cost: 1, art: 'sp:0,5',
-  text: 'Gain {block} Block. Draw 1 card.', v: { block: 6 }, up: { block: 9 },
+  text: 'Gain {block} Block. Draw 1 card.', v: { block: 7 }, up: { block: 10 },
   play: (c, v) => { c.block(v.block); c.draw(1); },
 });
 card('quickShot', {
@@ -289,7 +289,7 @@ card('twinArrows', {
 });
 card('poisonDart', {
   name: 'Poison Dart', cls: 'ranger', type: 'skill', rarity: 'common', cost: 1, target: 'enemy', art: 'sp:3,0',
-  text: 'Apply {n} Poison.', v: { n: 5 }, up: { n: 7 },
+  text: 'Apply {n} Poison.', v: { n: 6 }, up: { n: 8 },
   play: (c, v, t) => c.apply(t, 'poison', v.n),
 });
 card('backflip', {
@@ -305,7 +305,7 @@ card('huntersMark', {
 card('flurry', {
   hits: 'm',
   name: 'Flurry', cls: 'ranger', type: 'attack', rarity: 'common', cost: 1, target: 'enemy', art: 'sk:11,6',
-  text: 'Deal {dmg} damage {m} times.', v: { dmg: 2, m: 4 }, up: { dmg: 2, m: 6 },
+  text: 'Deal {dmg} damage {m} times.', v: { dmg: 2, m: 5 }, up: { dmg: 2, m: 7 },
   play: (c, v, t) => c.attack(t, v.dmg, v.m),
 });
 card('piercingShot', {

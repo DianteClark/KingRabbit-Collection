@@ -64,18 +64,20 @@ test('full runs: winnable but not trivial, for every hero', () => {
   const perHero = {};
   for (const hero of HEROES) {
     let floors = 0;
+    let heroWins = 0;
     for (let i = 0; i < RUNS; i++) {
       const r = B.playRun({ hero, seed: 7000 + i * 13 });
       assert.ok(!r.stopped, 'run got stuck');
       floors += r.floor;
-      if (r.won) wins++;
+      if (r.won) { wins++; heroWins++; }
       if (r.won || r.act >= 2) reachedAct2++;
     }
-    perHero[hero] = floors / RUNS;
-    assert.ok(perHero[hero] >= 14, `${hero} rarely gets past act 1 (avg floor ${perHero[hero]})`);
+    perHero[hero] = `floor ${floors / RUNS}, ${heroWins} wins`;
+    assert.ok(heroWins >= 1 && heroWins <= RUNS * 0.75, `${hero} is out of line with the others: ${heroWins}/${RUNS} wins`);
+    assert.ok(floors / RUNS >= 14, `${hero} rarely gets past act 1 (avg floor ${floors / RUNS})`);
   }
   const total = RUNS * HEROES.length;
-  console.log(`bot: ${wins}/${total} wins, ${reachedAct2}/${total} beat act 1, avg floor`, perHero);
+  console.log(`bot: ${wins}/${total} wins, ${reachedAct2}/${total} beat act 1`, perHero);
   assert.ok(wins >= 2, `too hard: the bot won ${wins}/${total}`);
   assert.ok(wins <= total * 0.7, `too easy: the bot won ${wins}/${total}`);
   assert.ok(reachedAct2 >= total * 0.5, `act 1 too hard: ${reachedAct2}/${total}`);
@@ -95,5 +97,8 @@ test('endless mode is a little easier at first and keeps going', () => {
     }
   }
   assert.ok(endless >= normal, `endless (${endless}) should go at least as far as normal (${normal})`);
+  // ...but later loops get much harder, so a strong deck can't coast forever.
+  const deep = B.playRun({ hero: 'mage', mode: 'endless', seed: 9100, maxFloors: 400 });
+  assert.ok(deep.floor < 160, `endless run coasted to floor ${deep.floor}`);
   console.log(`endless floors ${endless} vs normal ${normal}; ${loops} endless runs reached a second loop`);
 });

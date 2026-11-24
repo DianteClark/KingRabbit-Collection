@@ -12,13 +12,16 @@ import { STATUSES } from '../logic/statuses.js';
 import { POTIONS } from '../logic/potions.js';
 import { RELICS } from '../logic/relics.js';
 import { HEROES, finishCombat, discardPotion } from '../logic/run.js';
-import { saveRun } from '../save.js';
+import { saveRun, save } from '../save.js';
+import { DEBUG } from '../debug.js';
 
 const FEET_Y = 246;
-const PLAYER = { x: 60, y: 392 };
-const CONTROLS_Y = 436;
-const HAND_Y = 552;
-const PLAY_LINE = 470; // drag a card above this line to play it
+const PLAYER = { x: 60, y: 384 };
+const CONTROLS_Y = 430;
+const HAND_Y = 556;
+const BACK_Y = 526; // big hands use two rows: the back row shows each card's cost and name
+const FRONT_Y = 586;
+const PLAY_LINE = 462; // drag a card above this line to play it
 const PANEL_TOP = 292;
 
 const INTENT_TINT = { attack: 0xff7b6b, defend: 0x8fc3ff };
@@ -59,7 +62,7 @@ export class Battle extends Phaser.Scene {
     this.layoutEnemies();
     this.drawPlayer();
     this.drawControls();
-    this.hint = outlined(this, WIDTH / 2, 470, '', { color: PALETTE.sand }).setDepth(35);
+    this.hint = outlined(this, WIDTH / 2, 459, '', { color: PALETTE.sand }).setDepth(35);
     this.panel = this.add.container(0, 0).setDepth(36);
     this.handGroup = this.add.container(0, 0).setDepth(30);
     this.handViews = [];
@@ -76,7 +79,8 @@ export class Battle extends Phaser.Scene {
       this.hint.setText('Tap a card, then tap it again or tap an enemy');
     }
     saveRun(run);
-    window.__battle = this; // for automated tests
+    if (DEBUG) window.__battle = this; // for automated tests
+    if (!save.get('tutorialSeen') && this.c.s.turn === 1 && !this.c.s.counters.cards) this.time.delayedCall(700, () => this.tutorial());
   }
 
   // ------------------------------------------------------------ drawing
@@ -247,6 +251,42 @@ export class Battle extends Phaser.Scene {
     return g;
   }
 
+  // ------------------------------------------------------------ first-fight tutorial
+
+  tutorial() {
+    const first = [...this.enemyViews.values()].find((v) => !v.e.dead);
+    const defend = this.handViews.find((v) => CARDS[v.card.id].type === 'skill') || this.handViews[0];
+    const steps = [
+      { x: 34, y: CONTROLS_Y, r: 28, text: 'This is your Energy. You get 3 every turn. The number in the corner of a card is how much Energy it costs.' },
+      first && { x: first.x, y: first.intent.y, r: 34, text: 'Above each enemy is its intent: what it will do on its turn. A sword means an attack, and the number is the damage you will take.' },
+      defend && { x: defend.x, y: defend.y, r: 50, text: 'Defend gives Block. Block soaks up damage until your next turn, so block what is coming, or attack hard to win first.' },
+      { x: 300, y: CONTROLS_Y, r: 56, text: 'Tap a card to read it, tap it again (or tap an enemy) to play it, then tap End Turn. The ? button explains everything.' },
+    ].filter(Boolean);
+    let i = 0;
+    const c = this.add.container(0, 0).setDepth(120);
+    const show = () => {
+      c.removeAll(true);
+      const st = steps[i];
+      const g = this.add.graphics();
+      g.fillStyle(hex(PALETTE.ink), 0.6).fillRect(0, 0, WIDTH, HEIGHT);
+      g.lineStyle(4, hex(PALETTE.gold)).strokeCircle(st.x, st.y, st.r);
+      const above = st.y > HEIGHT / 2;
+      const boxY = above ? st.y - st.r - 150 : st.y + st.r + 16;
+      const box = this.add.rectangle(16, boxY, WIDTH - 32, 134, hex(PALETTE.indigo)).setOrigin(0).setStrokeStyle(3, hex(PALETTE.gold));
+      const t = text(this, WIDTH / 2, boxY + 12, st.text, { wrap: WIDTH - 60 }).setOrigin(0.5, 0);
+      const more = text(this, WIDTH / 2, boxY + 116, i < steps.length - 1 ? `Tap to continue (${i + 1}/${steps.length})` : 'Tap to start fighting!', { color: PALETTE.gold });
+      const hit = this.add.rectangle(0, 0, WIDTH, HEIGHT, 0, 0).setOrigin(0).setInteractive();
+      hit.on('pointerup', () => {
+        sfx('tap');
+        i += 1;
+        if (i >= steps.length) { c.destroy(); save.set('tutorialSeen', true); return; }
+        show();
+      });
+      c.add([g, box, t, more, hit]);
+    };
+    show();
+  }
+
   // ------------------------------------------------------------ refresh
 
   refresh() {
@@ -281,9 +321,10 @@ export class Battle extends Phaser.Scene {
     for (const v of this.handViews) v.destroy();
     this.handViews = [];
     const hand = this.c.s.hand;
+    const cw = hand.length > 5 ? 68 : 76;
     hand.forEach((card, i) => {
-      const v = handCard(this, card, { combat: this.c, playable: !this.c.whyNot(card) });
-      const zone = this.add.zone(0, 0, 76, 108).setInteractive({ useHandCursor: true });
+      const v = handCard(this, card, { combat: this.c, playable: !this.c.whyNot(card), w: cw });
+      const zone = this.add.zone(0, 0, cw, 108).setInteractive({ useHandCursor: true });
       zone.on('pointerdown', (p) => { if (!this.busy) this.press = { uid: card.uid, x: p.x, y: p.y, dragging: false, view: v }; });
       v.add(zone);
       v.zone = zone;
@@ -299,6 +340,16 @@ export class Battle extends Phaser.Scene {
   }
 
   handPos(i, n) {
+    if (n > 5) {
+      // Two rows, no fan: every card's cost and name stay readable and tappable.
+      const back = Math.floor(n / 2);
+      const front = i >= back;
+      const k = front ? n - back : back;
+      const j = front ? i - back : i;
+      const spacing = k <= 1 ? 0 : Math.min(72, (WIDTH - 8 - 68) / (k - 1));
+      const x = WIDTH / 2 - (spacing * (k - 1)) / 2 + j * spacing;
+      return { x, y: front ? FRONT_Y : BACK_Y, angle: 0 };
+    }
     const spacing = n <= 1 ? 0 : Math.min(78, (WIDTH - 16 - 76) / (n - 1));
     const total = spacing * (n - 1);
     const x = WIDTH / 2 - total / 2 + i * spacing;
@@ -312,7 +363,7 @@ export class Battle extends Phaser.Scene {
     this.handViews.forEach((v, i) => {
       const pos = this.handPos(i, n);
       const sel = this.selected === v.card.uid;
-      const target = { x: pos.x, y: sel ? HAND_Y - 14 : pos.y, angle: sel ? 0 : pos.angle, scale: 1 };
+      const target = { x: pos.x, y: sel && n <= 5 ? pos.y - 16 : pos.y, angle: sel ? 0 : pos.angle, scale: 1 };
       this.handGroup.bringToTop(v);
       if (animate) this.tweens.add({ targets: v, ...target, duration: 120 });
       else v.setPosition(target.x, target.y).setAngle(target.angle).setScale(target.scale);
@@ -432,7 +483,7 @@ export class Battle extends Phaser.Scene {
     this.panel.removeAll(true);
     if (!card) return;
     const w = wideCard(this, card, WIDTH - 20, { combat: this.c });
-    w.setPosition(10, Math.min(PANEL_TOP, 404 - w.h));
+    w.setPosition(10, Math.min(PANEL_TOP, 398 - w.h));
     this.panel.add(w);
     this.panel.setAlpha(0.96);
   }
@@ -482,7 +533,7 @@ export class Battle extends Phaser.Scene {
     const card = this.cardByUid(uid);
     if (!card) return;
     const why = this.c.whyNot(card);
-    if (why) { sfx('error'); toast(this, why, 478, PALETTE.orange); this.layoutHand(); return; }
+    if (why) { sfx('error'); toast(this, why, 330, PALETTE.orange); this.layoutHand(); return; }
     if (this.c.needsTarget(card) && target === undefined && this.c.livingEnemies().length > 1) {
       this.selectCard(uid, true);
       return;

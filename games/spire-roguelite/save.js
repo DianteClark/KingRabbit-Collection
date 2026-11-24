@@ -5,6 +5,7 @@ import { VERSION, summary } from './logic/run.js';
 // records: lifetime stats per mode
 export const save = createSave('spire-roguelite', {
   run: null,
+  tutorialSeen: false,
   records: {
     runs: 0,
     wins: { knight: 0, mage: 0, ranger: 0 },

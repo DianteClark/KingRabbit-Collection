@@ -8,8 +8,8 @@ export const RELICS = {
   // Starting relics
   herb: {
     name: 'Healing Herb', rarity: 'starter', art: 'ar:5,6',
-    text: 'At the end of each fight, heal 6 HP.',
-    combatEnd: (run) => { run.hp = Math.min(run.maxHp, run.hp + 6); },
+    text: 'At the end of each fight, heal 8 HP.',
+    combatEnd: (run) => { run.hp = Math.min(run.maxHp, run.hp + 8); },
   },
   tome: {
     name: 'Spell Tome', rarity: 'starter', art: 'ar:2,9',

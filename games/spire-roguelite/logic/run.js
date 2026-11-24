@@ -25,7 +25,7 @@ export const HEROES = {
     blurb: 'Hits every enemy at once with fire and lightning, and draws lots of cards.',
   },
   ranger: {
-    name: 'Ranger', hp: 72, sprite: 'rampart:64', color: '#6c8c50',
+    name: 'Ranger', hp: 76, sprite: 'rampart:64', color: '#6c8c50',
     blurb: 'Nimble. Poisons enemies, dodges with Dexterity and plays many cheap cards.',
   },
 };
@@ -132,7 +132,7 @@ function enterRoom(run, type) {
 
 function pickEncounter(run) {
   const act = actInfo(run);
-  const list = run.fightsThisAct < 3 ? act.easy : act.hard;
+  const list = run.fightsThisAct < 3 && !run.loop ? act.easy : act.hard;
   const keyOf = (e) => e.join('+');
   let opts = list.filter((e) => !run.lastEncounters.includes(keyOf(e)));
   if (!opts.length) opts = list;

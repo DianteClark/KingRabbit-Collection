@@ -7,7 +7,7 @@ export const RULES = {
     {
       heading: 'The map',
       items: [
-        'Start at the bottom and tap a glowing room to walk there. Paths only go upward, so plan your route.',
+        'Start at the bottom and tap a glowing room to walk there. Paths only go upward, so plan your route. Drag to scroll; the Key button lists every room type.',
         'Swords: a fight. Skull cave: an elite (hard, but drops a relic). Crystal ball: an unknown event.',
         'Campfire: rest or upgrade. Stall: the merchant. Chest: treasure. The boss waits at the top.',
       ],
@@ -60,14 +60,14 @@ export const RULES = {
     {
       heading: 'Heroes',
       items: [
-        'Knight (80 HP): Strength, heavy hits and lots of Block. Heals 6 HP after each fight.',
+        'Knight (80 HP): Strength, heavy hits and lots of Block. Heals 8 HP after each fight.',
         'Mage (72 HP): spells that hit ALL enemies, card draw and extra Energy. Draws 2 extra cards and gains 1 Energy on the first turn.',
-        'Ranger (72 HP): Poison, Dexterity and cheap quick cards. Poisons all enemies at the start of each fight.',
+        'Ranger (76 HP): Poison, Dexterity and cheap quick cards. Poisons all enemies at the start of each fight.',
       ],
     },
     {
       heading: 'Endless mode',
-      text: 'A slightly easier start (+6 Max HP, a healing potion, slightly weaker enemies), but the acts keep looping. Every loop enemies get tougher. How high can you climb? Your best floor and score are saved.',
+      text: 'A slightly easier start (+6 Max HP, a healing potion, slightly weaker enemies), but the acts keep looping. Every loop enemies get much tougher: more HP and damage, extra Strength, Ritual (they grow stronger every turn) and, for elites and bosses, Artifact. How high can you climb? Your best floor and score are saved.',
     },
     { heading: 'Saving', text: 'Your run is saved after every step. Close the page any time and tap Continue to carry on.' },
     { heading: 'Art', text: 'Pixel art: HAS Heroic Fantasy by Aleksandr Makarov (iknowkingrabbit). Font: BoldPixels.' },

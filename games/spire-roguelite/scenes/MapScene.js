@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { PALETTE, hex, text, WIDTH, HEIGHT, route, go, setBackground, icon, unit, toast, sfx, topBar, relicRow, runMenu, dragScroll, modal } from './common.js';
+import { PALETTE, hex, text, button, WIDTH, HEIGHT, route, go, setBackground, icon, unit, toast, sfx, topBar, relicRow, runMenu, dragScroll, modal, overlayOpened } from './common.js';
 import { ROWS, NODE_TYPES } from '../logic/map.js';
 import { availableNodes, travel, actInfo, HEROES } from '../logic/run.js';
 import { ENEMIES } from '../logic/enemies.js';
@@ -43,6 +43,7 @@ export class MapScene extends Phaser.Scene {
     const many = run.relics.length > 10;
     relicRow(this, run, 20, 66, many ? { scale: 1, gap: 20, maxW: WIDTH - 24 } : { scale: 2, gap: 34 });
 
+    button(this, WIDTH - 40, HEIGHT - 24, 64, 32, 'Key', () => this.showKey(), { fill: PALETTE.sand }).setDepth(40);
     const scroller = dragScroll(this, this.content, VIEW_TOP, HEIGHT, contentH);
     this.scroller = scroller;
     // Start with the current row in view.
@@ -54,7 +55,7 @@ export class MapScene extends Phaser.Scene {
     this.content.add(text(this, WIDTH / 2, 14, title, { color: PALETTE.gold }));
     this.content.add(text(this, WIDTH / 2, 34, `Act ${run.act}${run.mode === 'endless' ? ` - loop ${run.loop + 1}` : ' of 3'} - Floor ${run.floor}`, { color: PALETTE.lavender }));
     if (!run.path?.length && run.act === 1 && run.loop === 0) {
-      this.time.delayedCall(400, () => toast(this, 'Tap a glowing room to begin', HEIGHT - 40));
+      this.time.delayedCall(400, () => toast(this, 'Tap a glowing room to begin', HEIGHT - 64));
     }
   }
 
@@ -146,11 +147,32 @@ export class MapScene extends Phaser.Scene {
   tapNode(n, can) {
     if (this.scroller.moved || this.leaving) return;
     const t = NODE_TYPES[n.type];
-    if (!can) { toast(this, `${t.name}: ${t.desc}`, HEIGHT - 40, PALETTE.cream); return; }
+    if (!can) { toast(this, `${t.name}: ${t.desc}`, HEIGHT - 64, PALETTE.cream); return; }
     this.leaving = true;
     sfx(n.type === 'boss' || n.type === 'elite' ? 'thud' : 'move');
     travel(this.run, n.id);
     route(this, this.run);
+  }
+
+  /** Legend: what each room icon means. */
+  showKey() {
+    sfx('select');
+    const c = this.add.container(0, 0).setDepth(100);
+    overlayOpened(this, c);
+    c.add(this.add.rectangle(0, 0, WIDTH, HEIGHT, hex(PALETTE.ink), 0.7).setOrigin(0).setInteractive());
+    const types = ['fight', 'elite', 'event', 'rest', 'shop', 'treasure', 'boss'];
+    const top = 92;
+    const h = types.length * 58 + 96;
+    c.add(this.add.rectangle(14, top, WIDTH - 28, h, hex(PALETTE.indigo)).setOrigin(0).setStrokeStyle(3, hex(PALETTE.lavender)));
+    c.add(text(this, WIDTH / 2, top + 20, 'Map key', { color: PALETTE.gold }));
+    types.forEach((t, i) => {
+      const y = top + 62 + i * 58;
+      if (t === 'boss') c.add(text(this, 44, y, 'Boss', { color: PALETTE.orange }));
+      else { const [ref, sc] = NODE_ICON[t]; c.add(icon(this, 44, y, ref, sc)); }
+      c.add(text(this, 80, y - 10, NODE_TYPES[t].name, { origin: [0, 0.5], color: PALETTE.sand }));
+      c.add(text(this, 80, y + 10, NODE_TYPES[t].desc, { origin: [0, 0.5], wrap: WIDTH - 110, align: 'left' }).setOrigin(0, 0.3));
+    });
+    c.add(button(this, WIDTH / 2, top + h - 28, 160, 36, 'Close', () => c.destroy(), { fill: PALETTE.lavender }));
   }
 
   showDeck() {
