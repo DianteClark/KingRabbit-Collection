@@ -56,7 +56,7 @@ export class Title extends Phaser.Scene {
     this.musicBtn = button(this, 298, 612, 108, 40, '', () => { setMusicOn(!musicOn()); this.syncToggles(); });
     this.syncToggles();
     helpButton(this);
-    text(this, WIDTH / 2, HEIGHT - 52, 'Art: Aleksandr Makarov', { color: DARK.blue });
+    text(this, WIDTH / 2, HEIGHT - 70, 'Art: Aleksandr Makarov', { color: PALETTE.lavender });
   }
 
   syncToggles() {

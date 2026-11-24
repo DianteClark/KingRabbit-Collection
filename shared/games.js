@@ -26,7 +26,7 @@ export const GAMES = [
   { id: 'star-drifter', title: 'Star Drifter', tagline: 'Crew a ship across a hostile galaxy', cat: 'strategy', status: 'playable' },
   { id: 'pangea', title: 'Pangea', tagline: 'Found cities, grow an empire', cat: 'strategy', status: 'playable' },
   { id: 'megaboy', title: 'MegaBoy Run', tagline: 'Run, jump, blast, steal boss weapons', cat: 'action', status: 'playable', landscape: true },
+  { id: 'darkhold', title: 'Darkhold', tagline: 'A dungeon crawl by torchlight', cat: 'adventure', status: 'playable' },
   // In development
-  { id: 'darkhold', title: 'Darkhold', tagline: 'A dungeon crawl by torchlight', cat: 'adventure', status: 'soon' },
   { id: 'town-builder', title: 'Tiny Town Builder', tagline: 'Zone, build and grow a little city', cat: 'sim', status: 'soon' },
 ];

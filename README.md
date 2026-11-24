@@ -18,6 +18,7 @@ Aleksandr Makarov's (iknowkingrabbit) pixel-art packs.
 | Star Drifter: FTL-style space roguelite (see docs/games/star-drifter.md) | Playable | [/star-drifter/](https://dianteclark.github.io/KingRabbit-Collection/star-drifter/) |
 | Pangea: Civilization-lite 4X (see docs/games/pangea.md) | Playable | [/pangea/](https://dianteclark.github.io/KingRabbit-Collection/pangea/) |
 | MegaBoy Run: action platformer, landscape (see docs/games/megaboy.md) | Playable | [/megaboy/](https://dianteclark.github.io/KingRabbit-Collection/megaboy/) |
+| Darkhold: torchlit roguelike dungeon crawl (see docs/games/darkhold.md) | Playable | [/darkhold/](https://dianteclark.github.io/KingRabbit-Collection/darkhold/) |
 | City Chief: run the police force of Tiny Town (see docs/games/city-chief.md) | Playable | [/city-chief/](https://dianteclark.github.io/KingRabbit-Collection/city-chief/) |
 | Pocket Soccer: 5-a-side arcade football (see docs/games/soccer.md) | Playable | [/soccer/](https://dianteclark.github.io/KingRabbit-Collection/soccer/) |
 
