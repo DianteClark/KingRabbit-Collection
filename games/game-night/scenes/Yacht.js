@@ -3,7 +3,8 @@ import { PALETTE, hex } from '../../../shared/core/palette.js';
 import { text, button } from '../../../shared/core/ui.js';
 import { WIDTH } from '../../../shared/core/boot.js';
 import { header, go, modal, setBackground } from './common.js';
-import { CATEGORIES, score, totals, isComplete, UPPER_BONUS_AT } from '../logic/yacht.js';
+import { CATEGORIES, totals, isComplete, UPPER_BONUS_AT, allowed, scoreFor, isYacht, grandTotal } from '../logic/yacht.js';
+import { toast } from './common.js';
 import { getBest, submitBest } from '../save.js';
 
 const DIE_SCALE = 4;            // 12px dice -> 48px
@@ -112,7 +113,12 @@ export class Yacht extends Phaser.Scene {
   pick(id) {
     if (!this.rolled || this.rolling || this.card[id] !== undefined) return;
     const dice = this.dice.map((d) => d.value);
-    this.card[id] = score(id, dice);
+    if (!allowed(this.card, dice).includes(id)) { toast(this, 'Joker rule: use the highlighted box', 220); return; }
+    if (isYacht(dice) && this.card.yacht === 50) {
+      this.card.yachtBonus = (this.card.yachtBonus || 0) + 100;
+      toast(this, 'Yacht bonus +100!', 220);
+    }
+    this.card[id] = scoreFor(id, dice, this.card);
     if (isComplete(this.card)) { this.refresh(); this.finish(); return; }
     this.newTurn();
   }
@@ -138,10 +144,11 @@ export class Yacht extends Phaser.Scene {
         r.name.setColor(PALETTE.lavender);
         r.bg.setFillStyle(hex(PALETTE.lavender), 0);
       } else if (this.rolled && !this.rolling) {
-        const s = score(r.cat.id, dice);
-        r.val.setText(String(s)).setColor(s ? PALETTE.gold : PALETTE.lavender);
-        r.name.setColor(PALETTE.cream);
-        r.bg.setFillStyle(hex(PALETTE.lavender), 0.18);
+        const ok = allowed(this.card, dice).includes(r.cat.id);
+        const s = scoreFor(r.cat.id, dice, this.card);
+        r.val.setText(ok ? String(s) : '-').setColor(ok && s ? PALETTE.gold : PALETTE.lavender);
+        r.name.setColor(ok ? PALETTE.cream : PALETTE.lavender);
+        r.bg.setFillStyle(hex(PALETTE.lavender), ok ? 0.18 : 0);
       } else {
         r.val.setText('-').setColor(PALETTE.lavender);
         r.name.setColor(PALETTE.cream);
@@ -151,12 +158,13 @@ export class Yacht extends Phaser.Scene {
 
     const t = totals(this.card);
     this.bonusVal.setText(t.bonus ? `+${t.bonus}` : `${t.upper}/${UPPER_BONUS_AT}`);
-    this.totalText.setText(`Total ${t.total}`);
+    const yb = this.card.yachtBonus ? ` (+${this.card.yachtBonus})` : '';
+    this.totalText.setText(`Total ${grandTotal(this.card)}${yb}`);
     this.bestText.setText(`Best ${getBest('yacht')}`);
   }
 
   finish() {
-    const { total } = totals(this.card);
+    const total = grandTotal(this.card);
     const best = getBest('yacht');
     const isBest = submitBest('yacht', total);
     this.refresh();

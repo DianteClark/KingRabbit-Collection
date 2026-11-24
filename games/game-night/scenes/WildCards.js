@@ -5,7 +5,8 @@ import { WIDTH } from '../../../shared/core/boot.js';
 import { header, go, setBackground, toast, modal } from './common.js';
 import { record } from '../save.js';
 import {
-  COLORS, newRound, canPlay, playableIdx, play, drawOne, passTurn, winner, top, cpuPick, favouriteColor,
+  COLORS, TARGET, newRound, canPlay, playableIdx, play, drawOne, passTurn, winner, top, cpuPick, favouriteColor,
+  resolveWild4, penalty, handPoints,
 } from '../logic/wildcards.js';
 
 const COLOR_HEX = [PALETTE.red, PALETTE.orange, PALETTE.indigo, PALETTE.leaf];
@@ -25,7 +26,8 @@ export class WildCards extends Phaser.Scene {
     header(this, 'Wild Cards', () => go(this, 'Menu'));
     this.layer = this.add.container(0, 0);
     this.status = text(this, WIDTH / 2, 352, '', { color: PALETTE.cream });
-    this.actionBtns = this.add.container(0, 0);
+    this.actionBtns = this.add.container(0, 0).setDepth(30);
+    this.scores = [0, 0, 0];
     this.newRound();
   }
 
@@ -34,44 +36,48 @@ export class WildCards extends Phaser.Scene {
     this.over = false;
     this.busy = false;
     this.drawn = -1;
+    this.calledUno = false;
+    this.catchable = undefined;
+    const fx = {
+      skip: 'First card is a Skip: you miss a turn', reverse: 'First card is a Reverse: Righty starts',
+      draw2: 'First card is a Draw Two: you draw 2', wild: 'First card is Wild: you pick the colour',
+    }[this.r.startEffect];
+    if (fx) toast(this, fx, 400);
     this.draw();
-    this.next();
+    this.time.delayedCall(fx ? 900 : 0, () => this.next());
   }
 
   // ---------- drawing ----------
   draw() {
     this.layer.removeAll(true);
     const r = this.r;
-    // Opponents
     [1, 2].forEach((p) => {
       const x = p === 1 ? 90 : WIDTH - 90;
       const active = r.turn === p && !this.over;
       const g = this.add.graphics();
-      g.fillStyle(hex(active ? PALETTE.gold : PALETTE.night)).fillRect(x - 76, 70, 152, 84);
-      g.fillStyle(hex(PALETTE.indigo)).fillRect(x - 73, 73, 146, 78);
+      g.fillStyle(hex(active ? PALETTE.gold : PALETTE.night)).fillRect(x - 76, 64, 152, 92);
+      g.fillStyle(hex(PALETTE.indigo)).fillRect(x - 73, 67, 146, 86);
       this.layer.add(g);
-      this.layer.add(text(this, x, 88, NAMES[p], { color: active ? PALETTE.gold : PALETTE.cream }));
+      this.layer.add(text(this, x, 80, `${NAMES[p]}  ${this.scores[p]}`, { color: active ? PALETTE.gold : PALETTE.cream }));
       const n = r.hands[p].length;
       const shown = Math.min(n, 8);
-      for (let k = 0; k < shown; k++) {
-        this.layer.add(this.add.image(x - (shown - 1) * 6 + k * 12, 124, 'wild', 'back').setScale(1.5));
-      }
-      this.layer.add(text(this, x + 56, 124, String(n), { color: PALETTE.gold }));
+      for (let k = 0; k < shown; k++) this.layer.add(this.add.image(x - (shown - 1) * 6 + k * 12, 118, 'wild', 'back').setScale(1.5));
+      this.layer.add(text(this, x + 56, 118, String(n), { color: PALETTE.gold }));
+      if (n === 1) this.layer.add(text(this, x, 142, 'UNO!', { color: PALETTE.gold }));
     });
-    // Piles
-    this.layer.add(text(this, WIDTH / 2, 176, r.dir === 1 ? 'Play goes  -->' : '<--  Play goes', { color: PALETTE.lavender }));
+    this.layer.add(text(this, WIDTH / 2, 176, `${r.dir === 1 ? 'Play goes  -->' : '<--  Play goes'}    You ${this.scores[0]} / ${TARGET}`, { color: PALETTE.lavender }));
     const deck = this.add.image(WIDTH / 2 - 56, 262, 'wild', 'back').setScale(4).setInteractive({ useHandCursor: true });
     deck.on('pointerup', () => this.humanDraw());
     this.layer.add(deck);
     this.layer.add(text(this, WIDTH / 2 - 56, 324, 'Draw', { color: PALETTE.cream }));
     const cg = this.add.graphics();
-    cg.fillStyle(hex(COLOR_HEX[r.color])).fillRect(WIDTH / 2 + 18, 204, 76, 116);
+    cg.fillStyle(hex(r.color === null ? PALETTE.lavender : COLOR_HEX[r.color])).fillRect(WIDTH / 2 + 18, 204, 76, 116);
     this.layer.add(cg);
     this.layer.add(this.add.image(WIDTH / 2 + 56, 262, 'wild', frameOf(top(r))).setScale(4));
-    this.layer.add(text(this, WIDTH / 2 + 56, 330, COLORS[r.color], { color: PALETTE.cream }));
-    // Your hand: rows of up to 9, overlapping.
+    this.layer.add(text(this, WIDTH / 2 + 56, 330, r.color === null ? 'Any' : COLORS[r.color], { color: PALETTE.cream }));
+
     const hand = r.hands[0];
-    const myTurn = r.turn === 0 && !this.over;
+    const myTurn = r.turn === 0 && !this.over && !this.busy;
     const rows = Math.max(1, Math.ceil(hand.length / 9));
     hand.forEach((c, i) => {
       const row = Math.floor(i / 9); const col = i % 9;
@@ -85,30 +91,55 @@ export class WildCards extends Phaser.Scene {
       img.on('pointerup', () => this.humanPlay(i));
       this.layer.add(img);
     });
+    this.drawButtons();
+  }
+
+  drawButtons() {
+    this.actionBtns.removeAll(true);
+    const r = this.r;
+    if (this.drawn >= 0) {
+      this.actionBtns.add(button(this, WIDTH / 2, 392, 160, 40, 'Keep it', () => {
+        this.drawn = -1; passTurn(this.r); this.next();
+      }));
+    }
+    // Call "UNO!" on your turn while you hold two cards, before you play the second-to-last one.
+    if (r.turn === 0 && !this.over && !this.busy && r.hands[0].length === 2 && !this.calledUno) {
+      this.actionBtns.add(button(this, WIDTH - 60, 392, 96, 40, 'UNO!', () => {
+        this.calledUno = true; toast(this, 'You: UNO!', 400); this.drawButtons();
+      }, { fill: PALETTE.gold }));
+    }
+    if (this.catchable !== undefined) {
+      this.actionBtns.add(button(this, 60, 392, 96, 40, 'Catch!', () => this.catchCpu(), { fill: PALETTE.red, color: PALETTE.cream }));
+    }
   }
 
   // ---------- flow ----------
   next() {
-    const w = winner(this.r);
-    if (w >= 0) { this.finish(w); return; }
     this.draw();
+    const w = winner(this.r);
+    if (w >= 0) { this.finishRound(w); return; }
+    if (this.r.color === null && this.r.turn === 0) {
+      this.chooseColor((k) => { this.r.color = k; this.next(); });
+      return;
+    }
     if (this.r.turn !== 0) {
       this.status.setText(`${NAMES[this.r.turn]} is thinking...`);
       this.busy = true;
-      this.time.delayedCall(800, () => this.cpuTurn());
+      this.draw();
+      this.time.delayedCall(850, () => this.cpuTurn());
     } else {
-      this.status.setText(playableIdx(this.r, 0).length ? 'Your turn: play a raised card' : 'No match: tap the deck to draw');
+      this.status.setText(playableIdx(this.r, 0).length ? 'Your turn: play a raised card or draw' : 'No match: tap the deck to draw');
     }
   }
 
+  chooseColor(done) {
+    const m = modal(this, 'Pick a colour', [], COLORS.map((name, k) => [name, () => { m.destroy(); done(k); }, COLOR_HEX[k], PALETTE.cream]));
+  }
+
   announce(ev) {
-    const who = NAMES[ev.player];
     const tgt = ev.target !== undefined ? NAMES[ev.target] : '';
-    const msg = {
-      skip: `${tgt} is skipped!`, reverse: 'Direction reversed!', draw2: `${tgt} draws 2!`, draw4: `${tgt} draws 4!`,
-    }[ev.effect];
+    const msg = { skip: `${tgt} is skipped!`, reverse: 'Direction reversed!', draw2: `${tgt} draws 2 and is skipped!` }[ev.effect];
     if (msg) toast(this, msg, 400);
-    if (this.r.hands[ev.player].length === 1) toast(this, `${who}: last card!`, 430);
   }
 
   cpuTurn() {
@@ -121,8 +152,53 @@ export class WildCards extends Phaser.Scene {
     }
     const ev = play(this.r, p, i, favouriteColor(this.r.hands[p]));
     this.announce(ev);
+    // CPUs usually remember to call Uno; when they forget you get a moment to catch them.
+    if (this.r.hands[p].length === 1) {
+      if (Math.random() < 0.8) toast(this, `${NAMES[p]}: UNO!`, 430);
+      else {
+        this.catchable = p;
+        this.time.delayedCall(2600, () => { if (this.catchable === p) { this.catchable = undefined; this.drawButtons(); } });
+      }
+    }
+    if (ev.effect === 'wild4') { this.handleWild4(ev); return; }
     this.busy = false;
     this.next();
+  }
+
+  catchCpu() {
+    const p = this.catchable;
+    if (p === undefined) return;
+    this.catchable = undefined;
+    penalty(this.r, p, 2);
+    toast(this, `Caught ${NAMES[p]}! They draw 2`, 430);
+    this.draw();
+  }
+
+  handleWild4(ev) {
+    const target = ev.target;
+    const prevColor = this.r.discard[this.r.discard.length - 2]?.color;
+    const finishWith = (challenge) => {
+      const out = resolveWild4(this.r, challenge);
+      const t = NAMES[target]; const o = NAMES[ev.player];
+      toast(this, {
+        accepted: `${t} draws 4 and is skipped`,
+        caught: `Illegal +4! ${o} draws 4 instead`,
+        failed: `Challenge failed: ${t} draws 6`,
+      }[out], 400);
+      this.busy = false;
+      this.next();
+    };
+    if (target === 0) {
+      this.busy = false;
+      const colourName = prevColor === null || prevColor === undefined ? 'matching' : COLORS[prevColor];
+      const m = modal(this, 'Wild Draw Four!', [`${NAMES[ev.player]} played +4 on you.`, 'Challenge if you think they', `still had a ${colourName} card.`], [
+        ['Accept (draw 4)', () => { m.destroy(); finishWith(false); }],
+        ['Challenge', () => { m.destroy(); finishWith(true); }],
+      ]);
+      return;
+    }
+    // A CPU sometimes challenges your +4.
+    finishWith(ev.player === 0 ? Math.random() < 0.35 : false);
   }
 
   humanPlay(i) {
@@ -131,30 +207,27 @@ export class WildCards extends Phaser.Scene {
     if (this.drawn >= 0 && i !== this.drawn) { toast(this, 'Play the card you drew, or keep it', 400); return; }
     if (!canPlay(this.r, c)) { toast(this, "That card doesn't match", 400); return; }
     const commit = (color) => {
+      const goingToOne = this.r.hands[0].length === 2;
       this.drawn = -1;
-      this.actionBtns.removeAll(true);
       const ev = play(this.r, 0, i, color);
       this.announce(ev);
+      if (goingToOne && !this.calledUno && Math.random() < 0.75) {
+        penalty(this.r, 0, 2);
+        toast(this, "Caught! You didn't call UNO: +2", 430);
+      }
+      if (ev.effect === 'wild4') { this.handleWild4(ev); return; }
       this.next();
     };
-    if (c.value === 'wild' || c.value === 'wild4') {
-      const m = modal(this, 'Pick a colour', [], COLORS.map((name, k) => [name, () => { m.destroy(); commit(k); }, COLOR_HEX[k], PALETTE.cream]));
-      return;
-    }
+    if (c.value === 'wild' || c.value === 'wild4') { this.chooseColor(commit); return; }
     commit(c.color);
   }
 
   humanDraw() {
     if (this.over || this.busy || this.r.turn !== 0 || this.drawn >= 0) return;
-    if (playableIdx(this.r, 0).length) { toast(this, 'You have a card you can play', 400); return; }
     const d = drawOne(this.r);
     if (canPlay(this.r, this.r.hands[0][d])) {
       this.drawn = d;
-      this.status.setText('You drew a playable card');
-      this.actionBtns.removeAll(true);
-      this.actionBtns.add(button(this, WIDTH / 2, 392, 160, 40, 'Keep it', () => {
-        this.drawn = -1; this.actionBtns.removeAll(true); passTurn(this.r); this.next();
-      }));
+      this.status.setText('You drew a playable card: play it or keep it');
       this.draw();
     } else {
       toast(this, 'No luck - turn passes', 400);
@@ -163,17 +236,29 @@ export class WildCards extends Phaser.Scene {
     }
   }
 
-  finish(w) {
+  finishRound(w) {
     this.over = true;
+    this.catchable = undefined;
+    const pts = this.r.hands.reduce((s, h, p) => (p === w ? s : s + handPoints(h)), 0);
+    this.scores[w] += pts;
     this.draw();
-    record('wildcards', w === 0 ? 'w' : 'l');
-    const title = w === 0 ? 'You win!' : `${NAMES[w]} wins`;
+    const matchOver = this.scores[w] >= TARGET;
+    const title = w === 0 ? 'You win the round!' : `${NAMES[w]} wins the round`;
     this.status.setText(title);
+    const lines = [`+${pts} points`, `You ${this.scores[0]}  Lefty ${this.scores[1]}  Righty ${this.scores[2]}`];
     this.time.delayedCall(700, () => {
-      const m = modal(this, title, [w === 0 ? 'You played your last card' : 'Better luck next round'], [
-        ['Play again', () => { m.destroy(); this.newRound(); }],
-        ['Menu', () => go(this, 'Menu')],
-      ]);
+      if (matchOver) {
+        record('wildcards', w === 0 ? 'w' : 'l');
+        const m = modal(this, w === 0 ? 'You win the match!' : `${NAMES[w]} wins the match`, lines, [
+          ['New match', () => { m.destroy(); this.scores = [0, 0, 0]; this.newRound(); }],
+          ['Menu', () => go(this, 'Menu')],
+        ]);
+      } else {
+        const m = modal(this, title, [...lines, `First to ${TARGET} wins`], [
+          ['Next round', () => { m.destroy(); this.newRound(); }],
+          ['Menu', () => go(this, 'Menu')],
+        ]);
+      }
     });
   }
 }

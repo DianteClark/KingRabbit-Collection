@@ -1,4 +1,4 @@
-// Klondike solitaire, draw one, unlimited passes through the stock.
+// Klondike solitaire. Draw 1 or draw 3, unlimited passes through the stock.
 // Card: { suit: 0..3 (spade, heart, club, diamond), rank: 1..13, up: bool }
 
 export const SUITS = ['spade', 'heart', 'club', 'diamond'];
@@ -39,11 +39,11 @@ export function canStack(pile, card) {
   return t.up && isRed(t) !== isRed(card) && t.rank === card.rank + 1;
 }
 
-/** Flip the stock (or recycle the waste when the stock is empty). */
-export function drawStock(g) {
+/** Flip 1 (or 3) cards from the stock, or recycle the waste when the stock is empty. */
+export function drawStock(g, count = 1) {
   const n = clone(g);
   if (n.stock.length) {
-    const c = n.stock.pop(); c.up = true; n.waste.push(c);
+    for (let k = 0; k < count && n.stock.length; k++) { const c = n.stock.pop(); c.up = true; n.waste.push(c); }
   } else if (n.waste.length) {
     n.stock = n.waste.reverse().map((c) => ({ ...c, up: false }));
     n.waste = [];
@@ -72,7 +72,16 @@ export function bestMove(g, src) {
   return null;
 }
 
-function pick(g, src) {
+/** Is moving the card(s) at src onto dst legal? dst: { to: 'foundation'|'tableau', i } */
+export function canMove(g, src, dst) {
+  const cards = pick(g, src);
+  if (!cards) return false;
+  if (dst.to === 'foundation') return cards.length === 1 && cards[0].suit === dst.i && canFound(g, cards[0]);
+  if (src.from === 'tableau' && src.i === dst.i) return false;
+  return canStack(g.tableau[dst.i], cards[0]);
+}
+
+export function pick(g, src) {
   if (src.from === 'waste') return g.waste.length ? [top(g.waste)] : null;
   if (src.from === 'foundation') return g.foundations[src.i].length ? [top(g.foundations[src.i])] : null;
   const col = g.tableau[src.i];

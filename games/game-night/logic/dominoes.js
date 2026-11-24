@@ -1,9 +1,14 @@
-// Draw dominoes (double-six set), you vs CPU. Each player draws 7; play a matching end or draw
-// from the boneyard; pass only when the boneyard is empty. A round ends when someone plays out
-// (they score the pips left in the other hand) or the game is blocked (lowest hand scores the
-// difference). First to 100 points wins the match.
+// Draw dominoes with a spinner, you vs CPU (double-six set, 7 tiles each).
+//  - The player holding the highest double leads with it (if nobody has a double, the heaviest tile leads).
+//  - The opening double is the spinner: tiles can be played off its left and right, and once both
+//    of those sides are covered, off its top and bottom too, so the layout can grow in 4 directions.
+//  - On your turn play a tile that matches an open end; if you can't, draw from the boneyard until
+//    you can (pass only when the boneyard is empty).
+//  - Domino! The first player out scores the pips left in the opponent's hand. A blocked game is
+//    won by the lighter hand, which scores the opponent's pips. First to 100 wins the match.
 
 export const TARGET = 100;
+export const SIDES = ['left', 'right', 'up', 'down'];
 
 export function fullSet() {
   const set = [];
@@ -18,54 +23,65 @@ export function shuffle(arr, rng = Math.random) {
 }
 
 export const pips = (hand) => hand.reduce((s, [a, b]) => s + a + b, 0);
+const isDouble = (t) => t[0] === t[1];
+const weight = (t) => (isDouble(t) ? 100 + t[0] : t[0] + t[1]);
 
-/** New round. The player holding the highest double (or highest tile) leads automatically. */
 export function newRound(rng = Math.random) {
   const bones = shuffle(fullSet(), rng);
   const hands = [bones.splice(0, 7), bones.splice(0, 7)];
-  return { hands, boneyard: bones, chain: [], ends: null, turn: firstPlayer(hands), passes: 0 };
+  // Find the lead tile: highest double, else heaviest tile.
+  let best = -1; let lead = null;
+  hands.forEach((h, p) => h.forEach((t, i) => { const w = weight(t); if (w > best) { best = w; lead = { p, i }; } }));
+  return {
+    hands, boneyard: bones, center: null, spinner: false,
+    arms: { left: [], right: [], up: [], down: [] },
+    turn: lead.p, lead, passes: 0,
+  };
 }
 
-function firstPlayer(hands) {
-  let best = -1; let who = 0;
-  hands.forEach((h, p) => h.forEach(([a, b]) => {
-    const v = a === b ? 100 + a : a + b;
-    if (v > best) { best = v; who = p; }
-  }));
-  return who;
-}
-
-/** Where tile can go: ['left'|'right'] (both for the first tile it's ['right']). */
-export function placements(r, tile) {
-  if (!r.ends) return ['right'];
-  const [l, rt] = r.ends;
-  const out = [];
-  if (tile[0] === l || tile[1] === l) out.push('left');
-  if (tile[0] === rt || tile[1] === rt) out.push('right');
+/** Open ends: [{ side, value }] */
+export function ends(r) {
+  if (!r.center) return [];
+  const c = r.center;
+  const tip = (side, base) => {
+    const arm = r.arms[side];
+    return arm.length ? arm[arm.length - 1][1] : base;
+  };
+  const out = [
+    { side: 'left', value: tip('left', c[0]) },
+    { side: 'right', value: tip('right', c[1]) },
+  ];
+  if (r.spinner && r.arms.left.length && r.arms.right.length) {
+    out.push({ side: 'up', value: tip('up', c[0]) }, { side: 'down', value: tip('down', c[0]) });
+  }
   return out;
 }
 
-export const playable = (r, p) => r.hands[p].map((t, i) => ({ i, sides: placements(r, t) })).filter((x) => x.sides.length);
+/** Sides where hand tile `tile` (at hand index i of player p) may be played. */
+export function placements(r, tile, p, i) {
+  if (!r.center) return r.lead.p === p && r.lead.i === i ? ['center'] : [];
+  return ends(r).filter((e) => tile[0] === e.value || tile[1] === e.value).map((e) => e.side);
+}
 
-/** Play hand[p][i] on `sideName`. Chain entries are oriented [leftValue, rightValue]. */
-export function playTile(r, p, i, sideName) {
+export const playable = (r, p) => r.hands[p]
+  .map((t, i) => ({ i, sides: placements(r, t, p, i) }))
+  .filter((x) => x.sides.length);
+
+/** Play hand[p][i] on side. Arm tiles are stored oriented [innerValue, outerValue]. */
+export function playTile(r, p, i, side) {
   const hands = r.hands.map((h) => h.slice());
   const [tile] = hands[p].splice(i, 1);
-  const chain = r.chain.slice();
-  let ends;
-  if (!r.ends) {
-    chain.push(tile);
-    ends = [tile[0], tile[1]];
-  } else if (sideName === 'left') {
-    const t = tile[1] === r.ends[0] ? tile : [tile[1], tile[0]];
-    chain.unshift(t);
-    ends = [t[0], r.ends[1]];
+  const arms = { left: r.arms.left.slice(), right: r.arms.right.slice(), up: r.arms.up.slice(), down: r.arms.down.slice() };
+  let { center, spinner } = r;
+  if (side === 'center') {
+    center = tile;
+    spinner = isDouble(tile);
   } else {
-    const t = tile[0] === r.ends[1] ? tile : [tile[1], tile[0]];
-    chain.push(t);
-    ends = [r.ends[0], t[1]];
+    const e = ends(r).find((x) => x.side === side);
+    const oriented = tile[0] === e.value ? [tile[0], tile[1]] : [tile[1], tile[0]];
+    arms[side].push(oriented);
   }
-  return { ...r, hands, chain, ends, turn: 1 - p, passes: 0 };
+  return { ...r, hands, arms, center, spinner, turn: 1 - p, passes: 0 };
 }
 
 export function draw(r, p) {
@@ -78,6 +94,8 @@ export function draw(r, p) {
 
 export const passTurn = (r) => ({ ...r, turn: 1 - r.turn, passes: r.passes + 1 });
 
+export const tileCount = (r) => (r.center ? 1 : 0) + SIDES.reduce((s, k) => s + r.arms[k].length, 0);
+
 /** null while the round continues, else { winner: 0|1|null, points } */
 export function roundResult(r) {
   for (const p of [0, 1]) {
@@ -86,20 +104,28 @@ export function roundResult(r) {
   if (r.passes >= 2) {
     const a = pips(r.hands[0]); const b = pips(r.hands[1]);
     if (a === b) return { winner: null, points: 0 };
-    return a < b ? { winner: 0, points: b - a } : { winner: 1, points: a - b };
+    return a < b ? { winner: 0, points: b } : { winner: 1, points: a };
   }
   return null;
 }
 
-/** CPU: play the heaviest tile that fits, preferring doubles; null means it must draw/pass. */
+/** CPU: heaviest playable tile (doubles first), on the end that leaves it the most options. */
 export function cpuChoice(r, p) {
   const opts = playable(r, p);
   if (!opts.length) return null;
-  let best = -1; let pick = null;
+  let best = -Infinity; let pick = null;
   for (const o of opts) {
-    const [a, b] = r.hands[p][o.i];
-    const v = a + b + (a === b ? 3 : 0);
-    if (v > best) { best = v; pick = { i: o.i, side: o.sides[0] }; }
+    const t = r.hands[p][o.i];
+    for (const side of o.sides) {
+      let v = t[0] + t[1] + (isDouble(t) ? 4 : 0);
+      if (side !== 'center') {
+        // Prefer leaving an end value the CPU still holds.
+        const next = playTile(r, p, o.i, side);
+        const own = ends(next).filter((e) => next.hands[p].some((h) => h[0] === e.value || h[1] === e.value)).length;
+        v += own * 1.5;
+      }
+      if (v > best) { best = v; pick = { i: o.i, side }; }
+    }
   }
   return pick;
 }

@@ -73,3 +73,34 @@ body.game { overflow: hidden; touch-action: none; }
 @media (orientation: landscape) and (max-height: 540px) {
   #rotate { display: flex; }
 }
+
+/* How to play sheet */
+#howto {
+  position: fixed; inset: 0; z-index: 90;
+  background: rgba(4, 3, 3, 0.75);
+  display: flex; align-items: center; justify-content: center;
+  padding: max(16px, env(safe-area-inset-top)) 12px max(16px, env(safe-area-inset-bottom));
+  touch-action: auto;
+}
+#howto .sheet {
+  width: 100%; max-width: 420px; max-height: 100%;
+  display: flex; flex-direction: column;
+  background: var(--indigo);
+  border: 4px solid var(--ink);
+  box-shadow: inset 0 0 0 3px var(--lavender), 0 6px 0 var(--ink);
+}
+#howto header { padding: 16px 16px 8px; text-align: center; }
+#howto h2 { margin: 0; font-weight: normal; font-size: 16px; color: var(--lavender); line-height: 1.4; }
+#howto h2 span { font-size: 32px; color: var(--gold); }
+#howto .scroll { overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 4px 18px 8px; touch-action: pan-y; }
+#howto section { margin-bottom: 14px; }
+#howto h3 { margin: 0 0 6px; font-weight: normal; font-size: 16px; color: var(--sand); }
+#howto p, #howto li { margin: 0 0 6px; line-height: 1.45; color: var(--cream); }
+#howto ul { margin: 0; padding-left: 18px; }
+#howto li::marker { color: var(--gold); }
+#howto button {
+  font: inherit; margin: 8px 16px 16px; padding: 12px;
+  background: var(--gold); color: var(--night);
+  border: 3px solid var(--ink); box-shadow: 0 4px 0 var(--ink); cursor: pointer;
+}
+#howto button:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--ink); }

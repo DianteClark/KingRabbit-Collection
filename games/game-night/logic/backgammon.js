@@ -160,3 +160,23 @@ export function cpuTurn(s, dice) {
   }
   return pick; // null when no move is possible
 }
+
+/** 1 single, 2 gammon (loser bore off nothing), 3 backgammon (also still on the bar or in the winner's home). */
+export function winType(s, w) {
+  const l = other(w);
+  if (s.off[l] > 0) return { points: 1, name: 'Single game' };
+  const inWinnersHome = (i) => (w === 0 ? i >= 1 && i <= 6 : i >= 19 && i <= 24);
+  let stuck = s.bar[l] > 0;
+  for (let i = 1; i <= 24; i++) if (s.pts[i].owner === l && s.pts[i].n && inWinnersHome(i)) stuck = true;
+  return stuck ? { points: 3, name: 'Backgammon!' } : { points: 2, name: 'Gammon!' };
+}
+
+/** Opening roll: each side rolls one die, re-rolling ties. Returns { first, dice:[a,b], rolls }. */
+export function openingRoll(rng = Math.random) {
+  const rolls = [];
+  for (;;) {
+    const a = 1 + Math.floor(rng() * 6); const b = 1 + Math.floor(rng() * 6);
+    rolls.push([a, b]);
+    if (a !== b) return { first: a > b ? 0 : 1, dice: [a, b], rolls };
+  }
+}

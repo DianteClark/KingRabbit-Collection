@@ -1,12 +1,24 @@
 import { PALETTE, hex } from '../../../shared/core/palette.js';
 import { text, button, panel, fadeTo } from '../../../shared/core/ui.js';
 import { WIDTH, HEIGHT } from '../../../shared/core/boot.js';
+import { showHowTo } from '../../../shared/core/howto.js';
+import { RULES } from '../rules.js';
 
 /** Top bar used by every Game Night screen: back button + title. */
 export function header(scene, title, onBack) {
   button(scene, 34, 34, 52, 40, '<', onBack, { size: 32, fill: PALETTE.cream });
-  const t = text(scene, WIDTH / 2 + 12, 34, title, { size: 32, color: PALETTE.cream });
+  const t = text(scene, WIDTH / 2, 34, title, { size: 32, color: PALETTE.cream });
+  const rules = RULES[scene.scene.key];
+  if (rules) button(scene, WIDTH - 34, 34, 52, 40, '?', () => openHowTo(scene), { size: 32, fill: PALETTE.gold });
   return t;
+}
+
+/** Pause the scene and show its How to play sheet. */
+export function openHowTo(scene) {
+  const rules = RULES[scene.scene.key];
+  if (!rules || document.getElementById('howto')) return;
+  scene.scene.pause();
+  showHowTo(rules, () => scene.scene.resume());
 }
 
 /** Go to another scene with a quick fade. */

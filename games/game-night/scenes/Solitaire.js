@@ -3,8 +3,8 @@ import { PALETTE, hex } from '../../../shared/core/palette.js';
 import { text, button } from '../../../shared/core/ui.js';
 import { WIDTH } from '../../../shared/core/boot.js';
 import { header, go, setBackground, toast, modal } from './common.js';
-import { record } from '../save.js';
-import { deal, drawStock, bestMove, move, won, canAutoFinish, autoStep, SUITS, RANKS, isRed } from '../logic/solitaire.js';
+import { record, save } from '../save.js';
+import { deal, drawStock, bestMove, move, canMove, won, canAutoFinish, autoStep, SUITS, RANKS, isRed } from '../logic/solitaire.js';
 
 const CW = 44;
 const CH = 60;
@@ -27,20 +27,32 @@ export class Solitaire extends Phaser.Scene {
     this.movesText = text(this, WIDTH - 16, 34, '', { origin: [1, 0.5], color: PALETTE.cream });
     this.movesText.setVisible(false);
     button(this, 70, 614, 110, 40, 'Undo', () => this.undo());
-    button(this, WIDTH / 2, 614, 110, 40, 'New deal', () => this.newDeal());
+    button(this, WIDTH / 2, 614, 110, 40, 'New deal', () => this.askDeal());
     this.autoBtn = button(this, WIDTH - 70, 614, 110, 40, 'Finish', () => this.autoFinish(), { fill: PALETTE.gold });
     this.input.on('pointerup', (p) => this.tap(p.x, p.y));
     this.newDeal();
   }
 
+  askDeal() {
+    const m = modal(this, 'New deal', [`Now: draw ${this.drawCount()}`], [
+      ['Draw 1', () => { m.destroy(); save.set('solitaireDraw', 1); this.newDeal(); }],
+      ['Draw 3', () => { m.destroy(); save.set('solitaireDraw', 3); this.newDeal(); }],
+      ['Cancel', () => m.destroy()],
+    ]);
+  }
+
+  drawCount() { return save.get('solitaireDraw') === 3 ? 3 : 1; }
+
   newDeal() {
     this.g = deal();
     this.history = [];
     this.done = false;
+    this.sel = null;
     this.draw();
   }
 
   push(next) {
+    this.sel = null;
     this.history.push(this.g);
     if (this.history.length > 200) this.history.shift();
     this.g = next;
@@ -50,6 +62,7 @@ export class Solitaire extends Phaser.Scene {
 
   undo() {
     if (this.done || !this.history.length) return;
+    this.sel = null;
     this.g = this.history.pop();
     this.draw();
   }
@@ -88,17 +101,20 @@ export class Solitaire extends Phaser.Scene {
     if (g.stock.length) this.card(colX(0), TOP_ROW, { up: false });
     else this.slot(colX(0), TOP_ROW, g.waste.length ? 'O' : '');
     this.hits.push({ x: colX(0), y: TOP_ROW, w: CW, h: CH, src: { from: 'stock' } });
-    // Waste
+    // Waste (draw 3 fans the top three; only the top one plays)
     if (g.waste.length) {
-      this.card(colX(1), TOP_ROW, g.waste[g.waste.length - 1]);
-      this.hits.push({ x: colX(1), y: TOP_ROW, w: CW, h: CH, src: { from: 'waste' } });
+      const fan = this.drawCount() === 3 ? g.waste.slice(-3) : g.waste.slice(-1);
+      fan.forEach((c, k) => this.card(colX(1) + k * 14, TOP_ROW, c));
+      const tx = colX(1) + (fan.length - 1) * 14;
+      this.hits.push({ x: tx, y: TOP_ROW, w: CW, h: CH, src: { from: 'waste' } });
+      this.wasteX = tx;
     } else this.slot(colX(1), TOP_ROW);
     // Foundations
     g.foundations.forEach((f, i) => {
       const x = colX(3 + i);
+      this.hits.push({ x, y: TOP_ROW, w: CW, h: CH, src: { from: 'foundation', i }, dst: { to: 'foundation', i } });
       if (f.length) {
         this.card(x, TOP_ROW, f[f.length - 1]);
-        this.hits.push({ x, y: TOP_ROW, w: CW, h: CH, src: { from: 'foundation', i } });
       } else {
         this.slot(x, TOP_ROW);
         this.layer.add(this.add.image(x + CW / 2, TOP_ROW + CH / 2, 'cards', SUITS[i]).setScale(3).setAlpha(0.35));
@@ -107,6 +123,7 @@ export class Solitaire extends Phaser.Scene {
     // Tableau: squeeze the spacing on long columns so they fit.
     g.tableau.forEach((pile, i) => {
       const x = colX(i);
+      this.hits.push({ x, y: TAB_Y, w: CW, h: MAX_Y - TAB_Y, dst: { to: 'tableau', i } });
       if (!pile.length) { this.slot(x, TAB_Y, 'K'); return; }
       const downs = pile.filter((c) => !c.up).length;
       const ups = pile.length - downs;
@@ -118,10 +135,24 @@ export class Solitaire extends Phaser.Scene {
         this.card(x, y, c);
         const last = k === pile.length - 1;
         const h = last ? CH : (c.up ? upGap : 8);
-        if (c.up) this.hits.push({ x, y, w: CW, h, src: { from: 'tableau', i, k } });
+        if (c.up) this.hits.push({ x, y, w: CW, h, src: { from: 'tableau', i, k }, dst: { to: 'tableau', i } });
         y += c.up ? upGap : 8;
       });
     });
+    // Selection outline around the picked card (and everything on top of it).
+    if (this.sel) {
+      const h = [...this.hits].reverse().find((x) => x.src && JSON.stringify(x.src) === JSON.stringify(this.sel));
+      if (h) {
+        let bottom = h.y + CH;
+        if (this.sel.from === 'tableau') {
+          const lastCard = [...this.hits].reverse().find((x) => x.src?.from === 'tableau' && x.src.i === this.sel.i);
+          bottom = lastCard.y + CH;
+        }
+        const sg = this.add.graphics();
+        sg.lineStyle(3, hex(PALETTE.gold)).strokeRect(h.x - 2, h.y - 2, CW + 4, bottom - h.y + 4);
+        this.layer.add(sg);
+      }
+    }
     this.autoBtn.setVisible(canAutoFinish(g) && !won(g));
     this.movesText.setText(`Moves ${g.moves}`);
   }
@@ -129,16 +160,38 @@ export class Solitaire extends Phaser.Scene {
   // ---------- input ----------
   tap(x, y) {
     if (this.done) return;
-    const hit = [...this.hits].reverse().find((h) => x >= h.x && x < h.x + h.w && y >= h.y && y < h.y + h.h);
-    if (!hit) return;
-    if (hit.src.from === 'stock') {
-      const n = drawStock(this.g);
+    const under = this.hits.filter((h) => x >= h.x && x < h.x + h.w && y >= h.y && y < h.y + h.h).reverse(); // topmost first
+    const hit = under.find((h) => h.src) || under.find((h) => h.dst);
+    if (!hit) { this.sel = null; this.draw(); return; }
+    if (hit.src?.from === 'stock') {
+      this.sel = null;
+      const n = drawStock(this.g, this.drawCount());
       if (n) this.push(n);
       return;
     }
-    const dst = bestMove(this.g, hit.src);
-    if (!dst) { this.cameras.main.shake(60, 0.003); return; }
-    this.push(move(this.g, hit.src, dst));
+    // A card is selected: try to drop it where you tapped.
+    if (this.sel) {
+      const dst = hit.dst || (hit.src?.from === 'foundation' ? { to: 'foundation', i: hit.src.i } : null);
+      const same = hit.src && JSON.stringify(hit.src) === JSON.stringify(this.sel);
+      if (same) {
+        // Second tap on the same card: send it to its best spot.
+        const best = bestMove(this.g, this.sel);
+        const src = this.sel;
+        this.sel = null;
+        if (best) this.push(move(this.g, src, best)); else { this.draw(); this.cameras.main.shake(60, 0.003); }
+        return;
+      }
+      if (dst && canMove(this.g, this.sel, dst)) {
+        const src = this.sel;
+        this.sel = null;
+        this.push(move(this.g, src, dst));
+        return;
+      }
+    }
+    // Select the tapped card (if it can be moved at all).
+    if (hit.src && hit.src.from !== 'stock') { this.sel = hit.src; this.draw(); return; }
+    this.sel = null;
+    this.draw();
   }
 
   autoFinish() {

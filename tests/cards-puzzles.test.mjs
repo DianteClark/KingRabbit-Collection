@@ -38,7 +38,7 @@ test('wild cards: deck, matching and a full CPU-only round finishes', () => {
   assert.equal(Wild.newDeck(seeded(2)).length, 108);
   const rng = seeded(4);
   const r = Wild.newRound(3, rng);
-  assert.equal(typeof Wild.top(r).value, 'number');
+  if (r.color === null) r.color = 0;   // opening wild: first player picks
   let turns = 0;
   while (Wild.winner(r) < 0 && turns++ < 2000) {
     const p = r.turn;
@@ -47,7 +47,8 @@ test('wild cards: deck, matching and a full CPU-only round finishes', () => {
       const d = Wild.drawOne(r);
       if (Wild.canPlay(r, r.hands[p][d])) i = d; else { Wild.passTurn(r); continue; }
     }
-    Wild.play(r, p, i, Wild.favouriteColor(r.hands[p]));
+    const ev = Wild.play(r, p, i, Wild.favouriteColor(r.hands[p]));
+    if (ev.effect === 'wild4') Wild.resolveWild4(r, false);
     // Card count is conserved: 108 total.
     const total = r.deck.length + r.discard.length + r.hands.reduce((s, h) => s + h.length, 0);
     assert.equal(total, 108);
@@ -102,4 +103,34 @@ test('six ball: matching, gravity and chains', () => {
   assert.ok(Six.move(g, -1));
   Six.hardDrop(g); Six.lock(g);
   assert.ok(!g.over);
+});
+
+test('wild cards: +4 legality and challenges, scoring, opening cards', () => {
+  const r = Wild.newRound(3, seeded(12));
+  r.color = 1; r.discard.push({ color: 1, value: 3 }); r.turn = 0; r.dir = 1;
+  r.hands[0] = [{ color: null, value: 'wild4' }, { color: 1, value: 7 }, { color: 2, value: 2 }];
+  assert.equal(Wild.wild4Legal(r, 0), false);           // holds an orange card
+  const before0 = r.hands[0].length;
+  Wild.play(r, 0, 0, 2);
+  assert.equal(Wild.resolveWild4(r, true), 'caught');   // bluff caught: offender draws 4
+  assert.equal(r.hands[0].length, before0 - 1 + 4);
+  assert.equal(r.turn, 1);
+  // A legal +4 that gets challenged costs the challenger 6.
+  r.turn = 0; r.color = 3;
+  r.hands[0] = [{ color: null, value: 'wild4' }, { color: 1, value: 7 }];
+  const before1 = r.hands[1].length;
+  Wild.play(r, 0, 0, 2);
+  assert.equal(Wild.resolveWild4(r, true), 'failed');
+  assert.equal(r.hands[1].length, before1 + 6);
+  assert.equal(r.turn, 2);
+  // Points: numbers face value, actions 20, wilds 50.
+  assert.equal(Wild.handPoints([{ color: 0, value: 7 }, { color: 1, value: 'skip' }, { color: null, value: 'wild' }]), 77);
+  // Opening cards never start on a Wild Draw Four, and their effects apply.
+  for (let sd = 1; sd < 200; sd++) {
+    const g = Wild.newRound(3, seeded(sd));
+    assert.notEqual(Wild.top(g).value, 'wild4');
+    if (g.startEffect === 'skip') assert.equal(g.turn, 1);
+    if (g.startEffect === 'reverse') { assert.equal(g.turn, 2); assert.equal(g.dir, -1); }
+    if (g.startEffect === 'draw2') { assert.equal(g.hands[0].length, 9); assert.equal(g.turn, 1); }
+  }
 });

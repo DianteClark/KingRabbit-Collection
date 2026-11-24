@@ -139,3 +139,44 @@ export function cpuMove(g, { rng = Math.random } = {}) {
   if (pick < 0 || (stones > 40 && best < 2)) return -1;
   return pick;
 }
+
+/**
+ * Guess which groups are dead at the end: groups in atari, and small weak groups that sit
+ * inside the opponent's area (removing them leaves space that only the opponent surrounds).
+ * Returns a Set of stone indexes. Players can then adjust it before scoring.
+ */
+export function suggestDead(board) {
+  const dead = new Set();
+  const seen = new Set();
+  for (let i = 0; i < N * N; i++) {
+    if (!board[i] || seen.has(i)) continue;
+    const g = group(board, i);
+    g.stones.forEach((s) => seen.add(s));
+    let isDead = g.libs.length <= 1;
+    if (!isDead && g.stones.length <= 8) {
+      const without = board.slice();
+      for (const s of g.stones) without[s] = 0;
+      const sc = score(without);
+      isDead = g.stones.every((s) => sc.territory[s] === other(board[i]));
+    }
+    if (isDead) g.stones.forEach((s) => dead.add(s));
+  }
+  return dead;
+}
+
+/** Toggle a whole group in/out of the dead set. */
+export function toggleDead(board, dead, i) {
+  if (!board[i]) return dead;
+  const next = new Set(dead);
+  const { stones } = group(board, i);
+  const on = !next.has(i);
+  for (const s of stones) { if (on) next.add(s); else next.delete(s); }
+  return next;
+}
+
+/** Area score after removing the dead stones. */
+export function finalScore(board, dead) {
+  const b = board.slice();
+  for (const s of dead) b[s] = 0;
+  return { ...score(b), board: b };
+}

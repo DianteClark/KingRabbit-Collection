@@ -4,7 +4,7 @@ import { text, button } from '../../../shared/core/ui.js';
 import { WIDTH } from '../../../shared/core/boot.js';
 import { header, go, setBackground, toast } from './common.js';
 import { endGame } from './boardkit.js';
-import { N, randomFleet, fire, allSunk, cpuTarget } from '../logic/seabattle.js';
+import { N, randomFleet, fire, allSunk, cpuTarget, shipCells, fits } from '../logic/seabattle.js';
 
 const BIG = 32;      // enemy grid cell
 const SMALL = 16;    // your grid cell during battle
@@ -27,16 +27,50 @@ export class SeaBattle extends Phaser.Scene {
     this.setup();
   }
 
-  // ---------- setup: shuffle your fleet, then start ----------
+  // ---------- setup: place your fleet ----------
   setup() {
     this.phase = 'setup';
     this.myFleet = randomFleet();
+    this.selectedShip = 0;
+    this.drawSetup();
+  }
+
+  drawSetup() {
     this.layer.removeAll(true);
-    this.status.setText('Your fleet. Shuffle until you like it.');
+    const ship = this.myFleet[this.selectedShip];
+    this.status.setText(ship ? `${ship.name} (${ship.cells.length}): tap a square to move it` : 'Tap a ship to move it');
     this.drawGrid(BIG_LEFT, BIG_TOP, BIG, this.myFleet, new Map(), true, 'grey');
-    this.layer.add(button(this, WIDTH / 2 - 80, 492, 140, 48, 'Shuffle', () => this.setup()));
-    this.layer.add(button(this, WIDTH / 2 + 80, 492, 140, 48, 'Battle!', () => this.start(), { fill: PALETTE.gold }));
-    this.layer.add(text(this, WIDTH / 2, 560, 'Ships: 5, 4, 3, 3, 2 - they never touch', { color: PALETTE.lavender }));
+    if (ship) {
+      const g = this.add.graphics();
+      const xs = ship.cells.map((c) => c % N); const ys = ship.cells.map((c) => Math.floor(c / N));
+      g.lineStyle(3, hex(PALETTE.gold)).strokeRect(BIG_LEFT + Math.min(...xs) * BIG, BIG_TOP + Math.min(...ys) * BIG, (Math.max(...xs) - Math.min(...xs) + 1) * BIG, (Math.max(...ys) - Math.min(...ys) + 1) * BIG);
+      this.layer.add(g);
+    }
+    this.layer.add(button(this, 66, 492, 104, 48, 'Rotate', () => this.rotateShip()));
+    this.layer.add(button(this, WIDTH / 2, 492, 104, 48, 'Shuffle', () => { this.myFleet = randomFleet(); this.drawSetup(); }));
+    this.layer.add(button(this, WIDTH - 66, 492, 104, 48, 'Battle!', () => this.start(), { fill: PALETTE.gold }));
+    this.layer.add(text(this, WIDTH / 2, 548, 'Tap a ship to pick it, then tap where its', { color: PALETTE.lavender }));
+    this.layer.add(text(this, WIDTH / 2, 570, 'front should go. Ships may touch.', { color: PALETTE.lavender }));
+  }
+
+  setupTap(cell) {
+    const owner = this.myFleet.findIndex((sh) => sh.cells.includes(cell));
+    if (owner >= 0 && owner !== this.selectedShip) { this.selectedShip = owner; this.drawSetup(); return; }
+    const ship = this.myFleet[this.selectedShip];
+    if (!ship) return;
+    const cells = shipCells(cell, ship.cells.length, ship.horizontal);
+    if (fits(this.myFleet, this.selectedShip, cells)) ship.cells = cells;
+    else toast(this, "It won't fit there", 600);
+    this.drawSetup();
+  }
+
+  rotateShip() {
+    const ship = this.myFleet[this.selectedShip];
+    if (!ship) return;
+    const cells = shipCells(ship.cells[0], ship.cells.length, !ship.horizontal);
+    if (fits(this.myFleet, this.selectedShip, cells)) { ship.cells = cells; ship.horizontal = !ship.horizontal; }
+    else toast(this, 'No room to rotate here', 600);
+    this.drawSetup();
   }
 
   start() {
@@ -97,15 +131,17 @@ export class SeaBattle extends Phaser.Scene {
 
   // ---------- play ----------
   tap(x, y) {
-    if (this.phase !== 'battle' || this.busy || this.over) return;
     const c = Math.floor((x - BIG_LEFT) / BIG); const r = Math.floor((y - BIG_TOP) / BIG);
     if (c < 0 || c >= N || r < 0 || r >= N) return;
     const cell = r * N + c;
+    if (this.phase === 'setup') { this.setupTap(cell); return; }
+    if (this.phase !== 'battle' || this.busy || this.over) return;
     if (this.myShots.has(cell)) return;
     const res = fire(this.enemyFleet, this.myShots, cell);
     this.redraw();
     if (res.result !== 'miss') { this.boom(BIG_LEFT + c * BIG + BIG / 2, BIG_TOP + r * BIG + BIG / 2, 4); this.cameras.main.shake(90, 0.004); }
-    this.status.setText(res.result === 'sunk' ? 'You sank a ship!' : res.result === 'hit' ? 'Hit!' : 'Miss');
+    this.status.setText(res.result === 'sunk' ? `You sank their ${res.ship.name}!` : res.result === 'hit' ? 'Hit!' : 'Miss');
+    if (res.result === 'sunk') toast(this, `${res.ship.name} sunk!`, 440);
     if (allSunk(this.enemyFleet)) { this.finish(true); return; }
     this.busy = true;
     this.time.delayedCall(750, () => this.cpuFire());
@@ -118,7 +154,7 @@ export class SeaBattle extends Phaser.Scene {
     if (res.result === 'sunk') res.ship.cells.forEach((c) => this.cpuSunk.add(c));
     this.redraw();
     if (res.result !== 'miss') this.boom(SMALL_LEFT + (cell % N) * SMALL + SMALL / 2, SMALL_TOP + Math.floor(cell / N) * SMALL + SMALL / 2, 2);
-    const msg = { miss: 'CPU missed. Your turn', hit: 'CPU hit your ship! Your turn', sunk: 'CPU sank your ship! Your turn' }[res.result];
+    const msg = { miss: 'CPU missed. Your turn', hit: 'CPU hit your ship! Your turn', sunk: `CPU sank your ${res.ship?.name}!` }[res.result];
     this.status.setText(msg);
     if (allSunk(this.myFleet)) { this.finish(false); return; }
     this.busy = false;

@@ -7,7 +7,7 @@ Aleksandr Makarov's (iknowkingrabbit) pixel-art packs.
 
 | Game | Status | Link |
 |---|---|---|
-| Game Night (Tic-Tac-Toe, Reversi, Yacht dice) | Playable | [/game-night/](https://dianteclark.github.io/KingRabbit-Collection/game-night/) |
+| Game Night: 20 board, card, arcade and puzzle games (see docs/games/game-night.md) | Playable | [/game-night/](https://dianteclark.github.io/KingRabbit-Collection/game-night/) |
 | Spire Roguelite | Planned | |
 | Heroes Lite | Planned | |
 | Tiny City | Planned | |

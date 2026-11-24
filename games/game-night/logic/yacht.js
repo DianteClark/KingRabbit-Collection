@@ -68,3 +68,32 @@ export function totals(card) {
 }
 
 export const isComplete = (card) => CATEGORIES.every((c) => card[c.id] !== undefined);
+
+// ---- Extra Yacht bonus + joker rules (official Yahtzee rules) ----
+export const isYacht = (dice) => dice.every((d) => d === dice[0]);
+
+/** A second Yacht acts as a joker once the Yacht box has been filled (with 50 or 0). */
+export const jokerActive = (card, dice) => isYacht(dice) && card.yacht !== undefined;
+
+/** Categories you may score this roll in. */
+export function allowed(card, dice) {
+  const open = CATEGORIES.filter((c) => card[c.id] === undefined);
+  if (!jokerActive(card, dice)) return open.map((c) => c.id);
+  const upper = CATEGORIES.find((c) => c.upper === dice[0]);
+  if (card[upper.id] === undefined) return [upper.id];                 // must use the matching upper box
+  const lower = open.filter((c) => !c.upper);
+  return (lower.length ? lower : open).map((c) => c.id);               // else any lower box, else a zero
+}
+
+/** Points for a category, applying joker values when they apply. */
+export function scoreFor(id, dice, card) {
+  if (!jokerActive(card, dice)) return score(id, dice);
+  const fixed = { house: 25, small: 30, large: 40 };
+  if (fixed[id] !== undefined) return fixed[id];
+  return score(id, dice);
+}
+
+/** Total including the +100 bonuses for extra Yachts. */
+export function grandTotal(card) {
+  return totals(card).total + (card.yachtBonus || 0);
+}

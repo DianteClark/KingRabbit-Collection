@@ -2,9 +2,9 @@ import Phaser from 'phaser';
 import { PALETTE } from '../../../shared/core/palette.js';
 import { text } from '../../../shared/core/ui.js';
 import { WIDTH } from '../../../shared/core/boot.js';
-import { header, go, setBackground, toast } from './common.js';
+import { header, go, setBackground, toast, modal } from './common.js';
 import { checkerboard, highlighter, endGame, think } from './boardkit.js';
-import { newGame, legalMoves, makeMove, status, inCheck, cpuMove } from '../logic/chess.js';
+import { newGame, legalMoves, makeMove, status, inCheck, cpuMove, positionKey } from '../logic/chess.js';
 
 const CELL = 40;
 const LEFT = 30;
@@ -26,12 +26,12 @@ export class Chess extends Phaser.Scene {
     this.hl = highlighter(this, this.g);
     this.pieces = this.add.container(0, 0).setDepth(10);
     this.input.on('pointerup', (p) => this.tap(this.g.indexAt(p.x, p.y)));
-    text(this, WIDTH / 2, TOP + CELL * 8 + 40, 'Pawns promote to a queen', { color: PALETTE.lavender });
     this.restart();
   }
 
   restart() {
     this.s = newGame();
+    this.history = new Map([[positionKey(this.s), 1]]);
     this.selected = -1;
     this.last = null;
     this.over = false;
@@ -69,7 +69,7 @@ export class Chess extends Phaser.Scene {
   next() {
     this.moves = legalMoves(this.s);
     this.draw();
-    const st = status(this.s);
+    const st = status(this.s, this.history);
     if (st) { this.finish(st); return; }
     const check = inCheck(this.s) ? ' - check!' : '';
     if (this.isCpu()) {
@@ -89,10 +89,16 @@ export class Chess extends Phaser.Scene {
     if (mine) { this.selected = this.moves.some((m) => m.from === i) ? i : -1; this.draw(); return; }
     if (this.selected >= 0) {
       const m = this.moves.find((x) => x.from === this.selected && x.to === i);
+      if (m && m.promo) { this.askPromotion(m); return; }
       if (m) { this.apply(m); return; }
     }
     this.selected = -1;
     this.draw();
+  }
+
+  askPromotion(m) {
+    const names = [['Queen', 'Q'], ['Rook', 'R'], ['Bishop', 'B'], ['Knight', 'N']];
+    const box = modal(this, 'Promote to', [], names.map(([label, p]) => [label, () => { box.destroy(); this.apply({ ...m, promoTo: p }); }]));
   }
 
   apply(m) {
@@ -103,6 +109,8 @@ export class Chess extends Phaser.Scene {
     const to = this.g.center(m.to);
     const done = () => {
       this.s = makeMove(this.s, m);
+      const key = positionKey(this.s);
+      this.history.set(key, (this.history.get(key) || 0) + 1);
       this.last = { from: m.from, to: m.to };
       this.busy = false;
       this.next();
@@ -124,7 +132,10 @@ export class Chess extends Phaser.Scene {
       outcome = 'd';
     }
     this.status.setText(title);
-    const why = { checkmate: 'Checkmate', stalemate: 'Stalemate - no legal moves', draw: 'Draw by material or 50 moves' }[st.result];
+    const why = {
+      checkmate: 'Checkmate', stalemate: 'Stalemate - no legal moves', material: 'Not enough pieces to mate',
+      fifty: '50 moves without a capture or pawn move', repetition: 'Same position three times',
+    }[st.result];
     endGame(this, { id: 'chess', mode: this.mode, title: st.result === 'checkmate' ? 'Checkmate!' : 'Draw', lines: [why, title.replace('Checkmate! ', '').replace('Checkmate. ', '')], outcome, onAgain: () => this.restart() });
   }
 }

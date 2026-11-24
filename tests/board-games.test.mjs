@@ -152,44 +152,107 @@ test('backgammon: opening sequences, bar entry and a full CPU game', () => {
   assert.notEqual(BG.winner(g), null);
 });
 
-test('dominoes: set, matching and a full round', () => {
+test('dominoes: highest double leads, spinner opens 4 ways, full round', () => {
   assert.equal(Dom.fullSet().length, 28);
-  let r = Dom.newRound(seeded(5)); let guard = 0;
-  while (!Dom.roundResult(r) && guard++ < 200) {
-    const p = r.turn;
-    const c = Dom.cpuChoice(r, p);
-    if (c) r = Dom.playTile(r, p, c.i, c.side);
-    else if (r.boneyard.length) r = Dom.draw(r, p);
-    else r = Dom.passTurn(r);
-  }
-  const res = Dom.roundResult(r);
-  assert.ok(res);
-  // Every adjacent pair in the chain matches.
-  for (let i = 1; i < r.chain.length; i++) assert.equal(r.chain[i - 1][1], r.chain[i][0]);
-});
-
-test('sea battle: fleets never touch and the CPU sinks a fleet in reasonable time', () => {
-  const rng = seeded(9);
-  for (let t = 0; t < 30; t++) {
-    const fleet = Sea.randomFleet(rng);
-    const owner = new Map();
-    fleet.forEach((s, k) => s.cells.forEach((c) => owner.set(c, k)));
-    for (const [c, k] of owner) {
-      const r = Math.floor(c / 10); const col = c % 10;
-      for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) {
-        const n = (r + dr) * 10 + col + dc;
-        if (r + dr < 0 || r + dr > 9 || col + dc < 0 || col + dc > 9) continue;
-        if (owner.has(n)) assert.equal(owner.get(n), k);
+  for (let seed = 1; seed < 40; seed++) {
+    let r = Dom.newRound(seeded(seed));
+    const leadTile = r.hands[r.lead.p][r.lead.i];
+    // Only the lead tile can start the game.
+    assert.equal(Dom.playable(r, r.turn).length, 1);
+    r = Dom.playTile(r, r.turn, r.lead.i, 'center');
+    assert.deepEqual(r.center, leadTile);
+    if (leadTile[0] === leadTile[1]) {
+      assert.ok(r.spinner);
+      assert.equal(Dom.ends(r).length, 2);           // up/down not open yet
+    }
+    let guard = 0; let sawFour = false;
+    while (!Dom.roundResult(r) && guard++ < 200) {
+      const p = r.turn;
+      const c = Dom.cpuChoice(r, p);
+      if (c) r = Dom.playTile(r, p, c.i, c.side);
+      else if (r.boneyard.length) r = Dom.draw(r, p);
+      else r = Dom.passTurn(r);
+      if (Dom.ends(r).length === 4) sawFour = true;
+      // Every arm chains correctly: each tile's inner value matches the previous outer value.
+      for (const side of Dom.SIDES) {
+        const arm = r.arms[side];
+        const base = side === 'right' ? r.center[1] : r.center[0];
+        arm.forEach((t, k) => assert.equal(t[0], k === 0 ? base : arm[k - 1][1]));
       }
     }
+    assert.ok(Dom.roundResult(r));
+    if (r.spinner && r.arms.up.length) assert.ok(sawFour);
+    // 28 tiles are always accounted for.
+    assert.equal(Dom.tileCount(r) + r.boneyard.length + r.hands[0].length + r.hands[1].length, 28);
   }
-  const fleet = Sea.randomFleet(rng); const shots = new Map(); const sunk = new Set(); let n = 0;
-  while (!Sea.allSunk(fleet) && n < 100) {
-    const remaining = fleet.filter((s) => s.hits < s.cells.length).map((s) => s.cells.length);
-    const res = Sea.fire(fleet, shots, Sea.cpuTarget(shots, sunk, remaining, rng));
-    if (res.result === 'sunk') res.ship.cells.forEach((c) => sunk.add(c));
-    n++;
+});
+
+test('sea battle: fleets never overlap and the CPU sinks a fleet in reasonable time', () => {
+  const rng = seeded(9);
+  for (let t = 0; t < 50; t++) {
+    const fleet = Sea.randomFleet(rng);
+    const all = fleet.flatMap((s) => s.cells);
+    assert.equal(new Set(all).size, 17);
+    assert.deepEqual(fleet.map((s) => s.name), Sea.NAMES);
   }
-  assert.ok(Sea.allSunk(fleet));
-  assert.ok(n < 80, `took ${n} shots`);
+  assert.equal(Sea.shipCells(8, 3, true), null);            // runs off the right edge
+  let total = 0;
+  for (let g = 0; g < 10; g++) {
+    const fleet = Sea.randomFleet(rng); const shots = new Map(); const sunk = new Set(); let n = 0;
+    while (!Sea.allSunk(fleet) && n < 100) {
+      const remaining = fleet.filter((s) => s.hits < s.cells.length).map((s) => s.cells.length);
+      const res = Sea.fire(fleet, shots, Sea.cpuTarget(shots, sunk, remaining, rng));
+      if (res.result === 'sunk') res.ship.cells.forEach((c) => sunk.add(c));
+      n++;
+    }
+    assert.ok(Sea.allSunk(fleet));
+    total += n;
+  }
+  assert.ok(total / 10 < 75, `average ${total / 10} shots`);
+});
+
+test('chess: under-promotion and threefold repetition', () => {
+  const s = fen('8/P7/8/8/8/8/8/k6K w - -');
+  const m = Chess.legalMoves(s).find((x) => x.promo);
+  assert.equal(Chess.makeMove(s, { ...m, promoTo: 'N' }).board[m.to], 'N');
+  assert.equal(Chess.makeMove(s, m).board[m.to], 'Q');
+  // Knights shuffling back and forth repeat the start position.
+  let g = Chess.newGame();
+  const hist = new Map([[Chess.positionKey(g), 1]]);
+  const sq = (n) => (8 - +n[1]) * 8 + (n.charCodeAt(0) - 97);
+  const seq = [['g1', 'f3'], ['g8', 'f6'], ['f3', 'g1'], ['f6', 'g8'], ['g1', 'f3'], ['g8', 'f6'], ['f3', 'g1'], ['f6', 'g8']];
+  for (const [a, b] of seq) {
+    g = Chess.makeMove(g, Chess.legalMoves(g).find((x) => x.from === sq(a) && x.to === sq(b)));
+    const k = Chess.positionKey(g); hist.set(k, (hist.get(k) || 0) + 1);
+  }
+  assert.equal(Chess.status(g, hist).result, 'repetition');
+});
+
+test('go: dead stones are suggested and removed for scoring', () => {
+  const b = new Array(81).fill(0);
+  // Black owns the left side with a wall on column 4; a lone white stone sits inside.
+  for (let r = 0; r < 9; r++) b[r * 9 + 4] = 1;
+  for (let r = 0; r < 9; r++) b[r * 9 + 5] = 2;
+  b[4 * 9 + 1] = 2;
+  const dead = Go.suggestDead(b);
+  assert.ok(dead.has(4 * 9 + 1));
+  assert.ok(!dead.has(4));
+  const sc = Go.finalScore(b, dead);
+  assert.equal(sc.black, 45);           // columns 0-4
+  assert.equal(sc.white, 36 + Go.KOMI); // columns 5-8
+  // Toggling brings it back.
+  assert.ok(!Go.toggleDead(b, dead, 4 * 9 + 1).has(4 * 9 + 1));
+});
+
+test('backgammon: opening roll and gammon scoring', () => {
+  const o = BG.openingRoll(seeded(3));
+  assert.notEqual(o.dice[0], o.dice[1]);
+  assert.equal(o.first, o.dice[0] > o.dice[1] ? 0 : 1);
+  const s = BG.newGame();
+  s.off[0] = 15; for (let i = 1; i <= 24; i++) if (s.pts[i].owner === 0) s.pts[i] = { owner: null, n: 0 };
+  assert.equal(BG.winType(s, 0).points, 3);   // dark still has 2 on point 1 = light's home
+  s.pts[1] = { owner: null, n: 0 }; s.pts[12].n += 2;
+  assert.equal(BG.winType(s, 0).points, 2);
+  s.off[1] = 1; s.pts[12].n -= 1;
+  assert.equal(BG.winType(s, 0).points, 1);
 });

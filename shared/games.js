@@ -5,7 +5,7 @@ export const GAMES = [
   {
     id: 'game-night',
     title: 'Game Night',
-    tagline: 'Tic-Tac-Toe, Reversi and Yacht dice',
+    tagline: '20 board, card, arcade and puzzle games',
     art: 'mas',
     status: 'playable',
   },

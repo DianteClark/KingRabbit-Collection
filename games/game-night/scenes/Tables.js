@@ -4,7 +4,7 @@ import { text, button } from '../../../shared/core/ui.js';
 import { WIDTH } from '../../../shared/core/boot.js';
 import { header, go, setBackground, toast } from './common.js';
 import { endGame } from './boardkit.js';
-import { newGame, turnSequences, apply, rollDice, winner, other, cpuTurn, pipCount } from '../logic/backgammon.js';
+import { newGame, turnSequences, apply, rollDice, winner, other, cpuTurn, pipCount, winType, openingRoll } from '../logic/backgammon.js';
 
 // Layout: 12 points per row, 6 | bar | 6. Light (player 0) moves 24 -> 1, home bottom-right.
 const PW = 24;                  // point width (8px sprite x3)
@@ -69,7 +69,12 @@ export class Tables extends Phaser.Scene {
     this.over = false;
     this.dice = [];
     this.selected = null;
-    this.startTurn();
+    // Opening roll: one die each, higher goes first and plays both numbers.
+    const o = openingRoll();
+    this.s = { ...this.s, turn: o.first };
+    const [a, b] = o.dice;
+    toast(this, `Opening roll: ${this.name(0)} ${a}, ${this.name(1)} ${b}`, 440);
+    this.startTurn(o.first === 0 ? [a, b] : [b, a]);
   }
 
   name(p) {
@@ -89,24 +94,26 @@ export class Tables extends Phaser.Scene {
   }
 
   // ---------- turn flow ----------
-  startTurn() {
+  startTurn(preset) {
     this.dice = [];
     this.selected = null;
     this.turnStart = null;
     this.draw();
-    this.rollBtn.setEnabled(!this.isCpu());
+    this.rollBtn.setEnabled(!this.isCpu() && !preset);
     this.undoBtn.setVisible(false);
     if (this.isCpu()) {
-      this.status.setText('CPU is rolling...');
-      this.time.delayedCall(600, () => this.cpuPlay());
+      this.status.setText(preset ? 'CPU won the opening roll' : 'CPU is rolling...');
+      this.time.delayedCall(preset ? 1400 : 600, () => this.cpuPlay(preset));
+    } else if (preset) {
+      this.time.delayedCall(900, () => this.humanRoll(preset));
     } else {
       this.status.setText(`${this.name(this.s.turn)}: tap Roll`);
     }
   }
 
-  humanRoll() {
+  humanRoll(preset) {
     if (this.over || this.dice.length || this.isCpu()) return;
-    this.dice = rollDice();
+    this.dice = Array.isArray(preset) ? preset.slice() : rollDice();
     this.used = [];
     this.turnStart = { s: this.s, dice: this.dice.slice() };
     this.rollBtn.setEnabled(false);
@@ -177,8 +184,8 @@ export class Tables extends Phaser.Scene {
     this.startTurn();
   }
 
-  cpuPlay() {
-    this.dice = rollDice();
+  cpuPlay(preset) {
+    this.dice = preset ? preset.slice() : rollDice();
     this.status.setText(`CPU rolled ${this.dice.slice(0, 2).join(' ')}${this.dice.length === 4 ? ' (double)' : ''}`);
     this.draw();
     const pick = cpuTurn(this.s, this.dice);
@@ -268,11 +275,12 @@ export class Tables extends Phaser.Scene {
   finish() {
     this.over = true;
     const w = winner(this.s);
+    const kind = winType(this.s, w);
     const title = this.mode === 'cpu' ? (w === 0 ? 'You win!' : 'CPU wins') : `${this.name(w)} wins!`;
-    this.status.setText(title);
+    this.status.setText(`${title} ${kind.name}`);
     endGame(this, {
       id: 'tables', mode: this.mode, title,
-      lines: [`All 15 borne off by ${this.name(w)}`], outcome: w === 0 ? 'w' : 'l', onAgain: () => this.restart(),
+      lines: [kind.name, `Worth ${kind.points} point${kind.points > 1 ? 's' : ''}`], outcome: w === 0 ? 'w' : 'l', onAgain: () => this.restart(),
     });
   }
 }

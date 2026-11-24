@@ -5,8 +5,12 @@ import { WIDTH } from '../../../shared/core/boot.js';
 import { header, go, setBackground, toast } from './common.js';
 import { endGame } from './boardkit.js';
 
-// Portrait table. Simplified 8-ball: first ball potted sets your group (solids 1-7 or stripes 9-15),
-// pot your group then the 8. Potting the cue ball or hitting nothing is a foul (turn passes, cue respotted).
+// Portrait table, 8-ball rules:
+//  - The table is open after the break; your first legal pot after that sets your group
+//    (solids 1-7 or stripes 9-15). Pot your whole group, then call a pocket and sink the 8.
+//  - Fouls: scratching, hitting nothing, hitting the other group first, or no ball reaching a rail /
+//    a pocket after contact. After a foul your opponent gets ball in hand (place the cue anywhere).
+//  - Sinking the 8 early, in the wrong pocket, or scratching on it loses. An 8 on the break is respotted.
 const T = { x: 52, y: 146, w: 256, h: 420 };
 const R = 8;
 const POCKET_R = 14;
@@ -69,6 +73,8 @@ export class Pool extends Phaser.Scene {
     this.groups = [null, null];
     this.over = false;
     this.moving = false;
+    this.breakShot = true;
+    this.ballInHand = false;
     this.redraw();
     this.startTurn();
   }
@@ -96,21 +102,53 @@ export class Pool extends Phaser.Scene {
     });
   }
 
+  onEight(p) { return this.groups[p] && this.remaining(p) === 0; }
+
   startTurn() {
     this.potted = [];
     this.firstHit = null;
-    this.status.setText(this.isCpu() ? 'CPU is lining up...' : `${this.name(this.turn)} to shoot`);
+    this.railAfterHit = false;
+    this.eightPocket = -1;
+    this.calledPocket = -1;
+    let msg = this.isCpu() ? 'CPU is lining up...' : `${this.name(this.turn)} to shoot`;
+    if (!this.isCpu() && this.ballInHand) msg = 'Ball in hand: drag the cue ball, then shoot';
+    else if (!this.isCpu() && this.onEight(this.turn)) msg = 'On the 8: tap a pocket to call it';
+    this.status.setText(msg);
     this.redraw();
+    this.drawCall();
     if (this.isCpu()) this.time.delayedCall(900, () => this.cpuShoot());
+  }
+
+  drawCall() {
+    this.callG ??= this.add.graphics().setDepth(9);
+    this.callG.clear();
+    if (this.calledPocket >= 0) {
+      const [x, y] = POCKETS[this.calledPocket];
+      this.callG.lineStyle(3, hex(PALETTE.gold)).strokeCircle(x, y, POCKET_R + 5);
+    }
   }
 
   // ---------- aiming ----------
   aimStart(p) {
     if (this.over || this.moving || this.isCpu()) return;
+    const c = this.cue();
+    // Calling the pocket for the 8.
+    if (this.onEight(this.turn)) {
+      const k = POCKETS.findIndex(([x, y]) => Math.hypot(p.x - x, p.y - y) < POCKET_R + 14);
+      if (k >= 0) { this.calledPocket = k; this.drawCall(); this.status.setText('Pocket called. Now shoot the 8'); return; }
+    }
+    if (this.ballInHand && Math.hypot(p.x - c.x, p.y - c.y) < R * 3) { this.placing = true; return; }
     this.aiming = { x: p.x, y: p.y };
   }
 
   aimMove(p) {
+    if (this.placing) {
+      const c = this.cue();
+      const x = Phaser.Math.Clamp(p.x, T.x + R, T.x + T.w - R);
+      const y = Phaser.Math.Clamp(p.y, T.y + R, T.y + T.h - R);
+      if (!this.balls.some((b) => b !== c && !b.in && Math.hypot(b.x - x, b.y - y) < R * 2.1)) { c.x = x; c.y = y; this.redraw(); }
+      return;
+    }
     if (!this.aiming) return;
     this.aiming = { x: p.x, y: p.y };
     this.drawAim();
@@ -150,7 +188,13 @@ export class Pool extends Phaser.Scene {
   }
 
   aimEnd() {
+    if (this.placing) { this.placing = false; return; }
     if (!this.aiming) return;
+    if (this.onEight(this.turn) && this.calledPocket < 0) {
+      this.aiming = null; this.aimG.clear();
+      toast(this, 'Call a pocket for the 8 first', 360);
+      return;
+    }
     const shot = this.shotFromAim();
     this.aiming = null;
     this.aimG.clear();
@@ -159,6 +203,7 @@ export class Pool extends Phaser.Scene {
   }
 
   shoot(dir, power) {
+    this.ballInHand = false;
     const c = this.cue();
     c.vx = dir.x * power * MAX_SHOT; c.vy = dir.y * power * MAX_SHOT;
     this.moving = true;
@@ -188,14 +233,21 @@ export class Pool extends Phaser.Scene {
     const live = this.balls.filter((b) => !b.in);
     for (const b of live) {
       b.x += b.vx * h; b.y += b.vy * h;
-      for (const [px, py] of POCKETS) {
-        if (Math.hypot(b.x - px, b.y - py) < POCKET_R - 2) { b.in = true; b.vx = 0; b.vy = 0; this.potted.push(b.n); break; }
+      for (let k = 0; k < POCKETS.length; k++) {
+        const [px, py] = POCKETS[k];
+        if (Math.hypot(b.x - px, b.y - py) < POCKET_R - 2) {
+          b.in = true; b.vx = 0; b.vy = 0; this.potted.push(b.n);
+          if (b.n === 8) this.eightPocket = k;
+          break;
+        }
       }
       if (b.in) continue;
-      if (b.x < T.x + R) { b.x = T.x + R; b.vx = Math.abs(b.vx) * 0.82; }
-      if (b.x > T.x + T.w - R) { b.x = T.x + T.w - R; b.vx = -Math.abs(b.vx) * 0.82; }
-      if (b.y < T.y + R) { b.y = T.y + R; b.vy = Math.abs(b.vy) * 0.82; }
-      if (b.y > T.y + T.h - R) { b.y = T.y + T.h - R; b.vy = -Math.abs(b.vy) * 0.82; }
+      let rail = false;
+      if (b.x < T.x + R) { b.x = T.x + R; b.vx = Math.abs(b.vx) * 0.82; rail = true; }
+      if (b.x > T.x + T.w - R) { b.x = T.x + T.w - R; b.vx = -Math.abs(b.vx) * 0.82; rail = true; }
+      if (b.y < T.y + R) { b.y = T.y + R; b.vy = Math.abs(b.vy) * 0.82; rail = true; }
+      if (b.y > T.y + T.h - R) { b.y = T.y + T.h - R; b.vy = -Math.abs(b.vy) * 0.82; rail = true; }
+      if (rail && this.firstHit !== null) this.railAfterHit = true;
     }
     for (let i = 0; i < live.length; i++) {
       for (let j = i + 1; j < live.length; j++) {
@@ -220,22 +272,34 @@ export class Pool extends Phaser.Scene {
   // ---------- rules ----------
   resolveShot() {
     const me = this.turn; const opp = 1 - me;
+    const wasBreak = this.breakShot;
+    this.breakShot = false;
     const scratch = this.potted.includes(0);
     const noHit = this.firstHit === null;
-    const myGroupBefore = this.groups[me];
-    // Hitting the wrong group first is also a foul once groups are set.
-    const wrongFirst = myGroupBefore && this.firstHit !== null
-      && groupOf(this.firstHit) !== myGroupBefore && !(groupOf(this.firstHit) === 'eight' && this.remaining(me) === 0);
-    const foul = scratch || noHit || wrongFirst;
+    const myGroup = this.groups[me];
+    const wrongFirst = myGroup && this.firstHit !== null
+      && groupOf(this.firstHit) !== myGroup && !(groupOf(this.firstHit) === 'eight' && this.remaining(me) === 0);
+    const noRail = !noHit && !this.potted.length && !this.railAfterHit;
+    const foul = scratch || noHit || wrongFirst || noRail;
 
     if (this.potted.includes(8)) {
-      const cleared = myGroupBefore && this.remaining(me) === 0;
-      this.finish(cleared && !scratch ? me : opp, cleared && !scratch ? 'Sank the 8 ball!' : 'The 8 went down early');
-      return;
+      if (wasBreak) {
+        // 8 on the break: spot it and carry on.
+        const eight = this.balls.find((b) => b.n === 8);
+        eight.in = false; eight.x = FOOT.x; eight.y = FOOT.y;
+        while (this.balls.some((b) => b !== eight && !b.in && Math.hypot(b.x - eight.x, b.y - eight.y) < R * 2.1)) eight.y -= R * 2.1;
+        toast(this, '8 on the break - respotted', 360);
+      } else {
+        const cleared = this.onEight(me);
+        const rightPocket = this.calledPocket < 0 || this.eightPocket === this.calledPocket;
+        if (cleared && !scratch && rightPocket) this.finish(me, 'Sank the 8 in the called pocket!');
+        else this.finish(opp, !cleared ? 'The 8 went down early' : scratch ? 'Scratched on the 8' : 'The 8 went in the wrong pocket');
+        return;
+      }
     }
-    // Assign groups on the first clean pot.
-    if (!myGroupBefore && !foul) {
-      const first = this.potted.find((n) => n !== 0);
+    // Groups are decided by the first legal pot after the break.
+    if (!myGroup && !foul && !wasBreak) {
+      const first = this.potted.find((n) => n !== 0 && n !== 8);
       if (first) {
         this.groups[me] = groupOf(first);
         this.groups[opp] = this.groups[me] === 'solids' ? 'stripes' : 'solids';
@@ -245,17 +309,17 @@ export class Pool extends Phaser.Scene {
     if (scratch) {
       const c = this.cue();
       c.in = false; c.x = HEAD.x; c.y = HEAD.y;
-      // Nudge it if something is sitting on the spot.
       while (this.balls.some((b) => b !== c && !b.in && Math.hypot(b.x - c.x, b.y - c.y) < R * 2.2)) c.x += R * 2.2;
     }
-    const mine = this.potted.filter((n) => n !== 0 && (!this.groups[me] || groupOf(n) === this.groups[me]));
-    if (foul) toast(this, scratch ? 'Scratch! Foul' : noHit ? 'No ball hit - foul' : 'Wrong ball first - foul', 360);
-    if (!foul && mine.length) {
-      this.startTurn(); // keep shooting
-    } else {
+    const mine = this.potted.filter((n) => n !== 0 && n !== 8 && (!this.groups[me] || groupOf(n) === this.groups[me]));
+    if (foul) {
+      toast(this, `${scratch ? 'Scratch' : noHit ? 'No ball hit' : wrongFirst ? 'Wrong ball first' : 'No rail after contact'} - foul! Ball in hand`, 360);
+      this.ballInHand = true;
       this.turn = opp;
-      this.startTurn();
+    } else if (!mine.length && !(wasBreak && this.potted.some((n) => n !== 0))) {
+      this.turn = opp;
     }
+    this.startTurn();
   }
 
   finish(winner, why) {
@@ -270,12 +334,48 @@ export class Pool extends Phaser.Scene {
   cpuShoot() {
     if (this.over) return;
     const c = this.cue();
-    const g = this.groups[1];
-    let targets = this.balls.filter((b) => !b.in && b.n !== 0 && b.n !== 8 && (!g || groupOf(b.n) === g));
-    if (!targets.length) targets = this.balls.filter((b) => !b.in && b.n === 8);
+    if (this.ballInHand) {
+      // Try spots around the table and keep the one with the easiest pot.
+      let bestSpot = { x: c.x, y: c.y, score: this.bestShot()?.score ?? -1e9 };
+      for (let k = 0; k < 40; k++) {
+        const x = T.x + R + Math.random() * (T.w - 2 * R); const y = T.y + R + Math.random() * (T.h - 2 * R);
+        if (this.balls.some((b) => b !== c && !b.in && Math.hypot(b.x - x, b.y - y) < R * 2.2)) continue;
+        c.x = x; c.y = y;
+        const sh = this.bestShot();
+        if (sh && sh.score > bestSpot.score) bestSpot = { x, y, score: sh.score };
+      }
+      c.x = bestSpot.x; c.y = bestSpot.y;
+      this.redraw();
+    }
+    const best = this.bestShot();
+    if (best && this.onEight(1)) { this.calledPocket = best.pocket; this.drawCall(); }
+    let dir; let power;
+    if (best) {
+      dir = rotate(best.dir, (Math.random() - 0.5) * 0.035);
+      power = Math.min(1, 0.32 + best.dist / 900 + best.cut * 0.2);
+    } else {
+      const targets = this.targetsFor(1);
+      const t = targets.sort((a, b) => Math.hypot(a.x - c.x, a.y - c.y) - Math.hypot(b.x - c.x, b.y - c.y))[0];
+      dir = norm(t.x - c.x, t.y - c.y);
+      power = 0.55;
+    }
+    this.aimG.clear().lineStyle(2, hex(PALETTE.cream), 0.7).lineBetween(c.x, c.y, c.x + dir.x * 120, c.y + dir.y * 120);
+    this.time.delayedCall(500, () => { this.aimG.clear(); this.shoot(dir, power); });
+  }
+
+  targetsFor(p) {
+    const g = this.groups[p];
+    const t = this.balls.filter((b) => !b.in && b.n !== 0 && b.n !== 8 && (!g || groupOf(b.n) === g));
+    return t.length ? t : this.balls.filter((b) => !b.in && b.n === 8);
+  }
+
+  /** Easiest pot for the CPU from where the cue ball is: { dir, dist, cut, pocket, score } or null. */
+  bestShot() {
+    const c = this.cue();
+    const targets = this.targetsFor(1);
     let best = null;
-    for (const t of targets) {
-      for (const [px, py] of POCKETS) {
+    POCKETS.forEach(([px, py], pocket) => {
+      for (const t of targets) {
         const tp = norm(px - t.x, py - t.y);
         const ghost = { x: t.x - tp.x * R * 2, y: t.y - tp.y * R * 2 };
         const cg = norm(ghost.x - c.x, ghost.y - c.y);
@@ -284,22 +384,10 @@ export class Pool extends Phaser.Scene {
         if (!this.clear(c, ghost, [t]) || !this.clear(t, { x: px, y: py }, [t])) continue;
         const dist = Math.hypot(ghost.x - c.x, ghost.y - c.y) + Math.hypot(px - t.x, py - t.y);
         const score = -cut * 220 - dist * 0.4;
-        if (!best || score > best.score) best = { score, dir: cg, dist, cut };
+        if (!best || score > best.score) best = { score, dir: cg, dist, cut, pocket };
       }
-    }
-    let dir; let power;
-    if (best) {
-      const err = (Math.random() - 0.5) * 0.035;
-      dir = rotate(best.dir, err);
-      power = Math.min(1, 0.32 + best.dist / 900 + best.cut * 0.2);
-    } else {
-      const t = targets.sort((a, b) => Math.hypot(a.x - c.x, a.y - c.y) - Math.hypot(b.x - c.x, b.y - c.y))[0];
-      dir = norm(t.x - c.x, t.y - c.y);
-      power = 0.55;
-    }
-    // Show the aim briefly, then shoot.
-    this.aimG.clear().lineStyle(2, hex(PALETTE.cream), 0.7).lineBetween(c.x, c.y, c.x + dir.x * 120, c.y + dir.y * 120);
-    this.time.delayedCall(500, () => { this.aimG.clear(); this.shoot(dir, power); });
+    });
+    return best;
   }
 
   clear(from, to, ignore) {

@@ -4,7 +4,7 @@ import { text, button } from '../../../shared/core/ui.js';
 import { WIDTH } from '../../../shared/core/boot.js';
 import { header, go, setBackground, toast, popIn } from './common.js';
 import { grid, endGame, think } from './boardkit.js';
-import { N, newGame, play, pass, isOver, score, cpuMove, tryMove } from '../logic/go.js';
+import { N, newGame, play, pass, isOver, cpuMove, tryMove, suggestDead, toggleDead, finalScore } from '../logic/go.js';
 
 const CELL = 32;
 const LEFT = (WIDTH - CELL * N) / 2;
@@ -43,6 +43,9 @@ export class Go extends Phaser.Scene {
 
   restart() {
     this.game = newGame();
+    this.counting = false;
+    this.dead = new Set();
+    this.passBtn?.setLabel('Pass');
     this.over = false;
     this.busy = false;
     this.lastMove = -1;
@@ -100,6 +103,10 @@ export class Go extends Phaser.Scene {
   }
 
   tap(i) {
+    if (this.counting) {
+      if (i >= 0 && this.game.board[i]) { this.dead = toggleDead(this.game.board, this.dead, i); this.drawCounting(); }
+      return;
+    }
     if (i < 0 || this.over || this.busy || this.isCpu()) return;
     if (this.game.board[i]) return;
     if (!tryMove(this.game, i)) { toast(this, 'Not allowed there (suicide or ko)', 600); return; }
@@ -117,6 +124,7 @@ export class Go extends Phaser.Scene {
   }
 
   humanPass() {
+    if (this.counting) { this.score(); return; }
     if (this.over || this.busy || this.isCpu()) return;
     this.game = pass(this.game);
     this.lastMove = -1;
@@ -125,7 +133,7 @@ export class Go extends Phaser.Scene {
   }
 
   resign() {
-    if (this.over) return;
+    if (this.over || this.counting) return;
     this.over = true;
     const loser = this.mode === 'cpu' ? 1 : this.game.turn;
     const winner = 3 - loser;
@@ -136,15 +144,42 @@ export class Go extends Phaser.Scene {
   }
 
   finish() {
+    // Both passed: agree which stones are dead before counting.
+    this.counting = true;
+    this.dead = suggestDead(this.game.board);
+    this.passBtn.setLabel('Score');
+    this.status.setText('Tap groups to mark them dead');
+    this.drawCounting();
+  }
+
+  drawCounting() {
+    const { territory, black, white } = finalScore(this.game.board, this.dead);
+    this.draw(territory);
+    for (const i of this.dead) {
+      const { x, y } = this.g.center(i);
+      this.marks.lineStyle(3, hex(PALETTE.red)).lineBetween(x - 8, y - 8, x + 8, y + 8).lineBetween(x + 8, y - 8, x - 8, y + 8);
+    }
+    this.stones.list.forEach((img) => {
+      const i = this.g.indexAt(img.x, img.y);
+      img.setAlpha(this.dead.has(i) ? 0.45 : 1);
+    });
+    this.caps.setText(`Count so far: ${this.name(1)} ${black}  ${this.name(2)} ${white}`);
+  }
+
+  score() {
+    this.counting = false;
     this.over = true;
-    const sc = score(this.game.board);
+    const sc = finalScore(this.game.board, this.dead);
+    this.game = { ...this.game, board: sc.board };
+    this.dead = new Set();
     this.draw(sc.territory);
     const blackWins = sc.black > sc.white;
     const title = this.mode === 'cpu' ? (blackWins ? 'You win!' : 'CPU wins') : `${blackWins ? 'Black' : 'White'} wins!`;
     this.status.setText(title);
+    this.passBtn.setLabel('Pass');
     endGame(this, {
       id: 'go', mode: this.mode, title,
-      lines: [`${this.name(1)} ${sc.black}  -  ${sc.white} ${this.name(2)}`, '(White gets 6.5 komi)'],
+      lines: [`${this.name(1)} ${sc.black}  -  ${sc.white} ${this.name(2)}`, '(stones + territory, White +6.5)'],
       outcome: blackWins ? 'w' : 'l', onAgain: () => this.restart(),
     });
   }

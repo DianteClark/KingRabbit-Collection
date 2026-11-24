@@ -25,3 +25,13 @@ assert.equal(Y.score('large',[2,3,4,5,6]),40); assert.equal(Y.score('yacht',[4,4
 assert.equal(Y.score('three',[4,4,4,1,2]),15); assert.equal(Y.score('fours',[4,4,4,1,2]),12);
 assert.deepEqual(Y.totals({ones:3,twos:6,threes:9,fours:12,fives:15,sixes:18,chance:20}),{upper:63,bonus:35,lower:20,total:118});
 console.log('all logic tests passed');
+// Joker rules
+{
+  const card = { yacht: 50 };
+  assert.deepEqual(Y.allowed(card, [3, 3, 3, 3, 3]), ['threes']);
+  card.threes = 9;
+  assert.ok(Y.allowed(card, [3, 3, 3, 3, 3]).includes('house'));
+  assert.equal(Y.scoreFor('large', [3, 3, 3, 3, 3], card), 40);
+  assert.equal(Y.scoreFor('large', [1, 2, 3, 4, 6], {}), 0);
+  console.log('joker rules ok');
+}

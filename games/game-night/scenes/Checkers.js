@@ -35,6 +35,7 @@ export class Checkers extends Phaser.Scene {
     this.over = false;
     this.busy = false;
     this.last = null;
+    this.quiet = 0;   // moves in a row with no capture and no crowning
     this.draw();
     this.next();
   }
@@ -69,6 +70,7 @@ export class Checkers extends Phaser.Scene {
   next() {
     const w = winnerIfStuck(this.board, this.turn);
     if (w) { this.finish(w); return; }
+    if (this.quiet >= 80) { this.drawGame(); return; }
     this.moves = legalMoves(this.board, this.turn);
     if (this.isCpu()) {
       this.status.setText('CPU is thinking...');
@@ -100,7 +102,10 @@ export class Checkers extends Phaser.Scene {
     });
     const hops = m.path.slice(1).map((sq) => this.g.center(sq));
     const finish = () => {
+      const before = this.board[m.from];
       this.board = play(this.board, m);
+      const crowned = before !== this.board[m.to];
+      this.quiet = m.captured.length || crowned ? 0 : this.quiet + 1;
       this.last = { from: m.from, to: m.to };
       this.turn = other(this.turn);
       this.busy = false;
@@ -116,12 +121,21 @@ export class Checkers extends Phaser.Scene {
     });
   }
 
+  drawGame() {
+    this.over = true;
+    this.status.setText('Draw');
+    endGame(this, {
+      id: 'checkers', mode: this.mode, title: 'Draw',
+      lines: ['40 moves each with no capture', 'or crowning'], outcome: 'd', onAgain: () => this.restart(),
+    });
+  }
+
   finish(winner) {
     this.over = true;
-    this.status.setText(`${this.name(winner)} win${this.mode === 'cpu' && winner === 'd' ? '' : 's'}!`);
     const title = this.mode === 'cpu' ? (winner === 'd' ? 'You win!' : 'CPU wins') : `${this.name(winner)} wins!`;
+    this.status.setText(title);
     endGame(this, {
-      id: 'checkers', mode: this.mode, title, lines: ['No moves left for the loser'],
+      id: 'checkers', mode: this.mode, title, lines: ['The other side has no moves left'],
       outcome: winner === 'd' ? 'w' : 'l', onAgain: () => this.restart(),
     });
   }

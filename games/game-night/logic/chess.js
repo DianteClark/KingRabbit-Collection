@@ -1,8 +1,8 @@
 // Chess rules + CPU.
 // Board: 64 squares, index = row * 8 + col, row 0 is rank 8 (black's back rank).
 // Pieces: 'P','N','B','R','Q','K' white, lowercase black, null empty.
-// Simplifications: pawns always promote to a queen; draws by stalemate, bare kings / single
-// minor piece, and the 50-move rule (threefold repetition isn't tracked).
+// Draws: stalemate, insufficient material, the 50-move rule and threefold repetition
+// (pass the position history to status()). Promotion: set m.promoTo ('Q','R','B','N'); defaults to a queen.
 
 const isWhite = (p) => p && p === p.toUpperCase();
 const colorOf = (p) => (p ? (isWhite(p) ? 'w' : 'b') : null);
@@ -116,7 +116,8 @@ export function makeMove(s, m) {
   const board = s.board.slice();
   const castle = { ...s.castle };
   const [r] = rc(m.from);
-  board[m.to] = m.promo ? (s.turn === 'w' ? 'Q' : 'q') : m.piece;
+  const promoTo = m.promoTo || 'Q';
+  board[m.to] = m.promo ? (s.turn === 'w' ? promoTo.toUpperCase() : promoTo.toLowerCase()) : m.piece;
   board[m.from] = null;
   if (m.enPassant) board[m.to + (s.turn === 'w' ? 8 : -8)] = null;
   if (m.castle) {
@@ -153,12 +154,21 @@ function insufficient(board) {
   return rest.length === 0 || (rest.length === 1 && 'NB'.includes(rest[0].toUpperCase()));
 }
 
-/** null while playing, else { result: 'checkmate'|'stalemate'|'draw', winner: 'w'|'b'|null } */
-export function status(s) {
+/** Key for repetition checks: same pieces, side to move, castling rights and en passant square. */
+export const positionKey = (s) => `${s.board.map((p) => p || '.').join('')}|${s.turn}|${Object.entries(s.castle).filter(([, v]) => v).map(([k]) => k).join('')}|${s.ep}`;
+
+/**
+ * null while playing, else { result, winner }.
+ * result: 'checkmate' | 'stalemate' | 'material' | 'fifty' | 'repetition'
+ * history: Map positionKey -> times seen (optional).
+ */
+export function status(s, history) {
   if (!legalMoves(s).length) {
     return inCheck(s) ? { result: 'checkmate', winner: s.turn === 'w' ? 'b' : 'w' } : { result: 'stalemate', winner: null };
   }
-  if (s.half >= 100 || insufficient(s.board)) return { result: 'draw', winner: null };
+  if (insufficient(s.board)) return { result: 'material', winner: null };
+  if (s.half >= 100) return { result: 'fifty', winner: null };
+  if (history && (history.get(positionKey(s)) || 0) >= 3) return { result: 'repetition', winner: null };
   return null;
 }
 
