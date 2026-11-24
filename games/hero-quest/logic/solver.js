@@ -107,7 +107,7 @@ function settle(st, log) {
       }
       if (r.on.clear && r.enemies.length && !st.flags[trigFlag(r, 'clear')]) { st.flags[trigFlag(r, 'clear')] = true; changed = true; }
       if (r.on.switch && !st.flags[trigFlag(r, 'switch')]) {
-        const sol = solvePuzzle(r, st.flags);
+        const sol = puzzleCache[r.id] ||= solvePuzzle(r, st.flags);
         if (sol.ok) {
           st.flags[trigFlag(r, 'switch')] = true;
           if (r.on.switch.door) { const [x, y] = DOOR_CELL[r.on.switch.door]; st.flags[cellFlag(r, x, y)] = true; }
@@ -154,6 +154,7 @@ function gain(st, item, area) {
   else if (item === 'heart') st.hearts = (st.hearts || 0) + 1;
 }
 
+const puzzleCache = {};
 const clone = (st) => JSON.parse(JSON.stringify(st));
 
 /**
@@ -218,41 +219,55 @@ export function solvePuzzle(r, flags = {}) {
   return { ok: results.length > 0 && results.every((x) => x.ok), results };
 
   function search(start) {
-    const bkey = (bs) => bs.map(([x, y]) => `${x},${y}`).sort().join(';');
-    const playerRegion = (bs, px, py) => {
-      const occ = new Set(bs.map(([x, y]) => `${x},${y}`));
-      const seen = new Set([`${px},${py}`]); const q = [[px, py]];
-      while (q.length) {
-        const [x, y] = q.pop();
-        for (const [dx, dy] of [[0, 1], [0, -1], [1, 0], [-1, 0]]) {
-          const nx = x + dx; const ny = y + dy; const k = `${nx},${ny}`;
-          if (seen.has(k) || occ.has(k)) continue;
-          if (!(floor(nx, ny) || (nx === start[0] && ny === start[1]))) continue;
-          seen.add(k); q.push([nx, ny]);
+    // Cells are numbered y * COLS + x; a state is the sorted block cells plus the lowest cell the
+    // player can reach (the player's whole region is equivalent).
+    const N = COLS * ROWS;
+    const isFloor = new Uint8Array(N); const isBlockFloor = new Uint8Array(N);
+    for (let y = 0; y < ROWS; y++) for (let x = 0; x < COLS; x++) { isFloor[y * COLS + x] = floor(x, y) ? 1 : 0; isBlockFloor[y * COLS + x] = blockFloor(x, y) ? 1 : 0; }
+    isFloor[start[1] * COLS + start[0]] = 1;
+    const swc = switches.map(([x, y]) => y * COLS + x);
+    const occ = new Uint8Array(N); const seenR = new Int32Array(N); let stamp = 0;
+    const region = (bs, p) => {
+      stamp++;
+      for (const c of bs) occ[c] = stamp;
+      const out = [p]; seenR[p] = stamp;
+      for (let i = 0; i < out.length; i++) {
+        const c = out[i]; const x = c % COLS;
+        const ns = [x > 0 ? c - 1 : -1, x < COLS - 1 ? c + 1 : -1, c - COLS, c + COLS];
+        for (const n of ns) {
+          if (n < 0 || n >= N || seenR[n] === stamp || occ[n] === stamp || !isFloor[n]) continue;
+          seenR[n] = stamp; out.push(n);
         }
       }
-      return seen;
+      return out;
     };
-    const canon = (region) => [...region].sort()[0];
-    const startState = { bs: blocks0, p: start };
+    const startState = { bs: blocks0.map(([x, y]) => y * COLS + x).sort((m, n) => m - n), p: start[1] * COLS + start[0], prev: null, push: null };
     const visited = new Set();
     const q = [startState];
-    let expanded = 0;
-    while (q.length && expanded < 200000) {
-      const st = q.shift(); expanded++;
-      const region = playerRegion(st.bs, st.p[0], st.p[1]);
-      const k = `${bkey(st.bs)}|${canon(region)}`;
+    let head = 0;
+    while (head < q.length && visited.size < 200000) {
+      const st = q[head++];
+      const reg = region(st.bs, st.p);
+      let low = N; for (const c of reg) if (c < low) low = c;
+      const k = `${st.bs.join(',')}|${low}`;
       if (visited.has(k)) continue;
       visited.add(k);
-      const covered = switches.every(([x, y]) => st.bs.some(([bx, by]) => bx === x && by === y));
-      if (covered && rewardReachable(region, st.bs)) return { ok: true, states: visited.size };
-      st.bs.forEach(([bx, by], i) => {
+      const inReg = new Set(reg);
+      if (swc.every((c) => st.bs.includes(c)) && rewardReachable(new Set(reg.map((c) => `${c % COLS},${Math.floor(c / COLS)}`)))) {
+        const plan = [];
+        for (let n = st; n.push; n = n.prev) plan.unshift(n.push);
+        return { ok: true, states: visited.size, start, plan };
+      }
+      st.bs.forEach((b, i) => {
+        const bx = b % COLS; const by = Math.floor(b / COLS);
         for (const [dx, dy] of [[0, 1], [0, -1], [1, 0], [-1, 0]]) {
           const px = bx - dx; const py = by - dy; const tx = bx + dx; const ty = by + dy;
-          if (!region.has(`${px},${py}`)) continue;
-          if (!blockFloor(tx, ty) || st.bs.some(([ox, oy]) => ox === tx && oy === ty)) continue;
-          const bs = st.bs.map((b, j) => (j === i ? [tx, ty] : b));
-          q.push({ bs, p: [bx, by] });
+          if (px < 0 || py < 0 || px >= COLS || py >= ROWS || tx < 0 || ty < 0 || tx >= COLS || ty >= ROWS) continue;
+          if (!inReg.has(py * COLS + px)) continue;
+          const t = ty * COLS + tx;
+          if (!isBlockFloor[t] || st.bs.includes(t)) continue;
+          const bs = st.bs.map((o, j) => (j === i ? t : o)).sort((m, n) => m - n);
+          q.push({ bs, p: b, prev: st, push: { block: [bx, by], dir: [dx, dy] } });
         }
       });
     }
