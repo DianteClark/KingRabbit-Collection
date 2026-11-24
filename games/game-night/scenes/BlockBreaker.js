@@ -4,6 +4,7 @@ import { text } from '../../../shared/core/ui.js';
 import { WIDTH } from '../../../shared/core/boot.js';
 import { header, go, setBackground, toast, modal } from './common.js';
 import { getBest, submitBest } from '../save.js';
+import { sfx } from '../../../shared/core/sfx.js';
 
 const F = { x: 20, y: 96, w: WIDTH - 40, h: 500 };
 const BW = 32; const BH = 16;           // brick = 16x8 sprite at x2
@@ -18,6 +19,9 @@ const LEVELS = [
   ['..llllll..', '.lrrrrrrl.', 'lroooooorl', 'lrog..gorl', 'lroooooorl', '.lrrrrrrl.', '..llllll..'],
   ['rgrgrgrgrg', 'grgrgrgrgr', 'oooooooooo', 'l.l.l.l.l.', '.l.l.l.l.l', 'gggggggggg', 'rrrrrrrrrr'],
   ['llllllllll', 'l........l', 'l.rrrrrr.l', 'l.roooor.l', 'l.rogggr.l', 'l.roooor.l', 'l.rrrrrr.l', 'llllllllll'],
+  ['g.o.r.l.r.', '.g.o.r.l.r', 'g.o.r.l.r.', '.g.o.r.l.r', 'g.o.r.l.r.', '.g.o.r.l.r'],
+  ['....ll....', '...lrrl...', '..lroorl..', '.lroggorl.', 'lroggggorl', '.lroggorl.', '..lroorl..', '...lrrl...', '....ll....'],
+  ['rrrrrrrrrr', 'l..l..l..l', 'oooooooooo', 'l..l..l..l', 'gggggggggg', 'l..l..l..l', 'rrrrrrrrrr'],
 ];
 const KIND = { g: ['green', 1, 10], o: ['orange', 1, 20], r: ['red', 2, 40], l: ['lavender', 3, 60] };
 
@@ -68,7 +72,8 @@ export class BlockBreaker extends Phaser.Scene {
         this.bricks.push({ x, y, hp, maxHp: hp, pts, img: this.add.image(x, y, 'blocks', frame).setScale(2) });
       });
     });
-    this.speed = 330 + (i * 25);
+    this.speed = 330 + Math.min(i, 8) * 22;
+    this.lastTouch = 0;
     this.resetBall();
     this.updateHud();
   }
@@ -108,6 +113,12 @@ export class BlockBreaker extends Phaser.Scene {
     const dt = Math.min(ms / 1000, 1 / 30);
     this.paddle.img.x = Math.round(this.paddle.x);
 
+    // If the ball hasn't touched the paddle or a brick for 12s, give it a nudge.
+    this.lastTouch += dt;
+    if (this.lastTouch > 12) {
+      this.lastTouch = 0;
+      for (const b of this.balls) { const a = Math.atan2(b.vy, b.vx) + Phaser.Math.FloatBetween(0.25, 0.45); const sp = Math.hypot(b.vx, b.vy); b.vx = Math.cos(a) * sp; b.vy = Math.sin(a) * sp; }
+    }
     for (const b of [...this.balls]) {
       if (b.stuck) { b.x = this.paddle.x; b.y = PADDLE_Y - 16; b.img.setPosition(b.x, b.y); continue; }
       const steps = 3;
@@ -128,9 +139,15 @@ export class BlockBreaker extends Phaser.Scene {
 
   stepBall(b, dt) {
     b.x += b.vx * dt; b.y += b.vy * dt;
-    if (b.x < F.x + BALL_R) { b.x = F.x + BALL_R; b.vx = Math.abs(b.vx); }
-    if (b.x > F.x + F.w - BALL_R) { b.x = F.x + F.w - BALL_R; b.vx = -Math.abs(b.vx); }
-    if (b.y < F.y + BALL_R) { b.y = F.y + BALL_R; b.vy = Math.abs(b.vy); }
+    if (b.x < F.x + BALL_R) { b.x = F.x + BALL_R; b.vx = Math.abs(b.vx); sfx('bounce'); }
+    if (b.x > F.x + F.w - BALL_R) { b.x = F.x + F.w - BALL_R; b.vx = -Math.abs(b.vx); sfx('bounce'); }
+    if (b.y < F.y + BALL_R) { b.y = F.y + BALL_R; b.vy = Math.abs(b.vy); sfx('bounce'); }
+    // Never let the ball go nearly flat: it would bounce between the walls for ages.
+    const sp = Math.hypot(b.vx, b.vy);
+    if (Math.abs(b.vy) < sp * 0.3) {
+      b.vy = (b.vy >= 0 ? 1 : -1) * sp * 0.3;
+      b.vx = Math.sign(b.vx || 1) * Math.sqrt(sp * sp - b.vy * b.vy);
+    }
     // Paddle: bounce angle depends on where it hits.
     if (b.vy > 0 && b.y > PADDLE_Y - 12 && b.y < PADDLE_Y + 6 && Math.abs(b.x - this.paddle.x) < this.paddle.w / 2 + BALL_R) {
       const off = (b.x - this.paddle.x) / (this.paddle.w / 2);
@@ -138,6 +155,8 @@ export class BlockBreaker extends Phaser.Scene {
       const sp = Math.min(Math.hypot(b.vx, b.vy) * 1.01, this.speed * 1.6);
       b.vx = Math.cos(a) * sp; b.vy = Math.sin(a) * sp;
       b.y = PADDLE_Y - 12;
+      this.lastTouch = 0;
+      sfx('hit');
     }
     // Bricks
     for (const br of this.bricks) {
@@ -153,27 +172,34 @@ export class BlockBreaker extends Phaser.Scene {
 
   hitBrick(br) {
     br.hp--;
-    if (br.hp > 0) { br.img.setAlpha(0.45 + 0.55 * (br.hp / br.maxHp)); return; }
+    this.lastTouch = 0;
+    if (br.hp > 0) { br.img.setAlpha(0.45 + 0.55 * (br.hp / br.maxHp)); sfx('bounce'); return; }
+    sfx('capture');
+    // The ball speeds up a little with every brick (up to 40% faster).
+    for (const b of this.balls) { const k = Math.min(1.004, (this.speed * 1.4) / Math.hypot(b.vx, b.vy)); b.vx *= k; b.vy *= k; }
     this.score += br.pts;
     br.img.destroy();
     this.bricks.splice(this.bricks.indexOf(br), 1);
-    if (Math.random() < 0.12) this.spawnDrop(br.x, br.y);
+    if (Math.random() < 0.13) this.spawnDrop(br.x, br.y);
     this.updateHud();
     if (!this.bricks.length) {
       toast(this, `Level ${this.level + 1} clear!`, 360);
+      sfx('win');
       this.time.delayedCall(800, () => this.loadLevel(this.level + 1));
     }
   }
 
   spawnDrop(x, y) {
-    const kinds = [['W', PALETTE.leaf], ['M', PALETTE.orange], ['S', PALETTE.lavender]];
-    const [kind, col] = kinds[Phaser.Math.Between(0, 2)];
+    const kinds = [['W', PALETTE.leaf], ['M', PALETTE.orange], ['S', PALETTE.lavender], ['W', PALETTE.leaf], ['M', PALETTE.orange], ['+', PALETTE.red]];
+    const [kind, col] = kinds[Phaser.Math.Between(0, kinds.length - 1)];
     const img = this.add.rectangle(x, y, 26, 12, hex(col)).setStrokeStyle(2, hex(PALETTE.cream));
     const label = text(this, x, y, kind, { color: PALETTE.night });
     this.drops.push({ x, y, kind, img, label });
   }
 
   applyPower(kind) {
+    sfx('power');
+    if (kind === '+') { this.lives++; this.updateHud(); toast(this, 'Extra ball!', 400); }
     if (kind === 'W') { this.setPaddleWidth(110); toast(this, 'Wide paddle!', 400); this.time.delayedCall(12000, () => this.setPaddleWidth(72)); }
     if (kind === 'M') {
       const extra = [];
@@ -188,6 +214,7 @@ export class BlockBreaker extends Phaser.Scene {
 
   loseLife() {
     this.lives--;
+    sfx('lose');
     this.updateHud();
     if (this.lives <= 0) { this.gameOver(); return; }
     toast(this, 'Ball lost!', 360);

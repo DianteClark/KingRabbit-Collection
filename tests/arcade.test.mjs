@@ -38,3 +38,13 @@ test('bowling: frame marks', () => {
   assert.deepEqual(B.marks([10, 10, 10], true), ['X', 'X', 'X']);
   assert.deepEqual(B.marks([7, 3, 10], true), ['7', '/', 'X']);
 });
+
+test('mole runner: every gem on every level can be reached', async () => {
+  const { LEVELS, parse, reachable, COLS, ROWS } = await import('../games/game-night/logic/molerunner.js');
+  LEVELS.forEach((L, i) => {
+    assert.equal(L.length, ROWS, `level ${i} rows`);
+    const lv = parse(L);
+    const seen = reachable(lv.grid, lv.player.r, lv.player.c);
+    lv.grid.forEach((t, k) => { if (t === '*') assert.ok(seen.has(k), `level ${i} gem at ${Math.floor(k / COLS)},${k % COLS}`); });
+  });
+});

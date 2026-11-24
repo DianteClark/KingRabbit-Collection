@@ -74,7 +74,7 @@ export const FRAMES = {
   })(),
   airhockey: { puck: [32, 56, 8, 8], blue: [40, 56, 8, 8], red: [40, 64, 8, 8] },
   blocks: { green: [0, 16, 16, 8], orange: [16, 16, 16, 8], red: [0, 24, 16, 8], lavender: [16, 24, 16, 8], ball: [8, 32, 8, 8], paddle: [24, 32, 24, 8] },
-  rocks: { ship: [32, 16, 8, 8], flame1: [0, 32, 8, 8], flame2: [8, 32, 8, 8], rockL: [0, 40, 24, 24], rockM: [16, 16, 16, 16], rockS: [8, 24, 8, 8] },
+  rocks: { ship: [32, 16, 8, 8], player: [0, 24, 8, 8], ufo: [32, 24, 8, 8], flame1: [0, 32, 8, 8], flame2: [8, 32, 8, 8], rockL: [0, 40, 24, 24], rockM: [16, 16, 16, 16], rockS: [8, 24, 8, 8] },
   bowling: { pin: [24, 24, 8, 8], pinDown: [32, 24, 8, 8], ball: [40, 24, 8, 8] },
   pool: (() => {
     // b0 cue, b1-7 solids, b8 eight ball, b9-15 stripes

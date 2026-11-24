@@ -113,10 +113,10 @@ export const RULES = {
   BlockBreaker: {
     title: 'Block Breaker',
     sections: [
-      { heading: 'Goal', text: 'Break every brick to clear the level. Score as many points as you can before your three balls run out.' },
+      { heading: 'Goal', text: 'Break every brick to clear the level. There are 8 layouts that repeat faster. Score as many points as you can before your balls run out.' },
       { heading: 'Controls', items: ['Drag left and right to move the paddle. Tap to launch the ball.', 'Where the ball hits the paddle sets its angle: the edges send it out sideways.'] },
       { heading: 'Bricks', items: ['Green and orange bricks break in one hit. Red takes 2 hits and lavender takes 3.', 'Higher bricks are worth more points.'] },
-      { heading: 'Power-ups', text: 'Catch falling capsules with the paddle: W makes the paddle wide, M splits the ball into three, and S slows the ball down.' },
+      { heading: 'Power-ups', text: 'Catch falling capsules with the paddle: W makes the paddle wide, M splits the ball into three, S slows the ball down, and + gives an extra ball.' },
     ],
   },
   SpaceRocks: {
@@ -160,14 +160,14 @@ export const RULES = {
     sections: [
       { heading: 'Goal', text: 'Push every box onto a gold target square.' },
       { heading: 'Rules', items: ['Move with the arrows or by swiping on the board.', 'You can push one box at a time, and only push (never pull).', 'A box pushed into a corner can\'t be moved out, so plan ahead.'] },
-      { heading: 'Controls', text: 'Undo takes back a move, Reset restarts the level. Finishing a level unlocks the next; all 16 can be solved.' },
+      { heading: 'Controls', text: 'Undo takes back a move, Reset restarts the level. Finishing a level unlocks the next; all 16 can be solved. Tap the level name at the top to jump to any level you have unlocked and see your fewest moves.' },
     ],
   },
   SixBall: {
     title: 'Six Ball',
     sections: [
       { heading: 'Goal', text: 'Line up three or more gems of the same colour to clear them, and keep the well from filling up.' },
-      { heading: 'Controls', items: ['< and > (or swipe) move the falling stack.', 'Turn (or tap the well) rotates the order of its three gems.', 'Drop (or swipe down) drops it instantly for bonus points.'] },
+      { heading: 'Controls', items: ['< and > (or swipe) move the falling stack. Hold them to keep sliding.', 'The faint outline shows where the stack will land.', 'Turn (or tap the well) rotates the order of its three gems.', 'Drop (or swipe down) drops it instantly for bonus points.'] },
       { heading: 'Scoring', items: ['Lines count across, down and diagonally.', 'After gems clear, the ones above fall and can clear again: chains multiply your score.', 'Every 30 gems cleared, the level and speed go up.', 'The game ends when there is no room for a new stack at the top.'] },
     ],
   },
@@ -178,6 +178,7 @@ export const RULES = {
       { heading: 'Moving', items: ['Hold the arrows to run, climb ladders, and hang from ropes.', 'Press down on a rope to let go and drop.', 'Walking off a ledge makes you fall.'] },
       { heading: 'Digging', items: ['Dig left / Dig right makes a hole in the brick diagonally below you on that side. Stone can\'t be dug.', 'Holes fill back in after a few seconds. Don\'t be standing in one when it does!', 'Enemies that fall into a hole get stuck for a moment, and you can run across their heads. If the hole fills while they\'re in it, they reappear at the top.'] },
       { heading: 'Lives', text: 'You have three lives. Touching an enemy costs one and restarts the level.' },
+      { heading: 'Levels', text: 'There are 6 levels. After the last one they repeat with quicker enemies.' },
     ],
   },
 };

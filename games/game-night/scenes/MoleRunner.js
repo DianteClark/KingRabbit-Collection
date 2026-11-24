@@ -4,18 +4,28 @@ import { text } from '../../../shared/core/ui.js';
 import { WIDTH } from '../../../shared/core/boot.js';
 import { header, go, setBackground, toast, modal, holdButton } from './common.js';
 import { getBest, submitBest } from '../save.js';
+import { sfx } from '../../../shared/core/sfx.js';
+import { getSkill, tune, reportResult } from '../adaptive.js';
 import { COLS, ROWS, LEVELS, parse, at, solid, supported, moves, chaseStep } from '../logic/molerunner.js';
 
 const TILE = 24;
 const OX = (WIDTH - COLS * TILE) / 2;
 const OY = 80;
 const HOLE_TIME = 5000;
-const TRAP_TIME = 2600;
+// Adapts to you: how fast enemies move (ms per tile) and how long a hole holds them.
+const PRESETS = {
+  easy: { step: 340, trap: 3400 },
+  normal: { step: 280, trap: 2600 },
+  hard: { step: 215, trap: 1900 },
+};
 
 export class MoleRunner extends Phaser.Scene {
   constructor() { super('MoleRunner'); }
 
-  init() { this.mode = 'solo'; }
+  init() {
+    this.mode = 'solo';
+    this.cfg = tune(PRESETS, getSkill('molerunner'), ['step', 'trap']);
+  }
 
   create() {
     setBackground(this, PALETTE.lavender);
@@ -33,7 +43,7 @@ export class MoleRunner extends Phaser.Scene {
     this.digL = holdButton(this, 250, y - 14, 120, 60, 'Dig left', { fill: PALETTE.orange });
     this.digR = holdButton(this, 250, y + 62, 120, 60, 'Dig right', { fill: PALETTE.orange });
 
-    this.score = 0; this.lives = 3; this.levelIdx = 0; this.over = false;
+    this.score = 0; this.lives = 3; this.levelIdx = 0; this.over = false; this.levelsCleared = 0; this.dying = false;
     this.startLevel();
   }
 
@@ -47,7 +57,8 @@ export class MoleRunner extends Phaser.Scene {
     this.enemies?.forEach((e) => e.img.destroy());
     this.player = this.makeBody(lv.player.r, lv.player.c, 'p');
     this.enemies = lv.enemies.map((e) => this.makeBody(e.r, e.c, 'e'));
-    this.enemySpeed = Math.max(170, 280 - Math.floor(this.levelIdx / LEVELS.length) * 40);
+    // Each time round the levels, enemies get a little quicker.
+    this.enemySpeed = Math.max(160, this.cfg.step - Math.floor(this.levelIdx / LEVELS.length) * 35);
     this.drawTiles();
     this.updateHud();
   }
@@ -115,11 +126,13 @@ export class MoleRunner extends Phaser.Scene {
         this.grid[i] = '.';
         this.gemsLeft--;
         this.score += 100;
+        sfx('coin');
         this.drawTiles(); this.updateHud();
         if (this.gemsLeft === 0) this.levelClear();
       }
     } else if (this.dug.has(i) && !b.trappedUntil) {
-      b.trappedUntil = this.time.now + TRAP_TIME;   // fell into a hole
+      b.trappedUntil = this.time.now + this.cfg.trap;   // fell into a hole
+      sfx('capture');
     }
     this.checkCatch();
   }
@@ -134,6 +147,7 @@ export class MoleRunner extends Phaser.Scene {
     if (this.enemies.some((e) => e.r === tr && e.c === tc)) return;
     p.img.setFlipX(side < 0);
     this.dug.set(i, { until: this.time.now + HOLE_TIME });
+    sfx('thud');
     this.drawTiles();
   }
 
@@ -210,7 +224,9 @@ export class MoleRunner extends Phaser.Scene {
     e.img.setVisible(false);
     this.score += 75;
     this.updateHud();
+    sfx('smallBoom');
     this.time.delayedCall(2000, () => {
+      if (!this.enemies.includes(e)) return;   // the level restarted meanwhile
       // Drop back in somewhere along the top row.
       const cols = [...Array(COLS).keys()].filter((c) => !solid(this.grid, this.dug, 0, c) && Math.abs(c - this.player.c) > 3);
       e.c = Phaser.Utils.Array.GetRandom(cols.length ? cols : [0]); e.r = 0;
@@ -225,6 +241,7 @@ export class MoleRunner extends Phaser.Scene {
     this.dying = true;
     this.tweens.killAll();
     this.cameras.main.shake(200, 0.01);
+    sfx('lose');
     toast(this, why, OY + 160);
     this.lives--;
     this.updateHud();
@@ -241,12 +258,16 @@ export class MoleRunner extends Phaser.Scene {
     this.score += 500;
     this.updateHud();
     toast(this, 'All gems! Level clear', OY + 160);
+    sfx('win');
+    this.levelsCleared = (this.levelsCleared || 0) + 1;
     this.time.delayedCall(1400, () => { this.levelIdx++; this.startLevel(); });
   }
 
   gameOver() {
     this.over = true;
     const isBest = submitBest('molerunner', this.score);
+    // Clearing 3 levels in a run counts as beating the computer.
+    reportResult('molerunner', Math.min(1, (this.levelsCleared || 0) / 3), 0.5);
     const m = modal(this, isBest ? 'New best!' : 'Game over', [`Score ${this.score}`, `Reached level ${this.levelIdx + 1}`], [
       ['Play again', () => { m.destroy(); this.scene.restart(); }],
       ['Menu', () => go(this, 'Menu')],

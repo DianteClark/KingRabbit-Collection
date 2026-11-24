@@ -4,6 +4,7 @@ import { text } from '../../../shared/core/ui.js';
 import { WIDTH } from '../../../shared/core/boot.js';
 import { header, go, setBackground, toast, modal } from './common.js';
 import { getBest, submitBest } from '../save.js';
+import { sfx } from '../../../shared/core/sfx.js';
 import { frames, totalScore, position, marks } from '../logic/bowling.js';
 
 const LANE = { x: 112, w: 136, top: 150, bottom: 600 };
@@ -30,7 +31,8 @@ export class Bowling extends Phaser.Scene {
     this.aimG = this.add.graphics().setDepth(7);
     this.meter = this.add.graphics().setDepth(7);
     this.prompt = text(this, WIDTH / 2, 622, '', { color: PALETTE.gold });
-    this.input.on('pointerup', () => this.tap());
+    // Taps on the header (back / How to Play) shouldn't count as a throw step.
+    this.input.on('pointerup', (p) => { if (p.y > 60) this.tap(); });
     this.rolls = [];
     this.over = false;
     this.rack(true);
@@ -100,6 +102,7 @@ export class Bowling extends Phaser.Scene {
 
   tap() {
     if (this.over) return;
+    if (this.phase !== 'rolling' && this.phase !== 'done') sfx('select');
     if (this.phase === 'position') { this.phase = 'aim'; this.t = 0; this.prompt.setText('Tap to set the angle'); }
     else if (this.phase === 'aim') { this.phase = 'power'; this.t = 0; this.prompt.setText('Tap to set the power'); }
     else if (this.phase === 'power') this.release();
@@ -111,6 +114,8 @@ export class Bowling extends Phaser.Scene {
     this.ball.vy = -Math.cos(this.angle) * speed;
     this.phase = 'rolling';
     this.rollTime = 0;
+    this.pinSound = 0;
+    sfx('thud');
     this.aimG.clear(); this.meter.clear();
     this.prompt.setText('');
   }
@@ -153,19 +158,19 @@ export class Bowling extends Phaser.Scene {
         b.x += b.vx * h; b.y += b.vy * h;
         // Gutter: the ball drops in and rolls straight down the channel.
         if (!b.gutter && (b.x < LANE.x || b.x > LANE.x + LANE.w)) {
-          b.gutter = true; b.x = b.x < LANE.x ? LANE.x - GUTTER / 2 : LANE.x + LANE.w + GUTTER / 2; b.vx = 0;
+          b.gutter = true; sfx('bounce'); b.x = b.x < LANE.x ? LANE.x - GUTTER / 2 : LANE.x + LANE.w + GUTTER / 2; b.vx = 0;
         }
         if (b.y < LANE.top - 20) { b.gone = true; b.img.setVisible(false); }
       }
       for (const p of this.pins) {
         if (p.gone) continue;
         p.x += p.vx * h; p.y += p.vy * h;
-        if (!b.gone && !b.gutter) this.bounce(b, p, 6, 1, BALL_R + PIN_R);
+        if (!b.gone && !b.gutter && this.bounce(b, p, 6, 1, BALL_R + PIN_R)) this.clatter();
       }
       for (let i = 0; i < this.pins.length; i++) {
         for (let j = i + 1; j < this.pins.length; j++) {
           const a = this.pins[i]; const c = this.pins[j];
-          if (!a.gone && !c.gone) this.bounce(a, c, 1, 1, PIN_R * 2);
+          if (!a.gone && !c.gone && this.bounce(a, c, 1, 1, PIN_R * 2)) this.clatter();
         }
       }
     }
@@ -183,18 +188,26 @@ export class Bowling extends Phaser.Scene {
   bounce(a, c, ma, mc, minDist) {
     const dx = c.x - a.x; const dy = c.y - a.y;
     const d = Math.hypot(dx, dy);
-    if (d >= minDist || d === 0) return;
+    if (d >= minDist || d === 0) return false;
     const nx = dx / d; const ny = dy / d;
     const overlap = minDist - d;
     a.x -= nx * overlap * (mc / (ma + mc)); a.y -= ny * overlap * (mc / (ma + mc));
     c.x += nx * overlap * (ma / (ma + mc)); c.y += ny * overlap * (ma / (ma + mc));
     const rel = (a.vx - c.vx) * nx + (a.vy - c.vy) * ny;
-    if (rel <= 0) return;
+    if (rel <= 0) return false;
     const imp = (2 * rel) / (ma + mc);
     a.vx -= imp * mc * nx; a.vy -= imp * mc * ny;
     c.vx += imp * ma * nx; c.vy += imp * ma * ny;
     // Pins scatter a little sideways so racks break up naturally.
     c.vx += (Math.random() - 0.5) * 40;
+    return rel > 30;
+  }
+
+  /** Pin noise: a big crash on first contact, then a few quieter knocks. */
+  clatter() {
+    const now = this.time.now;
+    if (!this.pinSound) { sfx('pins'); this.pinSound = now; this.lastKnock = now; return; }
+    if (now - this.lastKnock > 120 && now - this.pinSound < 1500) { sfx('hit'); this.lastKnock = now; }
   }
 
   finishRoll() {
@@ -209,6 +222,7 @@ export class Bowling extends Phaser.Scene {
     if (knocked === standingBefore && prev.freshRack) msg = 'STRIKE!';
     else if (knocked === standingBefore && knocked > 0) msg = 'Spare!';
     toast(this, msg, 380);
+    if (msg === 'STRIKE!') { sfx('strike'); this.cameras.main.shake(180, 0.006); } else if (msg === 'Spare!') sfx('win');
     this.drawCard();
     this.ball.gutter = false; this.ball.gone = false;
     if (pos.over) { this.time.delayedCall(900, () => this.gameOver()); return; }
@@ -222,6 +236,7 @@ export class Bowling extends Phaser.Scene {
     this.over = true;
     const total = totalScore(this.rolls);
     const isBest = submitBest('bowling', total);
+    sfx(isBest ? 'win' : 'goal');
     this.drawCard();
     const m = modal(this, isBest ? 'New best!' : 'Game over', [`Final score ${total}`], [
       ['Play again', () => { m.destroy(); this.scene.restart(); }],

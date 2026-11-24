@@ -2,7 +2,8 @@ import Phaser from 'phaser';
 import { PALETTE, hex } from '../../../shared/core/palette.js';
 import { text, button } from '../../../shared/core/ui.js';
 import { WIDTH } from '../../../shared/core/boot.js';
-import { header, go, setBackground, modal, swipeArea, toast } from './common.js';
+import { header, go, setBackground, modal, swipeArea, toast, holdButton } from './common.js';
+import { sfx } from '../../../shared/core/sfx.js';
 import { getBest, submitBest } from '../save.js';
 import { W, H, newGame, spawn, move, cycle, fall, hardDrop, lock, resolveOnce, fallDelay } from '../logic/columns.js';
 
@@ -38,13 +39,16 @@ export class SixBall extends Phaser.Scene {
     text(this, px + panelW / 2, TOP + 360, 'Tap the well\nto turn gems.\nSwipe to move\nor drop.', { color: PALETTE.lavender, align: 'center' });
 
     this.cells = this.add.container(0, 0);
+    this.ghostLayer = this.add.container(0, 0);
     this.pieceLayer = this.add.container(0, 0);
 
     // Controls
     const by = 580;
-    button(this, 52, by, 76, 56, '<', () => this.act('left'), { size: 32 });
+    // Hold < or > to keep sliding (after a short pause, like a keyboard).
+    this.holdL = holdButton(this, 52, by, 76, 56, '<', { size: 32 });
+    this.holdR = holdButton(this, 220, by, 76, 56, '>', { size: 32 });
+    this.repeat = 0;
     button(this, 136, by, 76, 56, 'Turn', () => this.act('cycle'));
-    button(this, 220, by, 76, 56, '>', () => this.act('right'), { size: 32 });
     button(this, 306, by, 76, 56, 'Drop', () => this.act('drop'), { fill: PALETTE.gold });
     swipeArea(this, { x: LEFT, y: TOP, w: W * CELL, h: H * CELL }, {
       onSwipe: (d) => this.act(d === 'down' ? 'drop' : d === 'up' ? 'cycle' : d),
@@ -73,17 +77,29 @@ export class SixBall extends Phaser.Scene {
     this.drawPiece();
   }
 
+  update(_, ms) {
+    if (!this.g || this.g.over || this.resolving) return;
+    for (const [btn, dir] of [[this.holdL, 'left'], [this.holdR, 'right']]) {
+      if (btn.wasPressed()) { this.act(dir); this.repeat = -170; continue; }
+      if (btn.isDown) {
+        this.repeat += ms;
+        if (this.repeat >= 70) { this.repeat = 0; this.act(dir); }
+      }
+    }
+  }
+
   act(a) {
     if (this.g.over || this.resolving || !this.g.piece) return;
-    if (a === 'left') move(this.g, -1);
-    else if (a === 'right') move(this.g, 1);
-    else if (a === 'cycle') cycle(this.g);
+    if (a === 'left') { if (move(this.g, -1)) sfx('move'); }
+    else if (a === 'right') { if (move(this.g, 1)) sfx('move'); }
+    else if (a === 'cycle') { cycle(this.g); sfx('flip'); }
     else if (a === 'drop') { this.g.score += hardDrop(this.g); this.land(); }
     this.drawPiece();
   }
 
   land() {
     lock(this.g);
+    sfx('place');
     this.redraw();
     if (this.g.over) { this.gameOver(); return; }
     this.resolving = true;
@@ -103,8 +119,9 @@ export class SixBall extends Phaser.Scene {
     // Flash the cleared cells, then show the settled grid.
     const flash = this.add.graphics().setDepth(20);
     for (const i of hit) flash.fillStyle(0xffffff, 0.85).fillRect(LEFT + (i % W) * CELL, TOP + Math.floor(i / W) * CELL, CELL, CELL);
+    sfx(n > 1 ? 'coin' : 'capture');
     if (n > 1) toast(this, `Chain x${n}!`, TOP + 160);
-    if (this.g.level > levelBefore) { toast(this, `Level ${this.g.level}!`, TOP + 200); this.schedule(); }
+    if (this.g.level > levelBefore) { toast(this, `Level ${this.g.level}!`, TOP + 200); sfx('power'); this.schedule(); }
     this.time.delayedCall(180, () => { flash.destroy(); this.redraw(); this.time.delayedCall(120, () => this.chain(n + 1)); });
   }
 
@@ -123,8 +140,23 @@ export class SixBall extends Phaser.Scene {
 
   drawPiece() {
     this.pieceLayer.removeAll(true);
+    this.ghostLayer.removeAll(true);
     const p = this.g.piece;
     if (!p) return;
+    // Faint outline of where the stack will land.
+    const y0 = p.y;
+    while (fall(this.g));
+    const landY = p.y;
+    p.y = y0;
+    if (landY > y0) {
+      const gg = this.add.graphics();
+      for (let k = 0; k < 3; k++) {
+        const y = landY - (2 - k);
+        if (y < 0) continue;
+        gg.lineStyle(2, 0xffffff, 0.35).strokeRect(LEFT + p.x * CELL + 3, TOP + y * CELL + 3, CELL - 6, CELL - 6);
+      }
+      this.ghostLayer.add(gg);
+    }
     p.gems.forEach((v, k) => {
       const y = p.y - (2 - k);
       if (y < 0) return;
@@ -135,6 +167,7 @@ export class SixBall extends Phaser.Scene {
 
   gameOver() {
     this.timer?.remove();
+    sfx('lose');
     const isBest = submitBest('sixball', this.g.score);
     this.time.delayedCall(500, () => {
       const m = modal(this, isBest ? 'New best!' : 'Game over', [`Score ${this.g.score}`, `Level ${this.g.level}`], [
