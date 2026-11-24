@@ -10,7 +10,7 @@ export const RULES = {
         'Use the arrow pad, or tap a spot you have seen to walk there. Walking stops by itself when a monster shows up.',
         'Walk into a monster to attack it. Attacking a sleeping or unaware monster is a sneak attack and hits much harder.',
         'Tap a monster that is further away to see what it is (and to shoot it).',
-        'Everything takes turns: monsters only move when you do. The middle button of the pad waits one turn.',
+        'Everything takes turns: monsters only move when you do. The Wait button in the middle of the pad lets one turn pass. Rest waits until you are healed (it stops if a monster shows up).',
         'Find the stairs on each floor, step on them and tap Descend.',
       ],
     },

@@ -77,7 +77,7 @@ export class Title extends Phaser.Scene {
 
   showRecords() {
     const r = getRecords();
-    const line = (name, m) => `${name}: ${m.runs} runs, ${m.wins} wins\n  deepest floor ${m.bestDepth}, best score ${m.bestScore}`;
+    const line = (name, m) => `${name}: ${m.runs} runs, ${m.wins} wins\nDeepest floor ${m.bestDepth}, best score ${m.bestScore}`;
     const lines = [
       line('Normal', r.normal),
       line('Lantern', r.lantern),

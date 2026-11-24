@@ -69,9 +69,9 @@ export function itemImage(scene, x, y, icon, scale = 2) {
   return img;
 }
 
-/** A creature sprite (frame 'c:c,r' of the Creatures sheet). */
-export function creature(scene, x, y, spr, scale = 2) {
-  return scene.add.image(x, y, 'cre', spr === 'king' ? 'c:king' : `c:${spr[0]},${spr[1]}`).setScale(scale);
+/** A creature sprite (frame 'c:c,r' of the Creatures sheet; dark: the black variant, on its tile). */
+export function creature(scene, x, y, spr, scale = 2, dark = false) {
+  return scene.add.image(x, y, dark ? 'creB' : 'cre', spr === 'king' ? 'c:king' : `c:${spr[0]},${spr[1]}`).setScale(scale);
 }
 
 /** Track open overlays so the map ignores taps while one is up. */
@@ -101,7 +101,7 @@ export function modal(scene, title, body, buttons, { width = 320, art, content, 
   c.add(text(scene, WIDTH / 2, top + 28, title, { size: 16, color: PALETTE.gold, wrap: width - 30 }));
   let y = top + 52;
   if (art) {
-    const a = art.creature ? creature(scene, WIDTH / 2, y + 32, art.creature, art.scale || 4) : itemImage(scene, WIDTH / 2, y + 32, art.icon, art.scale || 4);
+    const a = art.creature ? creature(scene, WIDTH / 2, y + 32, art.creature, art.scale || 4, true) : itemImage(scene, WIDTH / 2, y + 32, art.icon, art.scale || 4);
     c.add(a); y += artH;
   }
   if (bodyText) { bodyText.setOrigin(0.5, 0).setPosition(WIDTH / 2, y); c.add(bodyText); y += bodyH; }

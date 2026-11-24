@@ -29,8 +29,8 @@ export class ClassSelect extends Phaser.Scene {
       const con = this.add.container(0, 0);
       const frame = this.add.graphics();
       con.add(frame);
-      con.add(this.add.rectangle(46, y + 56, 64, 64, hex(DARK.navy)).setStrokeStyle(2, hex(DARK.blue)));
-      con.add(creature(this, 46, y + 56, c.spr, 3));
+      con.add(this.add.rectangle(46, y + 56, 54, 54, hex(PALETTE.ink)).setStrokeStyle(3, hex(DARK.blue)));
+      con.add(creature(this, 46, y + 56, c.spr, 3, true));
       con.add(text(this, 90, y + 14, c.name, { color: PALETTE.gold, origin: [0, 0] }));
       con.add(text(this, 90 + 80, y + 14, `${c.hp} HP`, { color: DARK.rose, origin: [0, 0] }));
       con.add(text(this, 90, y + 38, c.blurb, { color: PALETTE.cream, origin: [0, 0], wrap: 252, align: 'left' }));

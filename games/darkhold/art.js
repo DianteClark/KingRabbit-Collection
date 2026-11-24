@@ -1,16 +1,18 @@
 // Art from the MAS Darkness Pack by Aleksandr Makarov (see shared/assets/LICENSE-ART.md).
-//   tiles:  Tileset.png. Walls are a thin-wall autotile: each 16px floor cell is drawn as four
-//           8px quarters chosen by its neighbours (QUARTERS). Lit floors use these colours; the
-//           remembered (unlit) map uses a darkened copy ('tilesDim', the pack's night palette).
+//   tiles:  Tileset.png (the normal variant). Walls are a thin-wall autotile: each 16px floor cell
+//           is drawn as four 8px quarters chosen by its neighbours (QUARTERS). Lit areas use it.
+//   tilesB: TilesetBlack.png (the black variant), recoloured to the night palette ('tilesDim')
+//           for the unlit, remembered parts of the map.
 //   cre:    MonsterPack/Creatures.png, 16px cells 'c:col,row' plus the 32px boss 'c:king'.
-//   creB:   MonsterPack/CreaturesBlack.png (the black variant), used for class portraits.
+//   creB:   MonsterPack/CreaturesBlack.png (the black variant): portraits on their dark tile.
 //   items:  Items/Items.png, 16px cells 'i:col,row'.
 import tilesUrl from '../../shared/assets/mas-mini-retro/MAS-Darkness-Pack-1.0/Tileset/Tileset.png?url';
+import tilesBUrl from '../../shared/assets/mas-mini-retro/MAS-Darkness-Pack-1.0/Tileset/TilesetBlack.png?url';
 import creUrl from '../../shared/assets/mas-mini-retro/MAS-Darkness-Pack-1.0/MonsterPack/Creatures.png?url';
 import creBUrl from '../../shared/assets/mas-mini-retro/MAS-Darkness-Pack-1.0/MonsterPack/CreaturesBlack.png?url';
 import itemsUrl from '../../shared/assets/mas-mini-retro/MAS-Darkness-Pack-1.0/Items/Items.png?url';
 
-export const SHEETS = { tiles: tilesUrl, cre: creUrl, creB: creBUrl, items: itemsUrl };
+export const SHEETS = { tiles: tilesUrl, tilesB: tilesBUrl, cre: creUrl, creB: creBUrl, items: itemsUrl };
 
 // Quarter tiles [x, y] on Tileset.png for each corner of a floor cell. Case: none (open), v (wall
 // at the side), h (wall above/below), both (inner corner), post (only the diagonal is wall).
@@ -52,7 +54,7 @@ export function buildTextures(scene) {
 
   // The dim (remembered) tileset.
   if (!T.exists('tilesDim')) {
-    const src = tl.getSourceImage();
+    const src = T.get('tilesB').getSourceImage();
     const cv = T.createCanvas('tilesDim', src.width, src.height);
     const ctx = cv.getContext();
     ctx.drawImage(src, 0, 0);

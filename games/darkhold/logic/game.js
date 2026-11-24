@@ -18,6 +18,9 @@ const DIRS4 = [[0, -1], [1, 0], [0, 1], [-1, 0]];
 const idx = (x, y) => y * W + x;
 const inside = (x, y) => x >= 0 && y >= 0 && x < W && y < H;
 const roll = (st, [a, b]) => int(st.rng, a, b);
+// 'the Giant Rat' / 'The Giant Rat', and the Hollow King keeps his own 'The'.
+const the = (k) => (k.name.startsWith('The ') ? `the ${k.name.slice(4)}` : `the ${k.name}`);
+const The = (k) => (k.name.startsWith('The ') ? k.name : `The ${k.name}`);
 
 // ------------------------------------------------------------------ difficulty (adaptive)
 // Only how alert and pushy monsters are. Loot, maps and monster stats never change.
@@ -159,8 +162,8 @@ export function rangedAttack(st) {
 
 export function fireBlocked(st) {
   const p = st.p;
+  if (st.cls === 'mage' && !(p.eq.ranged && p.arrows > 0)) return p.mana < 2 ? 'Not enough mana. It refills as you walk.' : null;
   if (p.eq.ranged && p.arrows <= 0) return 'You are out of arrows.';
-  if (st.cls === 'mage' && !p.eq.ranged) return p.mana < 2 ? 'Not enough mana. It refills as you walk.' : null;
   if (!p.eq.ranged) return 'You have no bow equipped.';
   return null;
 }
@@ -599,7 +602,7 @@ function attackMon(st, m, ev) {
   const w = p.eq.melee ? MELEE[p.eq.melee.id] : null;
   const hitP = 0.82 + (w?.acc || 0) + (p.eq.melee?.e || 0) * 0.03 + perk(st, 'hunter') * 0.1 - k.dodge;
   if (!unaware && !chance(st.rng, hitP)) {
-    say(st, ev, `You miss the ${k.name}.`);
+    say(st, ev, `You miss ${the(k)}.`);
     ev.push({ t: 'miss', x: m.x, y: m.y });
     wake(st, m);
     return;
@@ -610,7 +613,7 @@ function attackMon(st, m, ev) {
   else if (st.cls === 'rogue' && chance(st.rng, 0.2)) { dmg *= 2; crit = true; say(st, ev, 'You find a weak spot!', 'good'); }
   if (m.kind === 'king') dmg = kingDamage(st, m, dmg, ev);
   dmg = Math.max(1, dmg - int(st.rng, 0, k.armor));
-  if (unaware) say(st, ev, `Sneak attack! You hit the ${k.name} for ${dmg}.`, 'good');
+  if (unaware) say(st, ev, `Sneak attack! You hit ${the(k)} for ${dmg}.`, 'good');
   damageMon(st, m, dmg, ev, crit);
 }
 
@@ -647,7 +650,7 @@ function damageMon(st, m, dmg, ev, crit = false) {
       c.hp = half; c.maxHp = Math.max(half, 1); c.small = true;
       m.maxHp = Math.max(m.hp, 1);
       st.mons.push(c);
-      say(st, ev, `The ${k.name} splits in two!`, 'bad');
+      say(st, ev, `${The(k)} splits in two!`, 'bad');
       ev.push({ t: 'split', id: c.id, x: c.x, y: c.y, from: [m.x, m.y] });
     }
   }
@@ -659,7 +662,7 @@ function killMon(st, m, ev) {
   m.hp = 0;
   st.stats.kills++;
   ev.push({ t: 'die', id: m.id, x: m.x, y: m.y });
-  say(st, ev, `The ${k.name} dies.`, 'good');
+  say(st, ev, `${The(k)} dies.`, 'good');
   if (m.gold > 0) { st.f.items.push({ x: m.x, y: m.y, item: makeItem('gold', 'gold', { n: m.gold }) }); say(st, ev, 'It drops the gold it stole.', 'good'); }
   if (k.tags.includes('glow')) { const g = Math.min(60, MAX_FUEL - p.fuel); p.fuel += g; if (g > 0) say(st, ev, 'You catch its flame on your torch.', 'good'); }
   if (perk(st, 'vampire')) p.hp = Math.min(maxHp(st), p.hp + 2);
@@ -732,12 +735,12 @@ function monHitsPlayer(st, m, ev, { ranged = false } = {}) {
   const dodge = perk(st, 'nimble') * 0.1;
   ev.push({ t: ranged ? 'shot' : 'attack', id: m.id, x: p.x, y: p.y, fx: m.x, fy: m.y, kind: 'arrow', hostile: true });
   if (!chance(st.rng, k.acc - dodge - (ranged ? 0.05 : 0))) {
-    say(st, ev, `The ${k.name} misses you.`);
+    say(st, ev, `${The(k)} misses you.`);
     ev.push({ t: 'miss', x: p.x, y: p.y });
     return;
   }
   if (!ranged && st.cls === 'knight' && chance(st.rng, 0.15)) {
-    say(st, ev, `You block the ${k.name} with your shield.`, 'good');
+    say(st, ev, `You block ${the(k)} with your shield.`, 'good');
     ev.push({ t: 'block', x: p.x, y: p.y });
     return;
   }
@@ -745,11 +748,11 @@ function monHitsPlayer(st, m, ev, { ranged = false } = {}) {
   if (m.kind === 'king' && m.hp < m.maxHp / 2) dmg += 2;
   dmg -= int(st.rng, 0, armorTotal(st));
   if (dmg <= 0) {
-    say(st, ev, `Your armour turns the ${k.name}'s blow.`);
+    say(st, ev, `Your armour turns ${the(k)}'s blow.`);
     ev.push({ t: 'block', x: p.x, y: p.y });
     return;
   }
-  say(st, ev, `The ${k.name} ${ranged ? 'shoots' : 'hits'} you for ${dmg}.`, 'bad');
+  say(st, ev, `${The(k)} ${ranged ? 'shoots' : 'hits'} you for ${dmg}.`, 'bad');
   hurtPlayer(st, dmg, `a ${k.name}`.replace('a The', 'the').replace(/^a ([AEIOU])/, 'an $1'), ev);
   if (st.over) return;
   if (k.tags.includes('chill')) { p.fuel = Math.max(0, p.fuel - 25); say(st, ev, 'Its icy touch makes your torch gutter.', 'bad'); }
@@ -757,7 +760,7 @@ function monHitsPlayer(st, m, ev, { ranged = false } = {}) {
   if (k.tags.includes('thief') && p.gold > 0 && !m.gold) {
     const n = Math.min(p.gold, 10 + st.depth * 4);
     p.gold -= n; m.gold = n; m.st = 'flee';
-    say(st, ev, `The ${k.name} snatches ${n} gold and vanishes!`, 'bad');
+    say(st, ev, `${The(k)} snatches ${n} gold and vanishes!`, 'bad');
     blinkAway(st, m, ev);
   }
 }
@@ -801,7 +804,7 @@ function fire(st, targetId, ev) {
   const k = MONSTERS[m.kind];
   const unaware = m.st !== 'hunt';
   if (!unaware && !chance(st.rng, 0.85 + perk(st, 'hunter') * 0.1 - k.dodge)) {
-    say(st, ev, `Your ${ra.kind === 'fire' ? 'firebolt' : 'arrow'} misses the ${k.name}.`);
+    say(st, ev, `Your ${ra.kind === 'fire' ? 'firebolt' : 'arrow'} misses ${the(k)}.`);
     ev.push({ t: 'miss', x: m.x, y: m.y });
     wake(st, m);
     return 10;
@@ -811,7 +814,7 @@ function fire(st, targetId, ev) {
   dmg = Math.round(dmg);
   if (m.kind === 'king') dmg = kingDamage(st, m, dmg, ev);
   dmg = Math.max(1, dmg - int(st.rng, 0, ra.kind === 'fire' ? 0 : k.armor));
-  say(st, ev, `Your ${ra.kind === 'fire' ? 'firebolt' : 'arrow'} hits the ${k.name} for ${dmg}.`, 'good');
+  say(st, ev, `Your ${ra.kind === 'fire' ? 'firebolt' : 'arrow'} hits ${the(k)} for ${dmg}.`, 'good');
   damageMon(st, m, dmg, ev, unaware);
   return 10;
 }
@@ -1181,7 +1184,7 @@ function monsterAct(st, m, ctx, ev) {
       m.st = sees ? 'hunt' : 'wander';
       if (sees) { m.lx = p.x; m.ly = p.y; m.chase = Math.round(st.tune.persist); }
       if (m.kind === 'king') { say(st, ev, 'The Hollow King rises from his throne!', 'bad'); ev.push({ t: 'flash' }); }
-      else if (canSeeMon(st, m)) say(st, ev, `The ${k.name} wakes up!`, 'bad');
+      else if (canSeeMon(st, m)) say(st, ev, `${The(k)} wakes up!`, 'bad');
     }
     return;
   }

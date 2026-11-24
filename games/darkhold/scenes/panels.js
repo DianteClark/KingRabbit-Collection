@@ -26,7 +26,7 @@ function fitLine(t, maxW) {
 }
 
 function row(scene, c, y, icon, label, { right, rightColor = PALETTE.gold, dim = false, onTap } = {}) {
-  const bg = scene.add.rectangle(WIDTH / 2, y, WIDTH - 36, 34, hex(DARK.navy)).setStrokeStyle(2, hex(DARK.blue));
+  const bg = scene.add.rectangle(WIDTH / 2, y, WIDTH - 36, 36, hex(DARK.navy)).setStrokeStyle(2, hex(DARK.blue));
   c.add(bg);
   if (icon) c.add(itemImage(scene, 36, y, icon, 2).setAlpha(dim ? 0.4 : 1));
   const rt = right ? text(scene, WIDTH - 28, y, right, { origin: [1, 0.5], color: rightColor }) : null;
@@ -106,7 +106,8 @@ export function bagPanel(scene, st, opts = {}) {
       },
     });
   });
-  c.add(button(scene, WIDTH / 2, HEIGHT - 34, 220, 44, opts.sell ? 'Done' : 'Close', () => { close(); if (opts.sell) opts.onDone?.(); }, { fill: PALETTE.lavender }));
+  c.primary = button(scene, WIDTH / 2, HEIGHT - 34, 220, 44, opts.sell ? 'Done' : 'Close', () => { close(); if (opts.sell) opts.onDone?.(); }, { fill: PALETTE.lavender });
+  c.add(c.primary);
   return c;
 }
 
@@ -139,7 +140,8 @@ export function shopPanel(scene, st, opts = {}) {
   });
   const y = HEIGHT - 34;
   c.add(button(scene, 96, y, 150, 44, 'Sell items', () => { close(); bagPanel(scene, st, { ...opts, sell: true, onDone: () => shopPanel(scene, st, opts) }); }, { fill: PALETTE.sand }));
-  c.add(button(scene, 264, y, 150, 44, 'Leave', () => close(), { fill: PALETTE.lavender }));
+  c.primary = button(scene, 264, y, 150, 44, 'Leave', () => close(), { fill: PALETTE.lavender });
+  c.add(c.primary);
   return c;
 }
 
@@ -166,7 +168,8 @@ export function heroPanel(scene, st) {
   const knownS = Object.keys(SCROLLS).filter((k) => st.known.scroll[k]).length;
   c.add(text(scene, WIDTH / 2, 520, `Known: ${knownP}/8 potions, ${knownS}/8 scrolls`, { color: DARK.rose }));
   c.add(button(scene, WIDTH / 2, 560, 220, 40, 'Known items', () => knownList(scene, st), { fill: PALETTE.sand }));
-  c.add(button(scene, WIDTH / 2, HEIGHT - 34, 220, 44, 'Close', () => c.destroy(), { fill: PALETTE.lavender }));
+  c.primary = button(scene, WIDTH / 2, HEIGHT - 34, 220, 44, 'Close', () => c.destroy(), { fill: PALETTE.lavender });
+  c.add(c.primary);
   void MELEE; void RANGED; void ARMORS;
   return c;
 }
@@ -180,7 +183,8 @@ function knownList(scene, st) {
     add({ spr: [7, 0], tint: look[1] }, st.known.potion[id] ? `${look[0]}: ${POTIONS[id].name}` : `${look[0]}: ?`, st.known.potion[id]);
   }
   for (const id of Object.keys(SCROLLS)) add({ spr: [6, 2] }, st.known.scroll[id] ? `${SCROLLS[id].name}` : `"${G.itemName(st, { k: 'scroll', id, n: 1 }).replace(/^Scroll "|"$/g, '')}": ?`, st.known.scroll[id]);
-  c.add(button(scene, WIDTH / 2, HEIGHT - 34, 220, 44, 'Close', () => c.destroy(), { fill: PALETTE.lavender }));
+  c.primary = button(scene, WIDTH / 2, HEIGHT - 34, 220, 44, 'Close', () => c.destroy(), { fill: PALETTE.lavender });
+  c.add(c.primary);
 }
 
 export function mapPanel(scene, st) {
@@ -216,7 +220,8 @@ export function mapPanel(scene, st) {
     c.add(scene.add.rectangle(x, y, 10, 10, hex(col)));
     c.add(text(scene, x + 12, y, label, { origin: [0, 0.5], color: PALETTE.cream }));
   });
-  c.add(button(scene, WIDTH / 2, HEIGHT - 34, 220, 44, 'Close', () => c.destroy(), { fill: PALETTE.lavender }));
+  c.primary = button(scene, WIDTH / 2, HEIGHT - 34, 220, 44, 'Close', () => c.destroy(), { fill: PALETTE.lavender });
+  c.add(c.primary);
   return c;
 }
 
@@ -234,6 +239,7 @@ export function perkPanel(scene, st, onPick) {
     }, { fill: i === 0 ? PALETTE.gold : PALETTE.sand });
     b.label.setWordWrapWidth(270);
     c.add(b);
+    if (i === 0) c.primary = b;
   });
   c.add(text(scene, WIDTH / 2, 540, `HP ${st.p.hp}/${G.maxHp(st)}`, { color: DARK.rose }));
   return c;
@@ -250,7 +256,8 @@ export function logPanel(scene, st) {
     c.add(t);
     y -= t.height + 6;
   }
-  c.add(button(scene, WIDTH / 2, HEIGHT - 34, 220, 44, 'Close', () => c.destroy(), { fill: PALETTE.lavender }));
+  c.primary = button(scene, WIDTH / 2, HEIGHT - 34, 220, 44, 'Close', () => c.destroy(), { fill: PALETTE.lavender });
+  c.add(c.primary);
   void outlined;
   return c;
 }

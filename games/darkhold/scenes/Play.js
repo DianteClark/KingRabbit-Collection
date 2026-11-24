@@ -77,7 +77,12 @@ export class Play extends Phaser.Scene {
 
     this.time.addEvent({ delay: 170, loop: true, callback: () => this.flicker() });
     this.input.keyboard?.on('keydown', (e) => this.onKey(e));
-    this.events.on('overlayClosed', () => this.time.delayedCall(60, () => this.nextHint()));
+    // When a popup closes: ignore map taps for a moment (a double tap must not walk), then show
+    // any level-up choice or tip that was waiting.
+    this.events.on('overlayClosed', () => {
+      this.quietUntil = this.time.now + 250;
+      this.time.delayedCall(60, () => { if (this.st.levelUp) this.showPerks(); else this.nextHint(); });
+    });
     this.events.once('shutdown', () => { this.stopWalk(); this.held = null; });
     playMusic(st.f.boss ? 'boss' : 'deep');
 
@@ -294,8 +299,9 @@ export class Play extends Phaser.Scene {
     this.lvlText.setText(`Lv ${p.lvl}`);
     this.xpFg.width = Math.round(122 * G.xpProgress(st));
     this.goldText.setText(String(p.gold));
-    this.ammoText.setText(st.cls === 'mage' && !p.eq.ranged ? `MP ${p.mana}/${G.manaMax(st)}` : p.eq.ranged ? `Arrows ${p.arrows}` : '');
-    if (this.ammoText.width > 100) this.ammoText.setText(st.cls === 'mage' && !p.eq.ranged ? `MP ${p.mana}` : `${p.arrows}`);
+    const bow = p.eq.ranged && (p.arrows > 0 || st.cls !== 'mage');
+    this.ammoText.setText(bow ? `Arrows ${p.arrows}` : st.cls === 'mage' ? `MP ${p.mana}/${G.manaMax(st)}` : '');
+    if (this.ammoText.width > 100) this.ammoText.setText(bow ? `${p.arrows}` : `MP ${p.mana}`);
     const tags = [];
     const h = G.hungerState(st);
     if (h) tags.push(h);
@@ -340,7 +346,8 @@ export class Play extends Phaser.Scene {
     this.ctxBtn.body.setFillStyle(hex(onStairs ? PALETTE.gold : items ? PALETTE.sand : PALETTE.cream));
     const ra = G.rangedAttack(st);
     this.fireBtn.setAlpha(ra ? 1 : 0.5);
-    this.fireBtn.setLabel(this.aim ? 'Cancel' : st.cls === 'mage' && !p.eq.ranged ? 'Cast' : 'Fire');
+    const castNext = st.cls === 'mage' && !(p.eq.ranged && p.arrows > 0);
+    this.fireBtn.setLabel(this.aim ? 'Cancel' : castNext ? 'Cast' : 'Fire');
   }
 
   buildPad() {
@@ -366,8 +373,7 @@ export class Play extends Phaser.Scene {
       c.on('pointerup', up);
       c.on('pointerout', up);
     }
-    const wait = button(this, cx, cy, 46, 46, '', () => this.doAct({ type: 'wait' }), { fill: DARK.purple, silent: true }).setDepth(D + 1);
-    wait.face.add(outlined(this, 0, -1, 'z', { color: PALETTE.cream }));
+    button(this, cx, cy, 50, 46, 'Wait', () => { if (this.canAct()) { this.stopWalk(); this.doAct({ type: 'wait' }); } }, { fill: DARK.purple, color: PALETTE.cream, silent: true }).setDepth(D + 1);
 
     this.bagBtn = button(this, 212, 502, 94, 44, 'Bag', () => this.openBag(), { fill: PALETTE.cream }).setDepth(D);
     this.fireBtn = button(this, 310, 502, 94, 44, 'Fire', () => this.pressFire(), { fill: PALETTE.orange }).setDepth(D);
@@ -427,6 +433,7 @@ export class Play extends Phaser.Scene {
   }
 
   onMapTap(p) {
+    if (this.time.now < (this.quietUntil || 0)) return;
     if (!this.canAct()) { if (this.walk) this.stopWalk(); return; }
     const st = this.st;
     const x = Math.floor((p.x - this.world.x) / T);
@@ -575,8 +582,7 @@ export class Play extends Phaser.Scene {
     const inf = G.monsterInfo(st, m);
     const canShoot = G.targets(st).some((t) => t.id === m.id);
     const k = MONSTERS[m.kind];
-    const fear = k.tags.includes('fearLight') ? '\nFears bright light.' : '';
-    const body = m.disguised ? 'A closed chest. Walk into it to open it.' : `${inf.state}. HP ${inf.hp}/${inf.maxHp}.\n${inf.desc}${fear}`;
+    const body = m.disguised ? 'A closed chest. Walk into it to open it.' : `${inf.state}. HP ${inf.hp}/${inf.maxHp}.\n${inf.desc}`;
     const buttons = [];
     if (canShoot) buttons.push([G.rangedAttack(st).kind === 'fire' ? 'Cast Firebolt' : 'Shoot', (c) => { c.destroy(); this.doAct({ type: 'fire', target: m.id }); }, PALETTE.orange]);
     buttons.push(['Close', (c) => c.destroy(), PALETTE.lavender]);
@@ -717,7 +723,13 @@ export class Play extends Phaser.Scene {
   }
 
   floatText(x, y, str, color) {
-    const t = outlined(this, x * T + 16, y * T + 4, str, { color });
+    // Several numbers on one spot in the same moment stack instead of overlapping.
+    const key = `${x},${y}`;
+    const now = this.time.now;
+    this.floats = (this.floats || []).filter((f) => now - f.t < 300);
+    const n = this.floats.filter((f) => f.k === key).length;
+    this.floats.push({ k: key, t: now });
+    const t = outlined(this, x * T + 16, y * T + 4 - n * 16, str, { color });
     this.fxLayer.add(t);
     this.tweens.add({ targets: t, y: t.y - 26, alpha: 0, delay: 250, duration: 450, onComplete: () => t.destroy() });
   }

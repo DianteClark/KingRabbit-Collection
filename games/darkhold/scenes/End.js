@@ -28,7 +28,7 @@ export class End extends Phaser.Scene {
     else this.tweens.add({ targets: hero, y: 152, duration: 180, yoyo: true, repeat: -1, repeatDelay: 700 });
 
     const mode = st.daily ? `Daily run ${st.daily}` : st.mode === 'lantern' ? 'Lantern mode' : 'Normal mode';
-    const where = st.depth >= 11 ? 'in the Hollow King\'s hall' : `on floor ${st.depth}`;
+    const where = st.depth >= 11 ? 'in the great hall' : `on floor ${st.depth}`;
     const cause = won ? 'You defeated the Hollow King!' : st.abandoned ? `You gave up ${where}.` : `Slain by ${st.killedBy} ${where}.`;
     const lines = [
       `${CLASSES[st.cls].name}, ${mode}`,
@@ -51,7 +51,8 @@ export class End extends Phaser.Scene {
     // The last few things that happened.
     const last = st.log.slice(-3).map((l) => l.text).join('\n');
     const lt = text(this, WIDTH / 2, 452, last, { color: DARK.purple, wrap: WIDTH - 30 }).setOrigin(0.5, 0);
-    if (lt.height > 80) lt.setText(st.log.slice(-2).map((l) => l.text).join('\n'));
+    if (lt.height > 70) lt.setText(st.log.slice(-2).map((l) => l.text).join('\n'));
+    if (lt.height > 70) lt.setText(st.log[st.log.length - 1]?.text || '');
 
     button(this, WIDTH / 2, 556, 280, 46, st.daily ? 'Try the daily again' : 'New run', () => go(this, 'ClassSelect', { daily: st.daily ? todayStr() : null }), { fill: PALETTE.gold });
     button(this, WIDTH / 2, 610, 280, 42, 'Title screen', () => go(this, 'Title'), { fill: PALETTE.lavender });
