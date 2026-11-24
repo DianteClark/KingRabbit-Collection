@@ -71,7 +71,16 @@ body.game { overflow: hidden; touch-action: none; }
   60%, 100% { transform: rotate(0deg); }
 }
 @media (orientation: landscape) and (max-height: 540px) {
-  #rotate { display: flex; }
+  body:not(.landscape) #rotate { display: flex; }
+}
+/* Landscape games ask for the phone on its side instead. */
+@keyframes tilt-side {
+  0%, 40% { transform: rotate(0deg); }
+  60%, 100% { transform: rotate(-90deg); }
+}
+body.landscape #rotate .phone { animation-name: tilt-side; }
+@media (orientation: portrait) and (max-width: 540px) {
+  body.landscape #rotate { display: flex; }
 }
 
 /* How to play sheet */
