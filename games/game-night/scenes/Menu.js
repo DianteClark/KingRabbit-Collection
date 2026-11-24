@@ -3,7 +3,8 @@ import { PALETTE, hex } from '../../../shared/core/palette.js';
 import { text, button } from '../../../shared/core/ui.js';
 import { WIDTH } from '../../../shared/core/boot.js';
 import { go, modal, shadowTitle, setBackground } from './common.js';
-import { save, getRecord, getBest, getLevel, setLevel, LEVEL_NAMES } from '../save.js';
+import { save, getRecord, getBest } from '../save.js';
+import { skillLabel, resetSkill } from '../adaptive.js';
 import { isMuted, setMuted } from '../../../shared/core/sfx.js';
 import { CATEGORIES, TABLES } from '../tables.js';
 import { frameRef } from './Boot.js';
@@ -72,34 +73,29 @@ export class Menu extends Phaser.Scene {
   subtitle(t) {
     if (t.score === 'record') {
       const r = getRecord(t.id);
-      return t.modes.includes('cpu') ? `W${r.w} D${r.d} L${r.l}` : `Won ${r.w}`;
+      return t.modes.includes('cpu') ? `W${r.w} L${r.l}  CPU ${skillLabel(t.id)}` : `Won ${r.w}`;
     }
     const b = getBest(t.id);
+    if (t.modes.includes('cpu') && t.id === 'yacht') {
+      const r = getRecord(t.id);
+      return `Best ${b}  CPU ${skillLabel(t.id)}`;
+    }
     return b ? `Best ${b}` : 'No score yet';
   }
 
   open(t) {
     if (!t.scene) return;
-    const start = (mode) => {
-      if (mode === 'pvp' || !t.levels) { go(this, t.scene, { mode }); return; }
-      this.pickLevel(t, (level) => go(this, t.scene, { mode, level }));
-    };
-    if (t.modes.length === 1) { start(t.modes[0]); return; }
-    const m = modal(this, t.name, [], [
-      ['vs Computer', () => { m.destroy(); start('cpu'); }],
-      ['2 Players', () => start('pvp')],
-      ['Cancel', () => m.destroy()],
-    ]);
-  }
-
-  pickLevel(t, done) {
-    const last = getLevel(t.id);
-    const choose = (lv) => { setLevel(t.id, lv); done(lv); };
-    const m = modal(this, 'Difficulty', [`${t.name}  (last: ${LEVEL_NAMES[last]})`], [
-      ['Easy', () => choose('easy'), PALETTE.leaf, PALETTE.cream],
-      ['Normal', () => choose('normal'), PALETTE.gold],
-      ['Hard', () => choose('hard'), PALETTE.red, PALETTE.cream],
-      ['Cancel', () => m.destroy()],
-    ]);
+    const label = { solo: 'Solo', cpu: 'vs Computer', pvp: '2 Players' };
+    if (!t.levels && t.modes.length === 1) { go(this, t.scene, { mode: t.modes[0] }); return; }
+    const lines = t.levels ? [`CPU level ${skillLabel(t.id)}/10`, 'It adapts as you win or lose'] : [];
+    const buttons = t.modes.map((mode) => [t.modes.length === 1 ? 'Play' : label[mode], () => { m.destroy(); go(this, t.scene, { mode }); }]);
+    if (t.levels) {
+      buttons.push(['Reset CPU level', () => {
+        m.destroy(); resetSkill(t.id); this.showTab(this.tab);
+        this.open(t);
+      }, PALETTE.indigo, PALETTE.cream]);
+    }
+    buttons.push(['Cancel', () => m.destroy()]);
+    const m = modal(this, t.name, lines, buttons);
   }
 }

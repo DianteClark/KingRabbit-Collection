@@ -206,7 +206,13 @@ function evaluateHard(s, me, W = HARD_W) {
   return v;
 }
 
-export const LEVELS = { easy: 'easy', normal: 'normal', hard: 'hard' };
+// random: chance of a random legal play; noise: wobble in judging moves; look: how many top moves
+// get the full reply-roll lookahead (0 = none); sharp: weight of the stronger evaluation.
+export const LEVELS = {
+  easy: { random: 0.5, noise: 15, look: 0, sharp: 0 },
+  normal: { random: 0, noise: 0, look: 0, sharp: 0 },
+  hard: { random: 0, noise: 0, look: 6, sharp: 1 },
+};
 
 // The 21 distinct rolls with their odds out of 36.
 const ROLLS = [];
@@ -238,15 +244,15 @@ function lookahead(s, seqs, keep = 6) {
   return pick;
 }
 
-export function cpuTurn(s, dice, { level = 'normal', rng = Math.random } = {}) {
+export function cpuTurn(s, dice, { level = 'normal', cfg = LEVELS[level], rng = Math.random } = {}) {
   const seqs = turnSequences(s, dice);
   if (!seqs.length || !seqs[0].moves.length) return seqs[0] && seqs[0].moves.length ? seqs[0] : null;
-  if (level === 'easy' && rng() < 0.5) return seqs[Math.floor(rng() * seqs.length)];
-  if (level === 'hard') return lookahead(s, seqs);
+  if (rng() < cfg.random) return seqs[Math.floor(rng() * seqs.length)];
+  if (cfg.look >= 2) return lookahead(s, seqs, cfg.look);
   let best = -Infinity; let pick = null;
   for (const r of seqs) {
-    const base = evaluate(r.state, s.turn);
-    const v = base + (winner(r.state) === s.turn ? 10000 : 0) + (level === 'easy' ? rng() * 15 : 0);
+    const base = evaluate(r.state, s.turn) * (1 - cfg.sharp) + evaluateHard(r.state, s.turn) * cfg.sharp;
+    const v = base + (winner(r.state) === s.turn ? 10000 : 0) + rng() * cfg.noise;
     if (v > best) { best = v; pick = r; }
   }
   return pick;

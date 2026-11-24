@@ -5,6 +5,8 @@ import { WIDTH } from '../../../shared/core/boot.js';
 import { header, go, setBackground, toast } from './common.js';
 import { endGame } from './boardkit.js';
 import { sfx } from '../../../shared/core/sfx.js';
+import { getSkill, tune } from '../adaptive.js';
+
 
 // Portrait rink. You defend the bottom goal (blue), the CPU the top (red).
 const R = { x: 24, y: 96, w: WIDTH - 48, h: 512 };
@@ -20,13 +22,12 @@ export class AirHockey extends Phaser.Scene {
 
   init(data) {
     this.mode = 'cpu';
-    this.level = data.level || 'normal';
     // speed: CPU mallet top speed. read: how far ahead it predicts bounces. aim: shot accuracy.
-    this.ai = {
+    this.ai = tune({
       easy: { speed: 300, read: 0.3, aim: 0.45, react: 0.35 },
       normal: { speed: 460, read: 0.7, aim: 0.2, react: 0.18 },
       hard: { speed: 680, read: 1, aim: 0.06, react: 0.05 },
-    }[this.level];
+    }, getSkill('airhockey'));
   }
 
   create() {
@@ -71,7 +72,7 @@ export class AirHockey extends Phaser.Scene {
   }
 
   updateScore() {
-    this.scoreText.setText(`You ${this.scores[0]}  -  ${this.scores[1]} CPU   first to ${WIN_SCORE}  (${this.level})`);
+    this.scoreText.setText(`You ${this.scores[0]}  -  ${this.scores[1]} CPU   first to ${WIN_SCORE}`);
   }
 
   serve(toward) {
@@ -233,7 +234,8 @@ export class AirHockey extends Phaser.Scene {
       endGame(this, {
         id: 'airhockey', mode: 'cpu', title: won ? 'You win!' : 'CPU wins',
         lines: [`${this.scores[0]} - ${this.scores[1]}`], outcome: won ? 'w' : 'l',
-        onAgain: () => this.scene.restart({ level: this.level }),
+        margin: Math.abs(this.scores[0] - this.scores[1]) / WIN_SCORE,
+        onAgain: () => this.scene.restart({}),
       });
       return;
     }

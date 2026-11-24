@@ -6,8 +6,11 @@ import { header, go, setBackground, toast, modal } from './common.js';
 import { record } from '../save.js';
 import {
   COLORS, TARGET, newRound, canPlay, playableIdx, play, drawOne, passTurn, winner, top, cpuPick, favouriteColor,
-  resolveWild4, penalty, handPoints,
+  resolveWild4, penalty, handPoints, nextPlayer, LEVELS,
 } from '../logic/wildcards.js';
+import { getSkill, tune } from '../adaptive.js';
+
+import { sfx } from '../../../shared/core/sfx.js';
 
 const COLOR_HEX = [PALETTE.red, PALETTE.orange, PALETTE.indigo, PALETTE.leaf];
 const NAMES = ['You', 'Lefty', 'Righty'];
@@ -19,7 +22,7 @@ const frameOf = (c) => {
 export class WildCards extends Phaser.Scene {
   constructor() { super('WildCards'); }
 
-  init() { this.mode = 'cpu'; }
+  init(data) { this.mode = 'cpu'; this.cfg = tune(LEVELS, getSkill('wildcards')); }
 
   create() {
     setBackground(this, PALETTE.wine);
@@ -33,6 +36,7 @@ export class WildCards extends Phaser.Scene {
 
   newRound() {
     this.r = newRound(3);
+    this.lacks = [new Set(), new Set(), new Set()];   // colours each player has shown they don't hold
     this.over = false;
     this.busy = false;
     this.drawn = -1;
@@ -144,17 +148,24 @@ export class WildCards extends Phaser.Scene {
 
   cpuTurn() {
     const p = this.r.turn;
-    let i = cpuPick(this.r, p);
+    let i = cpuPick(this.r, p, { cfg: this.cfg, lacks: this.lacks });
     if (i < 0) {
+      this.lacks[p].add(this.r.color);
+      sfx('card');
       const d = drawOne(this.r);
       if (canPlay(this.r, this.r.hands[p][d])) i = d;
       else { toast(this, `${NAMES[p]} draws`, 400); passTurn(this.r); this.busy = false; this.next(); return; }
     }
-    const ev = play(this.r, p, i, favouriteColor(this.r.hands[p]));
+    const card = this.r.hands[p][i];
+    const rest = this.r.hands[p].filter((_, k) => k !== i);
+    const color = favouriteColor(rest, Math.random() < this.cfg.smart ? this.lacks[nextPlayer(this.r)] : null);
+    const ev = play(this.r, p, i, color);
+    if (card.color !== null) this.lacks[p].delete(card.color);
+    sfx('card');
     this.announce(ev);
-    // CPUs usually remember to call Uno; when they forget you get a moment to catch them.
+    // CPUs usually remember to call Uno (always on Hard); when they forget you get a moment to catch them.
     if (this.r.hands[p].length === 1) {
-      if (Math.random() < 0.8) toast(this, `${NAMES[p]}: UNO!`, 430);
+      if (Math.random() < this.cfg.uno) toast(this, `${NAMES[p]}: UNO!`, 430);
       else {
         this.catchable = p;
         this.time.delayedCall(2600, () => { if (this.catchable === p) { this.catchable = undefined; this.drawButtons(); } });
@@ -197,8 +208,12 @@ export class WildCards extends Phaser.Scene {
       ]);
       return;
     }
-    // A CPU sometimes challenges your +4.
-    finishWith(ev.player === 0 ? Math.random() < 0.35 : false);
+    // A CPU may challenge your +4. Hard challenges more when it hasn't seen you short of that colour.
+    if (ev.player === 0) {
+      const prev = this.r.discard[this.r.discard.length - 2]?.color;
+      const chance = this.lacks[0].has(prev) ? this.cfg.challenge * 0.25 : this.cfg.challenge;
+      finishWith(Math.random() < chance);
+    } else finishWith(false);
   }
 
   humanPlay(i) {
@@ -209,6 +224,8 @@ export class WildCards extends Phaser.Scene {
     const commit = (color) => {
       const goingToOne = this.r.hands[0].length === 2;
       this.drawn = -1;
+      if (c.color !== null) this.lacks[0].delete(c.color);
+      sfx('card');
       const ev = play(this.r, 0, i, color);
       this.announce(ev);
       if (goingToOne && !this.calledUno && Math.random() < 0.75) {
@@ -224,6 +241,8 @@ export class WildCards extends Phaser.Scene {
 
   humanDraw() {
     if (this.over || this.busy || this.r.turn !== 0 || this.drawn >= 0) return;
+    if (!playableIdx(this.r, 0).length) this.lacks[0].add(this.r.color);
+    sfx('card');
     const d = drawOne(this.r);
     if (canPlay(this.r, this.r.hands[0][d])) {
       this.drawn = d;
@@ -241,6 +260,7 @@ export class WildCards extends Phaser.Scene {
     this.catchable = undefined;
     const pts = this.r.hands.reduce((s, h, p) => (p === w ? s : s + handPoints(h)), 0);
     this.scores[w] += pts;
+    sfx(w === 0 ? 'win' : 'lose');
     this.draw();
     const matchOver = this.scores[w] >= TARGET;
     const title = w === 0 ? 'You win the round!' : `${NAMES[w]} wins the round`;
@@ -248,7 +268,7 @@ export class WildCards extends Phaser.Scene {
     const lines = [`+${pts} points`, `You ${this.scores[0]}  Lefty ${this.scores[1]}  Righty ${this.scores[2]}`];
     this.time.delayedCall(700, () => {
       if (matchOver) {
-        record('wildcards', w === 0 ? 'w' : 'l');
+        record('wildcards', w === 0 ? 'w' : 'l', Math.min(1, (Math.max(...this.scores) - [...this.scores].sort((a, b) => b - a)[1]) / 300));
         const m = modal(this, w === 0 ? 'You win the match!' : `${NAMES[w]} wins the match`, lines, [
           ['New match', () => { m.destroy(); this.scores = [0, 0, 0]; this.newRound(); }],
           ['Menu', () => go(this, 'Menu')],

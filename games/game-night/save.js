@@ -1,8 +1,9 @@
 import { createSave } from '../../shared/core/save.js';
+import { reportResult } from './adaptive.js';
 
 // records: { tableId: { w, d, l } }  (only games vs the computer count)
 // best:    { tableId: number }        (high score, or lowest for 'low' tables)
-export const save = createSave('game-night', { records: {}, best: {}, tab: 'board', levels: {} });
+export const save = createSave('game-night', { records: {}, best: {}, tab: 'board', skill: {}, skillGames: {} });
 
 // Move v0.1 saves (ttt / reversi / yachtBest keys) into the new shape once.
 (() => {
@@ -21,8 +22,9 @@ export function getRecord(id) {
   return { w: 0, d: 0, l: 0, ...(save.get('records')[id] || {}) };
 }
 
-/** outcome: 'w' | 'd' | 'l' */
-export function record(id, outcome) {
+/** outcome: 'w' | 'd' | 'l'. Also moves the adaptive CPU level (margin 0..1 = how decisive). */
+export function record(id, outcome, margin = 0.5) {
+  reportResult(id, outcome === 'w' ? 1 : outcome === 'd' ? 0.5 : 0, margin);
   const records = { ...save.get('records') };
   const r = getRecord(id);
   r[outcome] += 1;
@@ -43,7 +45,3 @@ export function submitBest(id, value, lower = false) {
   return true;
 }
 
-export const LEVELS = ['easy', 'normal', 'hard'];
-export const LEVEL_NAMES = { easy: 'Easy', normal: 'Normal', hard: 'Hard' };
-export const getLevel = (id) => (save.get('levels') || {})[id] || 'normal';
-export function setLevel(id, level) { save.set('levels', { ...(save.get('levels') || {}), [id]: level }); }

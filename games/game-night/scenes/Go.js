@@ -5,7 +5,9 @@ import { WIDTH } from '../../../shared/core/boot.js';
 import { header, go, setBackground, toast, popIn } from './common.js';
 import { grid, endGame, think } from './boardkit.js';
 import { sfx } from '../../../shared/core/sfx.js';
-import { N, newGame, play, pass, isOver, cpuMove, tryMove, suggestDead, toggleDead, finalScore } from '../logic/go.js';
+import { N, newGame, play, pass, isOver, cpuMove, tryMove, suggestDead, toggleDead, finalScore, LEVELS } from '../logic/go.js';
+import { getSkill, tune } from '../adaptive.js';
+
 
 const CELL = 32;
 const LEFT = (WIDTH - CELL * N) / 2;
@@ -15,7 +17,7 @@ const FRAME = { 1: 'dark', 2: 'light' };
 export class Go extends Phaser.Scene {
   constructor() { super('Go'); }
 
-  init(data) { this.mode = data.mode ?? 'cpu'; this.level = data.level || 'normal'; }
+  init(data) { this.mode = data.mode ?? 'cpu'; this.cfg = tune(LEVELS, getSkill('go')); }
 
   create() {
     setBackground(this, PALETTE.wine);
@@ -92,7 +94,7 @@ export class Go extends Phaser.Scene {
       this.status.setText('CPU is thinking...');
       this.busy = true;
       think(this, () => {
-        const m = cpuMove(this.game, { level: this.level });
+        const m = cpuMove(this.game, { cfg: this.cfg });
         this.busy = false;
         if (m < 0) { toast(this, 'CPU passes', 600); this.game = pass(this.game); this.lastMove = -1; this.draw(); this.next(); }
         else this.place(m);
@@ -181,7 +183,7 @@ export class Go extends Phaser.Scene {
     endGame(this, {
       id: 'go', mode: this.mode, title,
       lines: [`${this.name(1)} ${sc.black}  -  ${sc.white} ${this.name(2)}`, '(stones + territory, White +6.5)'],
-      outcome: blackWins ? 'w' : 'l', onAgain: () => this.restart(),
+      outcome: blackWins ? 'w' : 'l', margin: Math.min(1, Math.abs(sc.black - sc.white) / 30), onAgain: () => this.restart(),
     });
   }
 }

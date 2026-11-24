@@ -132,10 +132,9 @@ function search(board, toMove, me, depth, alpha, beta) {
 }
 
 /** CPU move for `me` with a short look-ahead. Returns -1 if it must pass. */
-export const LEVELS = { easy: { depth: 1, noise: 60 }, normal: { depth: 2, noise: 8 }, hard: { depth: 4, noise: 0, endgame: 9 } };
+export const LEVELS = { easy: { depth: 1, noise: 60, endgame: 0 }, normal: { depth: 2, noise: 8, endgame: 0 }, hard: { depth: 4, noise: 0, endgame: 9 } };
 
-export function cpuMove(board, me, { depth, level = 'normal', rng = Math.random } = {}) {
-  const cfg = LEVELS[level];
+export function cpuMove(board, me, { depth, level = 'normal', cfg = LEVELS[level], rng = Math.random } = {}) {
   depth ??= cfg.depth;
   const empties = board.filter((c) => !c).length;
   if (cfg.endgame && empties <= cfg.endgame) depth = empties;   // play the ending perfectly

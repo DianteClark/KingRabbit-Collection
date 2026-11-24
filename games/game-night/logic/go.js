@@ -134,13 +134,12 @@ function areaEstimate(board, me) {
 }
 
 export const LEVELS = {
-  easy: { noise: 6, area: 0, lookahead: false, wild: 0.35 },
-  normal: { noise: 2.5, area: 0.3, lookahead: false },
-  hard: { noise: 0.4, area: 0.6, lookahead: false },
+  easy: { noise: 6, area: 0, wild: 0.35 },
+  normal: { noise: 2.5, area: 0.3, wild: 0 },
+  hard: { noise: 0.4, area: 0.6, wild: 0 },
 };
 
-export function cpuMove(g, { level = 'normal', rng = Math.random } = {}) {
-  const cfg = LEVELS[level];
+export function cpuMove(g, { level = 'normal', cfg = LEVELS[level], rng = Math.random } = {}) {
   const { best, list } = scoredMoves(g, cfg, rng);
   // Easy sometimes just plays somewhere reasonable-looking at random.
   if (cfg.wild && best >= 0 && rng() < cfg.wild) {

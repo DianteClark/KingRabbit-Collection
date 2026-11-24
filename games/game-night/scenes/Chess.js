@@ -5,7 +5,9 @@ import { WIDTH } from '../../../shared/core/boot.js';
 import { header, go, setBackground, toast, modal } from './common.js';
 import { checkerboard, highlighter, endGame } from './boardkit.js';
 import { sfx } from '../../../shared/core/sfx.js';
-import { newGame, legalMoves, makeMove, status, inCheck, cpuMove, positionKey } from '../logic/chess.js';
+import { newGame, legalMoves, makeMove, status, inCheck, cpuMove, positionKey, LEVELS } from '../logic/chess.js';
+import { getSkill, tune } from '../adaptive.js';
+
 
 const CELL = 40;
 const LEFT = 30;
@@ -18,7 +20,7 @@ export class Chess extends Phaser.Scene {
 
   init(data) {
     this.mode = data.mode ?? 'cpu';
-    this.level = data.level || 'normal';
+    this.cfg = tune(LEVELS, getSkill('chess'), ['depth']);
   }
 
   /** Ask the background engine for a move; falls back to thinking on the main thread. */
@@ -30,9 +32,9 @@ export class Chess extends Phaser.Scene {
         this.events.once('shutdown', () => { this.worker?.terminate(); this.worker = null; });
       }
       this.worker.onmessage = (e) => { if (e.data.id === this.engineId) done(e.data.move); };
-      this.worker.postMessage({ state: this.s, level: this.level, id });
+      this.worker.postMessage({ state: this.s, cfg: this.cfg, id });
     } catch {
-      this.time.delayedCall(50, () => done(cpuMove(this.s, { level: this.level })));
+      this.time.delayedCall(50, () => done(cpuMove(this.s, { cfg: this.cfg })));
     }
   }
 
@@ -93,7 +95,7 @@ export class Chess extends Phaser.Scene {
     if (st) { this.finish(st); return; }
     const check = inCheck(this.s) ? ' - check!' : '';
     if (this.isCpu()) {
-      this.status.setText(`CPU (${this.level}) is thinking...${check}`);
+      this.status.setText(`CPU is thinking...${check}`);
       this.busy = true;
       const started = this.time.now;
       this.askEngine((m) => {

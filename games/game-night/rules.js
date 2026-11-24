@@ -76,7 +76,7 @@ export const RULES = {
   Yacht: {
     title: 'Yacht Dice',
     sections: [
-      { heading: 'Goal', text: 'Score the most points over 13 rounds by filling each box of the scorecard once.' },
+      { heading: 'Goal', text: 'Score the most points over 13 rounds by filling each box of the scorecard once. Play solo for a high score, or against the computer or a friend (take turns; most points wins).' },
       { heading: 'Each round', items: ['Roll five dice up to three times. Tap dice to hold them between rolls.', 'Then pick one empty box to score in. You can take 0 in any box.'] },
       { heading: 'Boxes', items: ['Ones to Sixes: total of that number. 63 or more in these six earns a 35 point bonus.', '3 of a Kind / 4 of a Kind: total of all dice.', 'Full House (3 + 2): 25.', 'Small Straight (4 in a row): 30. Large Straight (5 in a row): 40.', 'Yacht (5 of a kind): 50.', 'Chance: total of all dice.'] },
       { heading: 'Extra Yachts', items: ['Each extra Yacht after scoring 50 in the Yacht box is worth +100.', 'Joker rule: if the Yacht box is already filled, you must use the matching upper box if it\'s open. Otherwise you may score any lower box at full value (Full House 25, Straights 30 and 40).'] },
@@ -148,10 +148,11 @@ export const RULES = {
   Tanks: {
     title: 'Tank Battle',
     sections: [
-      { heading: 'Goal', text: 'Destroy all 12 enemy tanks in each stage while protecting your flag at the bottom of the map.' },
-      { heading: 'Controls', items: ['Hold the arrows to drive. Hold FIRE to shoot.', 'You can have one shell in the air at a time.'] },
-      { heading: 'The map', items: ['Brick walls break when shot. Steel blocks stop shells.', 'Water blocks tanks but not shells. Bushes hide tanks.', 'If any shell hits your flag, the game is over.'] },
-      { heading: 'Enemies', text: 'Green tanks are basic, red tanks are fast, and white tanks take two hits. Shells cancel out when they collide.' },
+      { heading: 'Goal', text: 'Destroy every enemy tank in each stage while protecting your flag at the bottom of the map.' },
+      { heading: 'Controls', items: ['Hold the arrows to drive. Hold FIRE to shoot.', 'You can have one shell in the air at a time (two with the star).'] },
+      { heading: 'The map', items: ['Brick walls break when shot. Steel blocks shells (star shells break it).', 'Water blocks tanks but not shells. Bushes hide tanks.', 'If any shell hits your flag, the game is over.'] },
+      { heading: 'Enemies', items: ['Green tanks are basic, red tanks are fast, and white tanks take two hits.', 'Some patrol, some hunt you, and some head straight for your flag, shooting through bricks on the way. Harder levels send more of them, faster.', 'Shells cancel out when they collide.'] },
+      { heading: 'Power-ups', items: ['Every fourth enemy glows gold: destroy it to drop a power-up. Drive over it before it vanishes.', 'Helmet: shield. Stopwatch: freezes enemies. Shovel: steel walls round your flag. Star: faster double shells. Grenade: destroys every enemy on screen. Tank: extra life.'] },
     ],
   },
   BoxBox: {

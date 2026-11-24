@@ -129,8 +129,7 @@ function search(board, turn, me, depth, alpha, beta) {
 
 export const LEVELS = { easy: { depth: 2, noise: 70 }, normal: { depth: 4, noise: 10 }, hard: { depth: 7, noise: 0 } };
 
-export function cpuMove(board, me, { depth, level = 'normal', rng = Math.random } = {}) {
-  const cfg = LEVELS[level];
+export function cpuMove(board, me, { depth, level = 'normal', cfg = LEVELS[level], rng = Math.random } = {}) {
   depth ??= cfg.depth;
   const noise = cfg.noise;
   const moves = legalMoves(board, me);

@@ -5,7 +5,9 @@ import { WIDTH } from '../../../shared/core/boot.js';
 import { header, go, setBackground, toast } from './common.js';
 import { endGame } from './boardkit.js';
 import { sfx } from '../../../shared/core/sfx.js';
-import { N, randomFleet, fire, allSunk, cpuTarget, shipCells, fits } from '../logic/seabattle.js';
+import { N, randomFleet, fire, allSunk, cpuTarget, shipCells, fits, LEVELS } from '../logic/seabattle.js';
+import { getSkill, tune } from '../adaptive.js';
+
 
 const BIG = 32;      // enemy grid cell
 const SMALL = 16;    // your grid cell during battle
@@ -17,7 +19,7 @@ const SMALL_TOP = 472;
 export class SeaBattle extends Phaser.Scene {
   constructor() { super('SeaBattle'); }
 
-  init(data) { this.mode = 'cpu'; this.level = data.level || 'normal'; }
+  init(data) { this.mode = 'cpu'; this.cfg = tune(LEVELS, getSkill('seabattle')); }
 
   create() {
     setBackground(this, PALETTE.indigo);
@@ -151,7 +153,7 @@ export class SeaBattle extends Phaser.Scene {
 
   cpuFire() {
     const remaining = this.myFleet.filter((s) => s.hits < s.cells.length).map((s) => s.cells.length);
-    const cell = cpuTarget(this.cpuShots, this.cpuSunk, remaining, Math.random, this.level);
+    const cell = cpuTarget(this.cpuShots, this.cpuSunk, remaining, Math.random, 'hard', this.cfg);
     const res = fire(this.myFleet, this.cpuShots, cell);
     if (res.result === 'sunk') res.ship.cells.forEach((c) => this.cpuSunk.add(c));
     this.redraw();
@@ -173,7 +175,8 @@ export class SeaBattle extends Phaser.Scene {
     sfx(won ? 'win' : 'lose');
     endGame(this, {
       id: 'seabattle', mode: 'cpu', title: won ? 'Victory!' : 'Fleet lost',
-      lines: [`You fired ${this.myShots.size} shots`], outcome: won ? 'w' : 'l', onAgain: () => this.setup(),
+      lines: [`You fired ${this.myShots.size} shots`], outcome: won ? 'w' : 'l',
+      margin: (won ? this.myFleet : this.enemyFleet).filter((s) => s.hits < s.cells.length).length / 5, onAgain: () => this.setup(),
     });
   }
 }

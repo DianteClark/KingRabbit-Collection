@@ -32,7 +32,7 @@ function minimax(board, turn, me, depth) {
  * Pick the CPU's move. `mistakeChance` makes it beatable: that share of the time
  * it plays a random free square instead of a perfect one.
  */
-export const MISTAKES = { easy: 0.45, normal: 0.18, hard: 0 };
+export const PRESETS = { easy: { mistakeChance: 0.45 }, normal: { mistakeChance: 0.18 }, hard: { mistakeChance: 0 } };
 
 export function cpuMove(board, me, { mistakeChance = 0.2, rng = Math.random } = {}) {
   const free = board.map((v, i) => (v ? -1 : i)).filter((i) => i >= 0);

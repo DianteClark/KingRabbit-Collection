@@ -5,7 +5,9 @@ import { WIDTH } from '../../../shared/core/boot.js';
 import { header, go, setBackground, toast, modal } from './common.js';
 import { record } from '../save.js';
 import { sfx } from '../../../shared/core/sfx.js';
-import { TARGET, SIDES, newRound, ends, playable, playTile, draw, passTurn, roundResult, cpuChoice, pips } from '../logic/dominoes.js';
+import { TARGET, SIDES, newRound, ends, playable, playTile, draw, passTurn, roundResult, cpuChoice, pips, LEVELS } from '../logic/dominoes.js';
+import { getSkill, tune } from '../adaptive.js';
+
 
 const PIPS = {
   0: [], 1: [[1, 1]], 2: [[0, 0], [2, 2]], 3: [[0, 0], [1, 1], [2, 2]], 4: [[0, 0], [2, 0], [0, 2], [2, 2]],
@@ -84,7 +86,7 @@ const HAND_H = 26;
 export class Dominoes extends Phaser.Scene {
   constructor() { super('Dominoes'); }
 
-  init(data) { this.mode = 'cpu'; this.level = data.level || 'normal'; }
+  init(data) { this.mode = 'cpu'; this.cfg = tune(LEVELS, getSkill('dominoes')); }
 
   create() {
     setBackground(this, PALETTE.leaf);
@@ -201,7 +203,7 @@ export class Dominoes extends Phaser.Scene {
   }
 
   cpuStep() {
-    const c = cpuChoice(this.r, 1, { level: this.level, voids: this.voids });
+    const c = cpuChoice(this.r, 1, { cfg: this.cfg, voids: this.voids });
     if (c) {
       this.r = playTile(this.r, 1, c.i, c.side);
       sfx('place');
@@ -258,7 +260,7 @@ export class Dominoes extends Phaser.Scene {
     this.time.delayedCall(900, () => {
       if (matchOver) {
         const youWon = this.scores[0] >= TARGET;
-        record('dominoes', youWon ? 'w' : 'l');
+        record('dominoes', youWon ? 'w' : 'l', Math.min(1, Math.abs(this.scores[0] - this.scores[1]) / 100));
         const m = modal(this, youWon ? 'You win the match!' : 'CPU wins the match', lines, [
           ['New match', () => { m.destroy(); this.scores = [0, 0]; this.newRound(); }],
           ['Menu', () => go(this, 'Menu')],

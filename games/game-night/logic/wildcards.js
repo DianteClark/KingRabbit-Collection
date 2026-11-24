@@ -142,23 +142,74 @@ export const passTurn = (r) => { r.turn = nextPlayer(r); };
 
 export const winner = (r) => r.hands.findIndex((h) => h.length === 0);
 
-/** Most common colour in a hand (for choosing a wild colour). */
-export function favouriteColor(hand) {
+/** Most common colour in a hand (for choosing a wild colour). With `avoid` (colours the next
+ *  player has shown they lack), ties go to a colour they can't follow. */
+export function favouriteColor(hand, avoidFor = null) {
   const n = [0, 0, 0, 0];
-  for (const c of hand) if (c.color !== null) n[c.color]++;
-  return n.indexOf(Math.max(...n));
+  for (const c of hand) if (c.color !== null) n[c.color] += 1;
+  let best = 0;
+  for (let k = 1; k < 4; k++) {
+    const score = (x) => n[x] + (avoidFor?.has(x) ? 0.5 : 0);
+    if (score(k) > score(best)) best = k;
+  }
+  return best;
 }
 
-/** CPU choice: index to play (or -1 to draw). CPUs only play a +4 legally. */
-export function cpuPick(r, p) {
+// random / smart: chance a turn is played at random / with the card-tracking strategy
+// (otherwise the plain strategy). uno: chance of remembering to call UNO. challenge: how often
+// it challenges your +4 when it suspects a bluff.
+export const LEVELS = {
+  easy: { random: 0.7, smart: 0, uno: 0.6, challenge: 0.15 },
+  normal: { random: 0, smart: 0, uno: 0.85, challenge: 0.3 },
+  hard: { random: 0, smart: 1, uno: 1, challenge: 0.5 },
+};
+export const UNO_MEMORY = { easy: 0.6, normal: 0.85, hard: 1 };
+
+/**
+ * CPU choice: index to play (or -1 to draw). CPUs only play a +4 legally.
+ * lacks: array of Sets, lacks[q] = colours player q has shown they don't hold (Hard uses it).
+ */
+export function cpuPick(r, p, { level = 'normal', cfg = LEVELS[level], lacks = null, rng = Math.random } = {}) {
   const opts = playableIdx(r, p).filter((i) => r.hands[p][i].value !== 'wild4' || wild4Legal(r, p));
   if (!opts.length) return -1;
-  const nextCount = r.hands[nextPlayer(r)].length;
-  const score = (c) => {
-    if (c.value === 'wild4') return nextCount <= 2 ? 50 : -20;
-    if (c.value === 'wild') return -10;                    // save wilds for later
-    if (typeof c.value !== 'number') return nextCount <= 2 ? 30 : 8;
-    return c.value;                                        // dump high numbers first
+  if (rng() < cfg.random) return opts[Math.floor(rng() * opts.length)];
+  level = rng() < cfg.smart ? 'hard' : 'normal';
+  const nxt = nextPlayer(r);
+  const nextCount = r.hands[nxt].length;
+  if (level === 'normal') {
+    const score = (c) => {
+      if (c.value === 'wild4') return nextCount <= 2 ? 50 : -20;
+      if (c.value === 'wild') return -10;
+      if (typeof c.value !== 'number') return nextCount <= 2 ? 30 : 8;
+      return c.value;
+    };
+    return opts.sort((a, b) => score(r.hands[p][b]) - score(r.hands[p][a]))[0];
+  }
+  // Hard
+  const hand = r.hands[p];
+  const colourCount = [0, 0, 0, 0];
+  for (const c of hand) if (c.color !== null) colourCount[c.color]++;
+  const danger = nextCount <= 2;
+  const leader = Math.min(...r.hands.map((h, q) => (q === p ? 99 : h.length)));
+  const nonWild = opts.filter((i) => !['wild', 'wild4'].includes(hand[i].value));
+  const score = (i) => {
+    const c = hand[i];
+    let v = 0;
+    if (c.value === 'wild4') v = danger ? 60 : -40;
+    else if (c.value === 'wild') v = nonWild.length ? -30 : 5;            // save wilds for when you're stuck
+    else {
+      v += typeof c.value === 'number' ? c.value * 0.6 : 0;               // shed points
+      v += colourCount[c.color] * 2;                                       // stay in your strong colour
+      if (lacks?.[nxt]?.has(c.color)) v += 8;                              // a colour the next player can't follow
+      if (c.value === 'skip' || c.value === 'draw2') v += danger ? 45 : 4;
+      if (c.value === 'reverse') {
+        // Reverse is good if it sends the turn away from someone about to go out.
+        const prev = (((p - r.dir) % r.hands.length) + r.hands.length) % r.hands.length;
+        v += danger && r.hands[prev].length > nextCount ? 35 : 2;
+      }
+      if (leader <= 2 && typeof c.value !== 'number') v += 6;
+    }
+    return v + rng() * 0.5;
   };
-  return opts.sort((a, b) => score(r.hands[p][b]) - score(r.hands[p][a]))[0];
+  return opts.sort((a, b) => score(b) - score(a))[0];
 }

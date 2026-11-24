@@ -4,7 +4,8 @@ import { text, button } from '../../../shared/core/ui.js';
 import { WIDTH } from '../../../shared/core/boot.js';
 import { header, go, setBackground, toast, modal } from './common.js';
 import { record, save } from '../save.js';
-import { deal, drawStock, bestMove, move, canMove, won, canAutoFinish, autoStep, SUITS, RANKS, isRed } from '../logic/solitaire.js';
+import { deal, drawStock, bestMove, move, canMove, won, canAutoFinish, autoStep, hint, SUITS, RANKS, isRed } from '../logic/solitaire.js';
+import { sfx } from '../../../shared/core/sfx.js';
 
 const CW = 44;
 const CH = 60;
@@ -24,11 +25,13 @@ export class Solitaire extends Phaser.Scene {
     setBackground(this, PALETTE.leaf);
     header(this, 'Solitaire', () => go(this, 'Menu'));
     this.layer = this.add.container(0, 0);
-    this.movesText = text(this, WIDTH - 16, 34, '', { origin: [1, 0.5], color: PALETTE.cream });
-    this.movesText.setVisible(false);
-    button(this, 70, 614, 110, 40, 'Undo', () => this.undo());
-    button(this, WIDTH / 2, 614, 110, 40, 'New deal', () => this.askDeal());
-    this.autoBtn = button(this, WIDTH - 70, 614, 110, 40, 'Finish', () => this.autoFinish(), { fill: PALETTE.gold });
+    this.movesText = text(this, colX(2) + CW / 2 + 2, TOP_ROW + 30, '', { color: PALETTE.cream, align: 'center' }).setDepth(5);
+    this.hintG = this.add.graphics().setDepth(40);
+    button(this, 50, 614, 84, 40, 'Undo', () => this.undo());
+    button(this, 140, 614, 84, 40, 'Hint', () => this.showHint());
+    button(this, 230, 614, 84, 40, 'Deal', () => this.askDeal());
+    this.autoBtn = button(this, 318, 614, 76, 40, 'Finish', () => this.autoFinish(), { fill: PALETTE.gold });
+    this.time.addEvent({ delay: 1000, loop: true, callback: () => this.updateClock() });
     this.input.on('pointerup', (p) => this.tap(p.x, p.y));
     this.newDeal();
   }
@@ -43,7 +46,37 @@ export class Solitaire extends Phaser.Scene {
 
   drawCount() { return save.get('solitaireDraw') === 3 ? 3 : 1; }
 
+  updateClock() {
+    if (this.done || !this.g) return;
+    const t = Math.floor((this.time.now - this.started) / 1000);
+    this.movesText.setText(`${this.g.moves}\nmoves\n${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`);
+  }
+
+  showHint() {
+    if (this.done) return;
+    const h = hint(this.g);
+    this.hintG.clear();
+    if (!h) { toast(this, 'No moves left - try a new deal', 300); sfx('error'); return; }
+    if (h.draw) { toast(this, 'Draw from the deck', 300); this.flashRect(colX(0), TOP_ROW, CH); return; }
+    const src = [...this.hits].reverse().find((x) => x.src && JSON.stringify(x.src) === JSON.stringify(h.src));
+    if (src) this.flashRect(src.x, src.y, CH);
+    const dx = h.dst.to === 'foundation' ? colX(3 + h.dst.i) : colX(h.dst.i);
+    const dy = h.dst.to === 'foundation' ? TOP_ROW : TAB_Y;
+    this.flashRect(dx, dy, h.dst.to === 'foundation' ? CH : Math.max(CH, this.colBottom(h.dst.i) - TAB_Y));
+  }
+
+  colBottom(i) {
+    const last = [...this.hits].reverse().find((x) => x.src?.from === 'tableau' && x.src.i === i);
+    return last ? last.y + CH : TAB_Y + CH;
+  }
+
+  flashRect(x, y, h) {
+    this.hintG.lineStyle(4, hex(PALETTE.gold)).strokeRect(x - 3, y - 3, CW + 6, h + 6);
+    this.tweens.add({ targets: this.hintG, alpha: { from: 1, to: 0.2 }, yoyo: true, repeat: 3, duration: 220, onComplete: () => { this.hintG.clear(); this.hintG.setAlpha(1); } });
+  }
+
   newDeal() {
+    this.started = this.time.now;
     this.g = deal();
     this.history = [];
     this.done = false;
@@ -53,6 +86,8 @@ export class Solitaire extends Phaser.Scene {
 
   push(next) {
     this.sel = null;
+    this.hintG?.clear();
+    sfx(next.foundations.flat().length > this.g.foundations.flat().length ? 'coin' : 'card');
     this.history.push(this.g);
     if (this.history.length > 200) this.history.shift();
     this.g = next;
@@ -154,7 +189,7 @@ export class Solitaire extends Phaser.Scene {
       }
     }
     this.autoBtn.setVisible(canAutoFinish(g) && !won(g));
-    this.movesText.setText(`Moves ${g.moves}`);
+    this.updateClock();
   }
 
   // ---------- input ----------
@@ -211,6 +246,9 @@ export class Solitaire extends Phaser.Scene {
     if (this.done) return;
     this.done = true;
     record('solitaire', 'w');
+    sfx('win');
+    // Bounce the foundation kings for a little celebration.
+    this.cameras.main.flash(250, 240, 210, 110);
     toast(this, 'All four suits complete!', 300);
     this.time.delayedCall(900, () => {
       const m = modal(this, 'You win!', [`Finished in ${this.g.moves} moves`], [

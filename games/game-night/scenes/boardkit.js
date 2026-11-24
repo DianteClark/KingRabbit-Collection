@@ -61,8 +61,8 @@ export function highlighter(scene, g) {
 }
 
 /** Standard end-of-game popup + record keeping. outcome from the human's view: 'w'|'d'|'l' (cpu mode). */
-export function endGame(scene, { id, mode, title, lines = [], outcome, onAgain }) {
-  if (mode === 'cpu' && outcome) record(id, outcome);
+export function endGame(scene, { id, mode, title, lines = [], outcome, onAgain, margin }) {
+  if (mode === 'cpu' && outcome) record(id, outcome, margin);
   scene.time.delayedCall(700, () => {
     const m = modal(scene, title, lines, [
       ['Play again', () => { m.destroy(); onAgain(); }],

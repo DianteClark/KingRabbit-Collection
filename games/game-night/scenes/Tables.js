@@ -5,7 +5,9 @@ import { WIDTH } from '../../../shared/core/boot.js';
 import { header, go, setBackground, toast } from './common.js';
 import { endGame } from './boardkit.js';
 import { sfx } from '../../../shared/core/sfx.js';
-import { newGame, turnSequences, apply, rollDice, winner, other, cpuTurn, pipCount, winType, openingRoll } from '../logic/backgammon.js';
+import { newGame, turnSequences, apply, rollDice, winner, other, cpuTurn, pipCount, winType, openingRoll, LEVELS } from '../logic/backgammon.js';
+import { getSkill, tune } from '../adaptive.js';
+
 
 // Layout: 12 points per row, 6 | bar | 6. Light (player 0) moves 24 -> 1, home bottom-right.
 const PW = 24;                  // point width (8px sprite x3)
@@ -27,7 +29,7 @@ const isTop = (i) => i >= 13;
 export class Tables extends Phaser.Scene {
   constructor() { super('Tables'); }
 
-  init(data) { this.mode = data.mode ?? 'cpu'; this.level = data.level || 'normal'; }
+  init(data) { this.mode = data.mode ?? 'cpu'; this.cfg = tune(LEVELS, getSkill('tables'), ['look']); }
 
   create() {
     setBackground(this, PALETTE.wine);
@@ -192,7 +194,7 @@ export class Tables extends Phaser.Scene {
     sfx('roll');
     this.status.setText(`CPU rolled ${this.dice.slice(0, 2).join(' ')}${this.dice.length === 4 ? ' (double)' : ''}`);
     this.draw();
-    const pick = cpuTurn(this.s, this.dice, { level: this.level });
+    const pick = cpuTurn(this.s, this.dice, { cfg: this.cfg });
     if (!pick || !pick.moves.length) {
       toast(this, 'CPU has no moves', 600);
       this.time.delayedCall(1000, () => this.endTurn());
@@ -285,7 +287,7 @@ export class Tables extends Phaser.Scene {
     this.status.setText(`${title} ${kind.name}`);
     endGame(this, {
       id: 'tables', mode: this.mode, title,
-      lines: [kind.name, `Worth ${kind.points} point${kind.points > 1 ? 's' : ''}`], outcome: w === 0 ? 'w' : 'l', onAgain: () => this.restart(),
+      lines: [kind.name, `Worth ${kind.points} point${kind.points > 1 ? 's' : ''}`], outcome: w === 0 ? 'w' : 'l', margin: kind.points / 3, onAgain: () => this.restart(),
     });
   }
 }

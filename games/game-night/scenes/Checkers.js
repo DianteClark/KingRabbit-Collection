@@ -4,7 +4,9 @@ import { text } from '../../../shared/core/ui.js';
 import { WIDTH } from '../../../shared/core/boot.js';
 import { header, go, setBackground } from './common.js';
 import { checkerboard, highlighter, endGame, think } from './boardkit.js';
-import { newBoard, legalMoves, play, other, side, winnerIfStuck, cpuMove } from '../logic/checkers.js';
+import { newBoard, legalMoves, play, other, side, winnerIfStuck, cpuMove, LEVELS } from '../logic/checkers.js';
+import { getSkill, tune } from '../adaptive.js';
+
 import { sfx } from '../../../shared/core/sfx.js';
 
 const CELL = 40;
@@ -14,7 +16,7 @@ const TOP = 168;
 export class Checkers extends Phaser.Scene {
   constructor() { super('Checkers'); }
 
-  init(data) { this.mode = data.mode ?? 'cpu'; this.level = data.level || 'normal'; }
+  init(data) { this.mode = data.mode ?? 'cpu'; this.cfg = tune(LEVELS, getSkill('checkers'), ['depth']); }
 
   create() {
     setBackground(this, PALETTE.wine);
@@ -76,7 +78,7 @@ export class Checkers extends Phaser.Scene {
     if (this.isCpu()) {
       this.status.setText('CPU is thinking...');
       this.busy = true;
-      think(this, () => this.apply(cpuMove(this.board, 'l', { level: this.level })));
+      think(this, () => this.apply(cpuMove(this.board, 'l', { cfg: this.cfg })));
     } else {
       this.status.setText(`${this.name(this.turn)} to move${this.moves[0]?.captured.length ? ' - capture!' : ''}`);
     }

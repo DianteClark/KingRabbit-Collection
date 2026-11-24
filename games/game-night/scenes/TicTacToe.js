@@ -3,7 +3,9 @@ import { PALETTE, hex } from '../../../shared/core/palette.js';
 import { text } from '../../../shared/core/ui.js';
 import { WIDTH } from '../../../shared/core/boot.js';
 import { header, go, modal, popIn, setBackground } from './common.js';
-import { result, cpuMove, MISTAKES } from '../logic/tictactoe.js';
+import { result, cpuMove, PRESETS } from '../logic/tictactoe.js';
+import { getSkill, tune } from '../adaptive.js';
+
 import { sfx } from '../../../shared/core/sfx.js';
 import { record } from '../save.js';
 
@@ -18,7 +20,7 @@ export class TicTacToe extends Phaser.Scene {
 
   init(data) {
     this.mode = data.mode ?? 'cpu';
-    this.level = data.level || 'normal';
+    this.cfg = tune(PRESETS, getSkill('ttt'));
     this.firstPlayer = 'X';
     this.tally = { X: 0, O: 0, draw: 0 };
   }
@@ -99,7 +101,7 @@ export class TicTacToe extends Phaser.Scene {
     this.busy = true;
     this.time.delayedCall(450, () => {
       this.busy = false;
-      if (!this.over) this.place(cpuMove(this.board, 'O', { mistakeChance: MISTAKES[this.level] }));
+      if (!this.over) this.place(cpuMove(this.board, 'O', { mistakeChance: this.cfg.mistakeChance }));
     });
   }
 

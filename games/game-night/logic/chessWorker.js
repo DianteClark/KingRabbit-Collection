@@ -2,7 +2,7 @@
 import { cpuMove } from './chess.js';
 
 self.onmessage = (e) => {
-  const { state, level, id } = e.data;
-  const move = cpuMove(state, { level });
+  const { state, level, cfg, id } = e.data;
+  const move = cpuMove(state, cfg ? { cfg } : { level });
   self.postMessage({ id, move });
 };

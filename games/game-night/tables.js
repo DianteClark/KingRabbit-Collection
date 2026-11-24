@@ -22,7 +22,7 @@ export const TABLES = [
   { id: 'dominoes', scene: 'Dominoes', name: 'Dominoes', cat: 'board', modes: ['cpu'], score: 'record', icon: ['dominoes:icon', 2], levels: true },
   { id: 'seabattle', scene: 'SeaBattle', name: 'Sea Battle', cat: 'board', modes: ['cpu'], score: 'record', icon: ['seabattle:boom', 4], levels: true },
   // Cards & dice
-  { id: 'yacht', scene: 'Yacht', name: 'Yacht Dice', cat: 'cards', modes: ['solo'], score: 'best', icon: ['yacht:d5', 2.5] },
+  { id: 'yacht', scene: 'Yacht', name: 'Yacht Dice', cat: 'cards', modes: ['solo', 'cpu', 'pvp'], score: 'best', levels: true, icon: ['yacht:d5', 2.5] },
   { id: 'solitaire', scene: 'Solitaire', name: 'Solitaire', cat: 'cards', modes: ['solo'], score: 'record', icon: ['cards:back', 1.5] },
   { id: 'wildcards', scene: 'WildCards', name: 'Wild Cards', cat: 'cards', modes: ['cpu'], score: 'record', icon: ['wild:icon', 1], levels: true },
   // Arcade

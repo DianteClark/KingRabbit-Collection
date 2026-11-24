@@ -121,3 +121,34 @@ export function autoStep(g) {
   g.tableau.forEach((p, i) => { if (p.length) consider({ from: 'tableau', i, k: p.length - 1 }, top(p)); });
   return best ? move(g, best.src, { to: 'foundation', i: best.card.suit }) : null;
 }
+
+/**
+ * Suggest a useful move: { src, dst } or { draw: true } or null.
+ * Order: anything to a foundation, then moves that turn over a hidden card, then the waste card
+ * onto the table, then drawing from the stock.
+ */
+export function hint(g) {
+  const tops = [];
+  if (g.waste.length) tops.push({ from: 'waste' });
+  g.tableau.forEach((p, i) => { if (p.length) tops.push({ from: 'tableau', i, k: p.length - 1 }); });
+  for (const src of tops) {
+    const c = pick(g, src)?.[0];
+    if (c && canFound(g, c)) return { src, dst: { to: 'foundation', i: c.suit } };
+  }
+  // Move the whole face-up run of a column if that reveals a face-down card (or empties for a king).
+  for (let i = 0; i < 7; i++) {
+    const p = g.tableau[i];
+    const k = p.findIndex((c) => c.up);
+    if (k <= 0) continue;   // nothing hidden underneath
+    for (let j = 0; j < 7; j++) {
+      if (j !== i && canStack(g.tableau[j], p[k])) return { src: { from: 'tableau', i, k }, dst: { to: 'tableau', i: j } };
+    }
+  }
+  if (g.waste.length) {
+    for (let j = 0; j < 7; j++) {
+      if (canStack(g.tableau[j], g.waste[g.waste.length - 1])) return { src: { from: 'waste' }, dst: { to: 'tableau', i: j } };
+    }
+  }
+  if (g.stock.length || g.waste.length) return { draw: true };
+  return null;
+}

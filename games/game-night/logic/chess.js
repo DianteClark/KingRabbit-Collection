@@ -263,8 +263,7 @@ export const LEVELS = {
  * Best move for the side to move. Iterative deepening: searches 1, 2, ... levels deeper until the
  * level's depth or time budget runs out, keeping the best move from the last finished pass.
  */
-export function cpuMove(s, { depth, level = 'normal', rng = Math.random, timeMs } = {}) {
-  const cfg = LEVELS[level];
+export function cpuMove(s, { depth, level = 'normal', cfg = LEVELS[level], rng = Math.random, timeMs } = {}) {
   const maxDepth = depth ?? cfg.depth;
   const clock = { deadline: Date.now() + (timeMs ?? cfg.timeMs), nodes: 0 };
   let moves = order(legalMoves(s));

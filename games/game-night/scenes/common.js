@@ -3,6 +3,8 @@ import { text, button, panel, fadeTo } from '../../../shared/core/ui.js';
 import { WIDTH, HEIGHT } from '../../../shared/core/boot.js';
 import { showHowTo } from '../../../shared/core/howto.js';
 import { RULES } from '../rules.js';
+import { TABLES } from '../tables.js';
+import { skillLabel } from '../adaptive.js';
 
 /** Top bar used by every Game Night screen: back button + title. */
 export function header(scene, title, onBack) {
@@ -18,7 +20,15 @@ export function openHowTo(scene) {
   const rules = RULES[scene.scene.key];
   if (!rules || document.getElementById('howto')) return;
   scene.scene.pause();
-  showHowTo(rules, () => scene.scene.resume());
+  const table = TABLES.find((t) => t.scene === scene.scene.key);
+  const sections = [...rules.sections];
+  if (table?.levels) {
+    sections.push({
+      heading: 'The computer adapts to you',
+      text: `The CPU is at level ${skillLabel(table.id)} of 10 for you right now. Win and it plays better next time; lose and it eases off, so games stay close. It only changes how well the computer plays - dice, deals and shuffles are always fair. Reset it from the game's menu tile.`,
+    });
+  }
+  showHowTo({ ...rules, sections }, () => scene.scene.resume());
 }
 
 /** Go to another scene with a quick fade. */
