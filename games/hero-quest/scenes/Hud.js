@@ -1,25 +1,23 @@
 import Phaser from 'phaser';
 import { PALETTE, hex } from '../../../shared/core/palette.js';
 import { text, button, panel } from '../../../shared/core/ui.js';
-import { WIDTH, HEIGHT } from '../../../shared/core/boot.js';
+import { LANDSCAPE } from '../../../shared/core/boot.js';
 import { sfx, isMuted, setMuted } from '../../../shared/core/sfx.js';
 import { showHowTo } from '../../../shared/core/howto.js';
 import { RULES } from '../rules.js';
 import { save } from '../save.js';
 import { skillLabel } from '../adaptive.js';
 import { ITEM } from '../art.js';
-import { VIEW } from './Play.js';
 import { DUNGEONS } from '../logic/constants.js';
 import { objective } from '../logic/story.js';
 import { musicOn, setMusicOn } from '../music.js';
 import { ROOMS } from '../logic/data.js';
+// Landscape layout (see layout.js): the room fills the middle, full height. Left margin: pause,
+// hearts, gems, keys and the stick. Right margin: help, then SWAP / ITEM / SWORD for the thumb.
+import { VIEW, LEFT, RIGHT, MID as MARGIN_R, STICK, SWORD, ITEMB, SWAP, PAUSE_BTN, HELP_BTN, stickZone } from '../layout.js';
 
-const BAR_H = 44;
-const PAD_TOP = VIEW.y + VIEW.h;            // 464: the touch controls live below the room
-const STICK = { x: 84, y: 556, r: 44, knob: 20 };
-const SWORD = { x: 298, y: 548, r: 44 };
-const ITEMB = { x: 206, y: 594, r: 32 };
-const SWAP = { x: 206, y: 514, w: 72, h: 30 };
+const { WIDTH, HEIGHT } = LANDSCAPE;       // 640 x 360
+
 const itemFrame = (name) => ITEM[name][1] * 8 + ITEM[name][0];
 
 export class Hud extends Phaser.Scene {
@@ -38,36 +36,35 @@ export class Hud extends Phaser.Scene {
   get g() { return this.play.g; }
 
   create() {
-    // ------------------------------------------------ top bar
-    this.add.rectangle(0, 0, WIDTH, BAR_H, hex(PALETTE.night)).setOrigin(0);
-    this.add.rectangle(0, BAR_H, WIDTH, 2, hex(PALETTE.ink)).setOrigin(0);
-    button(this, 26, 22, 40, 36, '<', () => this.pauseMenu(), { size: 32, fill: PALETTE.cream });
-    button(this, WIDTH - 22, 22, 36, 36, '?', () => this.help(), { size: 32, fill: PALETTE.gold });
+    // ------------------------------------------------ side margins
+    this.add.rectangle(0, 0, LEFT, HEIGHT, hex(PALETTE.night)).setOrigin(0).setDepth(-1);
+    this.add.rectangle(RIGHT, 0, WIDTH - RIGHT, HEIGHT, hex(PALETTE.night)).setOrigin(0).setDepth(-1);
+    button(this, PAUSE_BTN.x, PAUSE_BTN.y, PAUSE_BTN.w, PAUSE_BTN.h, '<', () => this.pauseMenu(), { size: 32, fill: PALETTE.cream });
+    button(this, HELP_BTN.x, HELP_BTN.y, HELP_BTN.w, HELP_BTN.h, '?', () => this.help(), { size: 32, fill: PALETTE.gold });
     this.hearts = [];
-    for (let i = 0; i < 10; i++) this.hearts.push(this.add.image(60 + i * 16, 22, 'heart').setScale(2));
-    this.gemIcon = this.add.image(224, 22, 'items', itemFrame('gem')).setScale(1.25);
-    this.gemText = text(this, 236, 22, '0', { color: PALETTE.cream, origin: [0, 0.5] });
-    this.keyIcon = this.add.image(276, 22, 'items', itemFrame('key'));
-    this.keyText = text(this, 286, 22, '0', { color: PALETTE.cream, origin: [0, 0.5] });
-    this.bossKey = this.add.image(308, 22, 'items', itemFrame('bigkey'));
+    for (let i = 0; i < 10; i++) this.hearts.push(this.add.image(24 + (i % 5) * 24, 62 + Math.floor(i / 5) * 20, 'heart').setScale(2));
+    this.gemIcon = this.add.image(26, 108, 'items', itemFrame('gem')).setScale(1.25);
+    this.gemText = text(this, 40, 108, '0', { color: PALETTE.cream, origin: [0, 0.5] });
+    this.keyIcon = this.add.image(84, 108, 'items', itemFrame('key'));
+    this.keyText = text(this, 94, 108, '0', { color: PALETTE.cream, origin: [0, 0.5] });
+    this.bossKey = this.add.image(124, 108, 'items', itemFrame('bigkey'));
     // frame around the room
     const fr = this.add.graphics();
     fr.lineStyle(2, hex(PALETTE.ink)).strokeRect(VIEW.x - 1, VIEW.y - 1, VIEW.w + 2, VIEW.h + 2);
 
-    // ------------------------------------------------ control pad
-    this.add.rectangle(0, PAD_TOP + 2, WIDTH, HEIGHT - PAD_TOP, hex(PALETTE.night)).setOrigin(0).setDepth(-1);
+    // ------------------------------------------------ controls
     this.pad = this.add.graphics();
     this.swordLabel = text(this, SWORD.x, SWORD.y, 'SWORD', { color: PALETTE.night });
     this.itemIcon = this.add.image(ITEMB.x, ITEMB.y - 2, 'items', 0).setScale(2);
     this.itemLabel = text(this, ITEMB.x, ITEMB.y, 'ITEM', { color: PALETTE.night });
-    this.itemCount = text(this, ITEMB.x + 22, ITEMB.y + 22, '', { color: PALETTE.cream });
+    this.itemCount = text(this, ITEMB.x + 26, ITEMB.y + 24, '', { color: PALETTE.cream });
     this.swapLabel = text(this, SWAP.x, SWAP.y, 'SWAP', { color: PALETTE.night });
-    this.stickHint = text(this, STICK.x, PAD_TOP + 20, 'MOVE', { color: PALETTE.lavender });
+    this.stickHint = text(this, STICK.x, STICK.y - 70, 'MOVE', { color: PALETTE.lavender });
 
     // ------------------------------------------------ overlays
     this.flash = this.add.rectangle(VIEW.x, VIEW.y, VIEW.w, VIEW.h, 0xd8343a, 0).setOrigin(0).setDepth(30);
-    this.bannerText = text(this, WIDTH / 2, VIEW.y + 26, '', { size: 32, color: PALETTE.cream }).setDepth(31).setAlpha(0);
-    this.bannerBg = this.add.rectangle(WIDTH / 2, VIEW.y + 26, WIDTH - 8, 44, hex(PALETTE.ink), 0.6).setDepth(30).setAlpha(0);
+    this.bannerText = text(this, MARGIN_R, VIEW.y + 26, '', { size: 32, color: PALETTE.cream }).setDepth(31).setAlpha(0);
+    this.bannerBg = this.add.rectangle(MARGIN_R, VIEW.y + 26, VIEW.w, 44, hex(PALETTE.ink), 0.6).setDepth(30).setAlpha(0);
 
     this.setupInput();
     this.refresh();
@@ -93,8 +90,8 @@ export class Hud extends Phaser.Scene {
       const bg = this.add.rectangle(x, y, t.width + 14, t.height + 8, hex(PALETTE.gold)).setDepth(44).setStrokeStyle(2, hex(PALETTE.ink));
       items.push(t, bg);
     };
-    tag(STICK.x + 4, PAD_TOP + 22, 'Drag here to walk');
-    tag(SWORD.x - 6, SWORD.y - 58, 'Tap to swing');
+    tag(STICK.x + 6, STICK.y - 72, 'Drag here\nto walk');
+    tag(SWORD.x - 8, SWORD.y - 62, 'Tap to swing');
     this.tweens.add({ targets: items, y: '-=4', yoyo: true, repeat: 7, duration: 380 });
     this.time.delayedCall(6500, () => this.tweens.add({ targets: items, alpha: 0, duration: 400, onComplete: () => items.forEach((o) => o.destroy()) }));
   }
@@ -107,11 +104,11 @@ export class Hud extends Phaser.Scene {
     const inSwap = (p) => Math.abs(p.x - SWAP.x) < SWAP.w / 2 + 6 && Math.abs(p.y - SWAP.y) < SWAP.h / 2 + 6;
     this.input.on('pointerdown', (p) => {
       if (this.dialog) { this.advanceDialog(); return; }
-      if (this.modal || p.y < BAR_H + 2) return;
+      if (this.modal || (p.y < 48 && (p.x < 60 || p.x > WIDTH - 60))) return;
       if (inCircle(p, SWORD)) { this.down.sword.add(p.id); this.press.attack = true; return; }
       if (inCircle(p, ITEMB)) { this.down.item.add(p.id); this.press.item = true; return; }
       if (this.swapVisible && inSwap(p)) { this.press.cycle = true; return; }
-      if (p.x < 176 && this.stick.id === null) this.stick = { id: p.id, ox: p.x, oy: p.y, dx: 0, dy: 0 };
+      if (stickZone(p.x, p.y) && this.stick.id === null) this.stick = { id: p.id, ox: p.x, oy: p.y, dx: 0, dy: 0 };
     });
     this.input.on('pointermove', (p) => {
       if (p.id !== this.stick.id) return;
@@ -240,9 +237,10 @@ export class Hud extends Phaser.Scene {
 
   toast(msg) {
     this.lastToast?.destroy(); this.lastToastBg?.destroy();
-    const y = PAD_TOP - 26;
-    const t = text(this, WIDTH / 2, y, msg, { color: PALETTE.gold, wrap: 330 }).setDepth(41);
-    const bg = this.add.rectangle(WIDTH / 2, y, Math.min(WIDTH - 8, t.width + 20), t.height + 10, hex(PALETTE.ink), 0.75).setDepth(40);
+    const t = text(this, MARGIN_R, 0, msg, { color: PALETTE.gold, wrap: VIEW.w - 30 }).setDepth(41);
+    const y = HEIGHT - 12 - t.height / 2;
+    t.setY(Math.round(y));
+    const bg = this.add.rectangle(MARGIN_R, y, Math.min(VIEW.w - 4, t.width + 20), t.height + 10, hex(PALETTE.ink), 0.75).setDepth(40);
     this.lastToast = t; this.lastToastBg = bg;
     this.tweens.add({ targets: [t, bg], alpha: 0, delay: Math.min(4500, 1300 + msg.length * 45), duration: 300, onComplete: () => { t.destroy(); bg.destroy(); } });
   }
@@ -252,10 +250,11 @@ export class Hud extends Phaser.Scene {
   showDialog(lines, item, onDone) {
     this.closeDialogBox();
     const c = this.add.container(0, 0).setDepth(50);
-    const top = PAD_TOP + 4;
-    c.add(panel(this, 6, top, WIDTH - 12, HEIGHT - top - 6, { fill: PALETTE.night, inner: PALETTE.cream }));
-    const body = text(this, 22, top + 18, '', { color: PALETTE.cream, origin: [0, 0], align: 'left', wrap: WIDTH - 44 });
-    const more = text(this, WIDTH - 26, HEIGHT - 24, 'v', { color: PALETTE.gold });
+    // over the lower part of the room, a little wider than it
+    const x0 = LEFT - 24; const w = VIEW.w + 48; const top = HEIGHT - 128;
+    c.add(panel(this, x0, top, w, 124, { fill: PALETTE.night, inner: PALETTE.cream }));
+    const body = text(this, x0 + 16, top + 14, '', { color: PALETTE.cream, origin: [0, 0], align: 'left', wrap: w - 40 });
+    const more = text(this, x0 + w - 22, HEIGHT - 20, 'v', { color: PALETTE.gold });
     c.add([body, more]);
     this.tweens.add({ targets: more, y: more.y + 3, yoyo: true, repeat: -1, duration: 300 });
     this.dialog = { c, body, more, lines, i: 0, shown: 0, onDone, t0: this.time.now };
@@ -315,14 +314,16 @@ export class Hud extends Phaser.Scene {
     if (this.modal || this.dialog || this.play.busy) return;
     this.scene.pause('Play');
     const m = this.openModal((c) => {
-      const top = 34; const h = 596;
-      c.add(panel(this, 24, top, WIDTH - 48, h));
-      c.add(text(this, WIDTH / 2, top + 28, 'Paused', { size: 32, color: PALETTE.gold }));
+      // two columns: what's going on (left), what to do (right)
+      const top = 8; const L = 176; const R = 466;
+      c.add(panel(this, 16, top, WIDTH - 32, HEIGHT - 16));
+      c.add(text(this, L, top + 26, 'Paused', { size: 32, color: PALETTE.gold }));
       const s = this.g.s;
       const done = DUNGEONS.filter((d) => s.flags[`boss:${d}`]).length;
-      c.add(text(this, WIDTH / 2, top + 60, `Dungeons ${done}/3   Hearts ${s.maxHp / 2}   Pace ${skillLabel()}/10`, { color: PALETTE.cream }));
-      c.add(text(this, WIDTH / 2, top + 98, `Next: ${objective(s)}`, { color: PALETTE.sand, wrap: 280 }));
-      this.drawMap(c, WIDTH / 2, top + 210);
+      c.add(text(this, L, top + 58, `Dungeons ${done}/3   Hearts ${s.maxHp / 2}`, { color: PALETTE.cream }));
+      c.add(text(this, L, top + 78, `Enemy pace ${skillLabel()}/10`, { color: PALETTE.lavender }));
+      c.add(text(this, L, top + 116, `Next: ${objective(s)}`, { color: PALETTE.sand, wrap: 290 }));
+      this.drawMap(c, L, top + 262);
       const half = (x, label, fn) => { const b = button(this, x, 0, 104, 42, label, () => fn(b), { fill: PALETTE.lavender }); return b; };
       const rows = [['Resume', () => m.close(), PALETTE.gold]];
       if (this.g.hasBlocks()) rows.push(['Reset blocks', () => { m.close(); this.play.resetRoom(); }, PALETTE.cream]);
@@ -330,17 +331,17 @@ export class Hud extends Phaser.Scene {
       rows.push(['audio']);
       rows.push(['Save & Title', () => { this.play.saveNow(); m.close(); this.scene.stop('Play'); this.scene.start('Title'); }]);
       rows.push(['All Games', () => { this.play.saveNow(); window.location.href = '../'; }]);
-      const y0 = top + 312; const step = rows.length > 5 ? 48 : 54;
+      const step = rows.length > 5 ? 52 : 58; const y0 = top + 34 + (6 - rows.length) * 14;
       rows.forEach(([label, fn, fill], i) => {
         const y = y0 + i * step;
         if (label === 'audio') {
-          const sb = half(WIDTH / 2 - 56, isMuted() ? 'Sound off' : 'Sound on', (b) => { setMuted(!isMuted()); b.setLabel(isMuted() ? 'Sound off' : 'Sound on'); });
-          const mb = half(WIDTH / 2 + 56, musicOn() ? 'Music on' : 'Music off', (b) => { setMusicOn(!musicOn()); b.setLabel(musicOn() ? 'Music on' : 'Music off'); });
+          const sb = half(R - 56, isMuted() ? 'Sound off' : 'Sound on', (b) => { setMuted(!isMuted()); b.setLabel(isMuted() ? 'Sound off' : 'Sound on'); });
+          const mb = half(R + 56, musicOn() ? 'Music on' : 'Music off', (b) => { setMusicOn(!musicOn()); b.setLabel(musicOn() ? 'Music on' : 'Music off'); });
           sb.y = y; mb.y = y;
           c.add([sb, mb]);
           return;
         }
-        c.add(button(this, WIDTH / 2, y, 216, 42, label, fn, { fill: fill || PALETTE.lavender }));
+        c.add(button(this, R, y, 216, 42, label, fn, { fill: fill || PALETTE.lavender }));
       });
     }, () => this.scene.resume('Play'));
   }
@@ -353,7 +354,7 @@ export class Hud extends Phaser.Scene {
     const gr = this.add.graphics();
     c.add(gr);
     const name = { ow: 'Fernwick Vale  (1-3: dungeons)', d1: 'Mossy Hollow', d2: 'Ember Lab', d3: 'Hollow Keep' }[area];
-    c.add(text(this, cx, cy - 64, name, { color: PALETTE.sand }));
+    c.add(text(this, cx, cy - 66, name, { color: PALETTE.cream }));
     for (let y = 0; y < 3; y++) {
       for (let x = 0; x < 3; x++) {
         const id = `${area}:${x},${y}`;
@@ -386,8 +387,8 @@ export class Hud extends Phaser.Scene {
 
   deathModal(onContinue) {
     this.openModal((c) => {
-      const top = 200;
-      c.add(panel(this, 30, top, 300, 220, { fill: PALETTE.wine }));
+      const top = 70;
+      c.add(panel(this, WIDTH / 2 - 160, top, 320, 220, { fill: PALETTE.wine }));
       c.add(text(this, WIDTH / 2, top + 40, 'You fell...', { size: 32, color: PALETTE.cream }));
       c.add(text(this, WIDTH / 2, top + 96, 'You wake at the last entrance\nwith everything you found.', { color: PALETTE.sand }));
       c.add(button(this, WIDTH / 2, top + 170, 200, 48, 'Get up', () => c.close(), { fill: PALETTE.gold }));
@@ -398,11 +399,11 @@ export class Hud extends Phaser.Scene {
     const g = this.g;
     this.scene.pause('Play');
     const m = this.openModal((c) => {
-      const top = 96; const h = 456;
-      c.add(panel(this, 16, top, WIDTH - 32, h));
-      c.add(text(this, WIDTH / 2, top + 32, "Odo's Shop", { size: 32, color: PALETTE.gold }));
-      const gems = text(this, WIDTH / 2, top + 70, '', { color: PALETTE.cream });
-      const msg = text(this, WIDTH / 2, top + h - 92, 'Tap a price to buy.', { color: PALETTE.lavender });
+      const top = 8; const h = HEIGHT - 16; const x0 = 96; const w = WIDTH - 192;
+      c.add(panel(this, x0, top, w, h));
+      c.add(text(this, WIDTH / 2, top + 28, "Odo's Shop", { size: 32, color: PALETTE.gold }));
+      const gems = text(this, WIDTH / 2, top + 60, '', { color: PALETTE.cream });
+      const msg = text(this, x0 + 24, top + h - 34, 'Tap a price to buy.', { color: PALETTE.lavender, origin: [0, 0.5] });
       c.add([gems, msg]);
       const rows = [];
       const draw = () => {
@@ -410,11 +411,11 @@ export class Hud extends Phaser.Scene {
         g.shopStock().forEach((it, i) => rows[i]?.sync(it));
       };
       g.shopStock().forEach((it, i) => {
-        const y = top + 120 + i * 78;
-        const icon = it.id === 'heart' ? this.add.image(56, y, 'heartBig').setScale(2) : this.add.image(56, y, 'items', itemFrame(it.id)).setScale(2.5);
-        const name = text(this, 86, y - 12, it.name, { color: PALETTE.cream, origin: [0, 0.5] });
-        const desc = text(this, 86, y + 12, it.desc, { color: PALETTE.lavender, origin: [0, 0.5] });
-        const b = button(this, WIDTH - 66, y, 80, 44, `${it.price}`, () => {
+        const y = top + 104 + i * 66;
+        const icon = it.id === 'heart' ? this.add.image(x0 + 44, y, 'heartBig').setScale(2) : this.add.image(x0 + 44, y, 'items', itemFrame(it.id)).setScale(2.5);
+        const name = text(this, x0 + 76, y - 11, it.name, { color: PALETTE.cream, origin: [0, 0.5] });
+        const desc = text(this, x0 + 76, y + 11, it.desc, { color: PALETTE.lavender, origin: [0, 0.5] });
+        const b = button(this, x0 + w - 60, y, 84, 44, `${it.price}`, () => {
           const res = g.buy(it.id);
           msg.setText(res.msg).setColor(res.ok ? PALETTE.gold : PALETTE.sand);
           sfx(res.ok ? 'coin' : 'error');
@@ -424,7 +425,7 @@ export class Hud extends Phaser.Scene {
         c.add([icon, name, desc, b]);
         rows.push({ sync: (cur) => { desc.setText(cur.why || cur.desc); b.setEnabled(!cur.why && g.s.gems >= cur.price); } });
       });
-      c.add(button(this, WIDTH / 2, top + h - 40, 180, 44, 'Thanks!', () => m.close(), { fill: PALETTE.lavender }));
+      c.add(button(this, x0 + w - 90, top + h - 34, 144, 40, 'Thanks!', () => m.close(), { fill: PALETTE.lavender }));
       draw();
     }, () => { g.closeShop(); this.scene.resume('Play'); });
   }

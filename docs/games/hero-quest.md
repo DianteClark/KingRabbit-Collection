@@ -1,18 +1,22 @@
 # Hollow Crown
 
-**Status:** Playable (v1.1): overworld, 3 dungeons, bosses, shop, saves, ending, music, onboarding
+**Status:** Playable (v1.2, landscape): overworld, 3 dungeons, bosses, shop, saves, ending, music, onboarding
 **Game id:** `hero-quest` (`games/hero-quest/`)
 **Art:** LAS Adventure Pack 1.0 and LAS Alchemist Lab 1.02 by Aleksandr Makarov (`shared/assets/las-zelda-adventure/`)
 **Rules text:** `games/hero-quest/rules.js` (gold ? button)
 
 A short top-down sword-and-dungeon adventure for a phone held in one hand. The Gremlin King stole the Hollow Crown; you get a sword from Elder Bram, clear the Mossy Hollow (boomerang), the Ember Lab (bombs) and Hollow Keep, and carry the Crown home. A full run is roughly 30-45 minutes.
 
-## Screen and controls
-- 360x640 portrait. Top bar (44 px): back/pause, hearts, gems, dungeon keys, ?. The room (11 x 13 tiles of 16 px) is drawn at 2x in the middle (y 48-464); the touch controls live underneath it so they never cover the action.
-- Floating stick: thumb down anywhere on the left side (room or pad). SWORD button (right) turns into TALK / READ / OPEN next to people, signs and chests. ITEM uses the selected item; SWAP (shown once you own two items) cycles boomerang / bombs / potion.
+## Screen and controls (landscape since v1.2)
+- `startGame({ orientation: 'landscape' })`: 640x360 logical canvas; held upright the shared overlay asks you to turn the phone.
+- The room (11 x 13 tiles of 16 px) is drawn at a crisp 2x in the middle (x 144-496) using the full screen height. At 2x it is 416 px tall, so the camera follows you up and down by up to 28 px and never shows past the room's edges (`layout.js` `camY`). Room slides start from the current camera position and end on the new room's clamped view.
+- Left margin: pause `<`, hearts (two rows of five), gems, dungeon keys, and the floating stick (thumb down anywhere on the left half of the screen, margin or room).
+- Right margin: `?`, then SWAP, ITEM and a big SWORD button stacked for the right thumb. SWORD turns into TALK / READ / OPEN next to people, signs and chests.
+- Dialogs sit over the lower part of the room; toasts at its bottom edge; the area name at its top.
+- Pause and shop are two-column panels; title and ending use left/right columns.
+- All positions live in `layout.js` (plain numbers, tested). Text is 16/32 px only.
 - The shield is always up: rocks coming at the way you face bounce off unless you're mid-swing.
 - Keyboard: arrows/WASD, Space/J sword, K/X item, Q swap, Esc pause.
-- Rooms change screen by screen (a 0.4 s slide); doors and cave mouths fade.
 
 ## World
 | Area | Rooms | What's there |
@@ -66,7 +70,8 @@ Green slime (hops at random), blue slime (lunges when you line up), red slime (f
 | `logic/solver.js` | Completability solver (all key orders) and the push-block Sokoban search |
 | `scenes/painter.js` | Paints a room into a canvas (LAS tiles outdoors; dungeon floors/walls drawn in the same pixel style so any wall shape joins up) |
 | `scenes/Play.js` | World camera (2x), sprites, animations, effects, scroll/fade transitions |
-| `scenes/Hud.js` | Top bar, stick and buttons, dialog box, shop, pause (with area map), death screen |
+| `layout.js` | Landscape screen layout: room view, margins, stick/button positions, camera clamp |
+| `scenes/Hud.js` | Side-margin HUD, stick and buttons, dialog box, shop, pause (with area map), death screen |
 | `scenes/Title.js`, `scenes/Ending.js`, `scenes/Boot.js` | Menus, ending, loading and baked textures/animations |
 
 ## Boss tuning
@@ -74,6 +79,7 @@ Tuned by playing each boss through the real scene with a scripted "human" (decis
 
 ## Tests
 - `tests/hero-quest.test.mjs`: map validity (sizes, legend, chest/sign/warp/house alignment, matching room edges, no openings to nowhere), the whole-game solver in every key order (every chest, every boss), item gating, every switch puzzle from every doorway, bomb refills near cracked walls, and rules (sword, contact damage and i-frames, shield, keys, block pushing, boomerang, bombs, death/respawn, potions, shop, bosses' immunities, splitting, clear-shutters, enemies stay in bounds, adaptive presets, save round-trip, the hidden cave).
+- `tests/hero-quest-layout.test.mjs`: the landscape layout fits 640x360, controls stay in the margins without overlapping, the stick zone avoids the buttons, and the camera keeps the player and only the room in view.
 - `tests/hero-quest-playthrough.test.mjs`: a bot plays from the first line to the ending through the real simulation (walking, pushing, unlocking, boomerang, bombs, chests), opening every chest.
 
 ## Next ideas

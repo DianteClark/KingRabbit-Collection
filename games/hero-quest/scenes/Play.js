@@ -10,8 +10,7 @@ import { DIR_NAME, ITEM } from '../art.js';
 import { playMusic, jingle, tuneFor } from '../music.js';
 import { objective } from '../logic/story.js';
 
-// The room is drawn at 2x into this part of the 360x640 screen; the HUD scene owns the rest.
-export const VIEW = { x: 4, y: 48, w: ROOM_W * 2, h: ROOM_H * 2 };
+import { VIEW, camY } from '../layout.js';
 
 const SLIME_COLOR = { slime: 'Green', slimelet: 'Green', blueSlime: 'Blue', redSlime: 'Red', slimeKing: 'Red' };
 const itemFrame = (name) => ITEM[name][1] * 8 + ITEM[name][0];
@@ -31,7 +30,7 @@ export class Play extends Phaser.Scene {
 
     const cam = this.cameras.main;
     cam.setViewport(VIEW.x, VIEW.y, VIEW.w, VIEW.h).setZoom(2).setBackgroundColor('#050404');
-    cam.centerOn(ROOM_W / 2, ROOM_H / 2);
+    cam.centerOn(ROOM_W / 2, camY(this.g.p.y));
     cam.setRoundPixels(true);
     document.body.style.background = '#1c1618';
 
@@ -60,6 +59,15 @@ export class Play extends Phaser.Scene {
     document.addEventListener('visibilitychange', flush);
     this.events.once('shutdown', () => { window.removeEventListener('pagehide', flush); document.removeEventListener('visibilitychange', flush); });
     cam.fadeIn(250);
+  }
+
+  /** Keep the player in view (the room is a little taller than the screen). */
+  follow(snap = false) {
+    const cam = this.cameras.main;
+    const want = camY(this.g.p.y);
+    const cur = cam.midPoint.y;
+    const y = snap ? want : cur + (want - cur) * 0.2;
+    cam.centerOn(ROOM_W / 2, Math.abs(want - y) < 0.5 ? want : y);
   }
 
   /** Pause menu "Reset room": blocks back to their start. */
@@ -111,6 +119,7 @@ export class Play extends Phaser.Scene {
     }
     layer.add([this.pShadow, this.player, this.held]);
     this.layer = layer;
+    if (!ox && !oy) this.cameras.main.centerOn(ROOM_W / 2, camY(this.g.p.y));
     return layer;
   }
 
@@ -300,8 +309,7 @@ export class Play extends Phaser.Scene {
     const input = this.hud.readInput();   // read every frame so presses during a slide don't linger
     if (!this.busy) g.update(dt, input);
     this.handleEvents();
-    if (!this.busy) this.syncAll(dt);
-    else this.animPlayer();
+    if (!this.busy) { this.syncAll(dt); this.follow(); } else this.animPlayer();
     if (g.dirty && time - this.lastSave > 1500) this.saveNow();
     if (!this.busy) playMusic(g.mode === 'dead' ? null : tuneFor(g.room, g.enemies.some((e) => e.boss && !e.dead)));
   }
@@ -386,8 +394,8 @@ export class Play extends Phaser.Scene {
     const neu = this.buildRoom(dx * ROOM_W, dy * ROOM_H);
     this.syncAll(0);
     const cam = this.cameras.main;
-    const from = { x: ROOM_W / 2, y: ROOM_H / 2 };
-    const to = { x: ROOM_W / 2 + dx * ROOM_W, y: ROOM_H / 2 + dy * ROOM_H };
+    const from = { x: cam.midPoint.x, y: cam.midPoint.y };
+    const to = { x: ROOM_W / 2 + dx * ROOM_W, y: camY(this.g.p.y) + dy * ROOM_H };
     const pos = { k: 0 };
     this.tweens.add({
       targets: pos, k: 1, duration: 420, ease: 'Sine.easeInOut',
@@ -395,7 +403,7 @@ export class Play extends Phaser.Scene {
       onComplete: () => {
         this.dropLayer(old);
         neu.setPosition(0, 0);
-        cam.centerOn(ROOM_W / 2, ROOM_H / 2);
+        cam.centerOn(ROOM_W / 2, camY(this.g.p.y));
         this.busy = false;
         this.g.endTransition();
         this.syncAll(0);
