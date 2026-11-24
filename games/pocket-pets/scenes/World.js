@@ -17,6 +17,19 @@ const VIEW_BOTTOM = 504;
 const DIALOG_TOP = 384;
 const PLAYER_CH = 8;
 const STEP_MS = 150;
+const TAMER_STEP_MS = 110;
+
+/** Sprite frame for a character facing a way; step = mid-stride. Side views face right (flip for left). */
+export function charFrame(ch, face, step = false, alt = false) {
+  if (face === 'down') return `c${ch}_${step ? 7 : 6}`;
+  if (face === 'up') return `c${ch}_${step ? 9 : 8}`;
+  return `c${ch}_${step ? (alt ? 2 : 4) : 1}`;
+}
+
+function faceSprite(img, ch, face, step = false, alt = false) {
+  img.setFrame(charFrame(ch, face, step, alt));
+  if (face === 'left') img.setFlipX(true); else if (face === 'right') img.setFlipX(false); else img.setFlipX(false);
+}
 
 export class World extends Phaser.Scene {
   constructor() { super('World'); }
@@ -84,7 +97,8 @@ export class World extends Phaser.Scene {
     this.npcSprites.clear();
     for (const n of G.npcsOn(this.state)) {
       const img = this.add.image(n.x * T + 16, n.y * T + 12, 'chars2', `c${n.ch}_1`).setScale(2).setDepth(n.y * T + 16);
-      if (n.face === 'left') img.setFlipX(true);
+      faceSprite(img, n.ch, n.face || 'down');
+      img.ch = n.ch;
       this.npcSprites.set(n.id, img);
       if (n.kind === 'trainer' && !n.beaten || n.kind === 'leader' && !n.beaten) {
         this.tweens.add({ targets: img, y: img.y - 2, duration: 400, yoyo: true, repeat: -1, ease: 'Stepped', delay: (n.x * 97) % 400 });
@@ -103,7 +117,7 @@ export class World extends Phaser.Scene {
   placePlayer() {
     const { x, y } = this.state;
     this.player.setPosition(x * T + 16, y * T + 12).setDepth(y * T + 16);
-    this.player.setFlipX(this.state.face === 'left');
+    faceSprite(this.player, PLAYER_CH, this.state.face);
     this.syncGrass();
   }
 
@@ -186,6 +200,7 @@ export class World extends Phaser.Scene {
   }
 
   onTap(p) {
+    if (this.tamerWalk) { this.skipWalk = true; return; }
     if (blocking() || modalOpen(this)) return;
     if (this.dialog) { this.advanceDialog(); return; }
     if (this.busy || p.y < VIEW_TOP || p.y > VIEW_BOTTOM) return;
@@ -253,7 +268,7 @@ export class World extends Phaser.Scene {
     const npc = action.npc;
     if (npc) {
       const spr = this.npcSprites.get(npc.id);
-      if (spr && npc.x !== this.state.x) spr.setFlipX(this.state.x < npc.x);
+      if (spr) faceSprite(spr, spr.ch, G.dirTo(npc.x, npc.y, this.state.x, this.state.y));
     }
     this.doAction(action);
   }
@@ -277,7 +292,7 @@ export class World extends Phaser.Scene {
     const st = this.state;
     const before = { x: st.x, y: st.y };
     const res = G.step(st, dir);
-    this.player.setFlipX(dir === 'left' ? true : dir === 'right' ? false : this.player.flipX);
+    faceSprite(this.player, PLAYER_CH, dir);
     if (!res.moved) {
       // Walking into a door goes inside.
       const f = G.facing(st);
@@ -293,13 +308,14 @@ export class World extends Phaser.Scene {
     const tx = (exit ? before.x + (dir === 'left' ? -1 : dir === 'right' ? 1 : 0) : st.x) * T + 16;
     const ty = (exit ? before.y + (dir === 'up' ? -1 : dir === 'down' ? 1 : 0) : st.y) * T + 12;
     this.walkFrame = !this.walkFrame;
-    this.player.setFrame(`c${PLAYER_CH}_${this.walkFrame ? 2 : 4}`);
+    faceSprite(this.player, PLAYER_CH, dir, true, this.walkFrame);
+    if (dir === 'up' || dir === 'down') this.player.setFlipX(this.walkFrame);
     this.grassTop.setVisible(false);
     this.tweens.add({
       targets: this.player, x: tx, y: ty, duration: STEP_MS,
       onUpdate: () => this.player.setDepth(this.player.y + 4),
       onComplete: () => {
-        this.player.setFrame(`c${PLAYER_CH}_1`);
+        faceSprite(this.player, PLAYER_CH, dir);
         this.moving = false;
         if (!exit) this.placePlayer();
         this.afterStep(res.events);
@@ -438,21 +454,41 @@ export class World extends Phaser.Scene {
 
   spotted(npc) {
     this.busy = true;
+    this.path = null; this.held = null; this.pending = null;
+    const st = this.state;
     const spr = this.npcSprites.get(npc.id);
     sfx('error');
-    if (spr) {
-      const bang = text(this, spr.x, spr.y - 30, '!', { size: 32, color: PALETTE.red }).setDepth(4000);
-      this.tweens.add({ targets: bang, y: bang.y - 6, duration: 200, yoyo: true });
-      this.time.delayedCall(700, () => bang.destroy());
-      if (npc.x !== this.state.x) spr.setFlipX(this.state.x < npc.x);
-    }
-    const st = this.state;
-    if (npc.x !== st.x || npc.y !== st.y) { st.face = G.dirTo(st.x, st.y, npc.x, npc.y); this.placePlayer(); }
-    this.time.delayedCall(720, () => {
-      this.busy = false;
-      const setup = npc.kind === 'leader' ? G.leaderSetup(st, npc.id) : G.trainerSetup(st, npc);
-      this.challenge(setup, npc);
-    });
+    if (!spr) { this.busy = false; this.challenge(npc.kind === 'leader' ? G.leaderSetup(st, npc.id) : G.trainerSetup(st, npc), npc); return; }
+    this.tweens.killTweensOf(spr);
+    spr.y = npc.y * T + 12;
+    const bang = text(this, spr.x, spr.y - 30, '!', { size: 32, color: PALETTE.red }).setDepth(4000);
+    this.tweens.add({ targets: bang, y: bang.y - 6, duration: 160, yoyo: true });
+    // The tamer walks up to you (tap to hurry). It goes back to its post after the battle.
+    const route = G.findPath({ ...st, x: npc.x, y: npc.y }, st.x, st.y, { adjacent: true }) || [];
+    let pos = { x: npc.x, y: npc.y };
+    let k = 0;
+    const go = () => {
+      if (k >= route.length || this.skipWalk) {
+        const last = route.length ? route[route.length - 1] : [npc.x, npc.y];
+        pos = { x: last[0], y: last[1] };
+        spr.setPosition(pos.x * T + 16, pos.y * T + 12).setDepth(pos.y * T + 16);
+        faceSprite(spr, spr.ch, G.dirTo(pos.x, pos.y, st.x, st.y));
+        st.face = G.dirTo(st.x, st.y, pos.x, pos.y);
+        this.placePlayer();
+        this.skipWalk = false; this.tamerWalk = false;
+        this.time.delayedCall(150, () => {
+          this.busy = false;
+          this.challenge(npc.kind === 'leader' ? G.leaderSetup(st, npc.id) : G.trainerSetup(st, npc), npc);
+        });
+        return;
+      }
+      const [nx, ny] = route[k++];
+      const dir = G.dirTo(pos.x, pos.y, nx, ny);
+      faceSprite(spr, spr.ch, dir, true, k % 2 === 0);
+      pos = { x: nx, y: ny };
+      this.tweens.add({ targets: spr, x: nx * T + 16, y: ny * T + 12, duration: TAMER_STEP_MS, onUpdate: () => spr.setDepth(spr.y + 4), onComplete: go });
+    };
+    this.time.delayedCall(560, () => { bang.destroy(); this.tamerWalk = true; go(); });
   }
 
   /** Intro lines, then the battle. */

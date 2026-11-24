@@ -93,13 +93,26 @@ function buildPets(scene) {
 function buildChars(scene) {
   if (scene.textures.exists('chars2')) return;
   const src = scene.textures.get('chars').getSourceImage();
-  const w = src.width; const h = src.height;
+  const w = 160; const h = src.height;
   const tmp = canvas(w, h);
   const tctx = ctx2d(tmp);
   tctx.drawImage(src, 0, 0);
   const d = tctx.getImageData(0, 0, w, h);
   const px = d.data;
   for (let i = 0; i < px.length; i += 4) if (px[i] < 6 && px[i + 1] < 6 && px[i + 2] < 6) px[i + 3] = 0;
+  // The sheet only has side views. Columns 6-9 get made-up front and back views (6 front, 7 front
+  // walking, 8 back, 9 back walking): the side view is mirrored round its middle, then the front gets
+  // a small face and the back has its skin painted over with the hair or hood colour.
+  for (let r = 0; r < 11; r++) {
+    for (let k = 0; k < 4; k++) {
+      const col = k % 2 ? 2 : 1;
+      const cell = viewFrom(px, w, r, col, k < 2 ? 'front' : 'back');
+      for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+        const di = (((r + 1) * 16 + y) * w + (6 + k) * 16 + x) * 4;
+        for (let c = 0; c < 4; c++) px[di + c] = cell[(y * 16 + x) * 4 + c];
+      }
+    }
+  }
   const out = new Uint8ClampedArray(px);
   const ink = rgb('#1c1618');
   for (let y = 0; y < h; y++) {
@@ -118,11 +131,50 @@ function buildChars(scene) {
   tex.getContext().drawImage(tmp, 0, 0);
   tex.refresh();
   for (let r = 0; r < 11; r++) {
-    for (let c = 0; c < 6; c++) tex.add(`c${r}_${c}`, 0, c * 16, (r + 1) * 16, 16, 16);
+    for (let c = 0; c < 10; c++) tex.add(`c${r}_${c}`, 0, c * 16, (r + 1) * 16, 16, 16);
     const face = canvas(16, 16);
     face.getContext('2d').drawImage(tmp, 0, (r + 1) * 16, 16, 16, 0, 0, 16, 16);
     URLS.faces[r] = face.toDataURL();
   }
+}
+
+const SKIN = [[240, 212, 114], [249, 245, 239]];
+const isSkin = (d, i) => SKIN.some(([r, g, b]) => d[i] === r && d[i + 1] === g && d[i + 2] === b);
+
+/** A front or back view (16x16 RGBA) made from the side view at row r, column col. */
+function viewFrom(px, w, r, col, kind) {
+  const at = (x, y) => (((r + 1) * 16 + y) * w + col * 16 + x) * 4;
+  let minX = 16; let maxX = -1;
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) if (px[at(x, y) + 3]) { minX = Math.min(minX, x); maxX = Math.max(maxX, x); }
+  const cx = Math.floor((minX + maxX) / 2);
+  const out = new Uint8ClampedArray(16 * 16 * 4);
+  for (let y = 0; y < 16; y++) {
+    for (let x = 0; x < 16; x++) {
+      const sx = cx + (x >= 8 ? x - 7 : 8 - x);
+      if (sx < 0 || sx > 15) continue;
+      const si = at(sx, y); const di = (y * 16 + x) * 4;
+      for (let c = 0; c < 4; c++) out[di + c] = px[si + c];
+    }
+  }
+  let top = 0;
+  while (top < 15 && ![...Array(16).keys()].some((x) => out[(top * 16 + x) * 4 + 3])) top++;
+  const set = (x, y, [rr, gg, bb]) => { const i = (y * 16 + x) * 4; out[i] = rr; out[i + 1] = gg; out[i + 2] = bb; out[i + 3] = 255; };
+  if (kind === 'front') {
+    for (let y = top + 3; y < top + 6; y++) for (let x = 6; x < 10; x++) set(x, y, SKIN[0]);
+    set(6, top + 4, [28, 22, 24]); set(9, top + 4, [28, 22, 24]);
+  } else {
+    // Most common non-skin colour on the head = hair or hood.
+    const count = new Map();
+    for (let y = 0; y < 7; y++) for (let x = 0; x < 16; x++) {
+      const i = at(x, y);
+      if (!px[i + 3] || isSkin(px, i)) continue;
+      const k = `${px[i]},${px[i + 1]},${px[i + 2]}`;
+      count.set(k, (count.get(k) || 0) + 1);
+    }
+    const hair = [...count.entries()].sort((a, b) => b[1] - a[1])[0]?.[0].split(',').map(Number) || [28, 22, 24];
+    for (let y = 0; y < 9; y++) for (let x = 0; x < 16; x++) { const i = (y * 16 + x) * 4; if (out[i + 3] && isSkin(out, i)) set(x, y, hair); }
+  }
+  return out;
 }
 
 function paint(ctx, rows, ox, oy, colors) {
