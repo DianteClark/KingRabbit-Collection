@@ -30,11 +30,14 @@ export class Battle extends Phaser.Scene {
     this.biome = data.biome || 'grass';
     this.auto = false;
     this.busy = false;
+    this.done = false;
     this.spellMode = null;
   }
 
   create() {
     setBackground(this, PALETTE.night);
+    this.tweens.timeScale = 1;
+    this.time.timeScale = 1;
     const b = this.b;
     this.human = b.sides.findIndex((s) => !s.ai);
     this.aiTactics = aiParams(getSkill(SKILL_ID)).tactics;

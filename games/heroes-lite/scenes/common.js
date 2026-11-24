@@ -45,10 +45,8 @@ export function shadowTitle(scene, x, y, str, color = PALETTE.gold, shadow = PAL
 
 /** Short message that pops up and fades away. */
 export function toast(scene, msg, y = HEIGHT - 120, color = PALETTE.gold) {
-  const bg = scene.add.rectangle(WIDTH / 2, y, Math.min(WIDTH - 16, msg.length * 9 + 24), 30, hex(PALETTE.ink), 0.85).setDepth(80);
-  const t = text(scene, WIDTH / 2, y, msg, { color }).setDepth(81);
-  if (t.width > WIDTH - 28) t.setScale((WIDTH - 28) / t.width);
-  bg.width = Math.min(WIDTH - 16, t.displayWidth + 24);
+  const t = text(scene, WIDTH / 2, y, msg, { color, wrap: WIDTH - 40 }).setDepth(81);
+  const bg = scene.add.rectangle(WIDTH / 2, y, Math.min(WIDTH - 16, t.width + 24), t.height + 12, hex(PALETTE.ink), 0.85).setDepth(80);
   scene.tweens.add({ targets: [t, bg], alpha: 0, delay: 1500, duration: 300, onComplete: () => { t.destroy(); bg.destroy(); } });
   return t;
 }

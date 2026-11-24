@@ -27,7 +27,12 @@ const MAP_H = MAP_BOTTOM - MAP_TOP;
 export class Adventure extends Phaser.Scene {
   constructor() { super('Adventure'); }
 
-  init(data) { this.fresh = !!data?.fresh; }
+  init(data) {
+    this.fresh = !!data?.fresh;
+    this.overShown = false;
+    this.banner = null;
+    this.townCycle = -1;
+  }
 
   create() {
     this.s = store.state;
@@ -291,7 +296,7 @@ export class Adventure extends Phaser.Scene {
     this.resBar = resourceBar(this, 60, 11);
     // Info strip just above the bottom panel.
     this.infoBg = this.add.rectangle(WIDTH / 2, MAP_BOTTOM - 14, WIDTH, 28, hex(PALETTE.ink), 0.75).setDepth(11).setVisible(false);
-    this.infoText = add(text(this, WIDTH / 2, MAP_BOTTOM - 14, '', { color: PALETTE.cream })).setVisible(false);
+    this.infoText = add(text(this, WIDTH / 2, MAP_BOTTOM - 14, '', { color: PALETTE.cream, wrap: WIDTH - 20 })).setVisible(false);
     // Bottom panel.
     this.heroBtns = this.add.container(0, 0).setDepth(11);
     this.endBtn = add(button(this, 304, 574, 100, 40, 'End Day', () => this.endDay(), { fill: PALETTE.gold }));
@@ -330,7 +335,12 @@ export class Adventure extends Phaser.Scene {
   info(msg) {
     this.infoText.setText(msg || '').setVisible(!!msg);
     this.infoBg.setVisible(!!msg);
-    if (msg) this.infoBg.width = Math.min(WIDTH, this.infoText.width + 24);
+    if (msg) {
+      // Grow upward from the bottom edge of the map when the text wraps.
+      const h = this.infoText.height + 8;
+      this.infoText.setY(MAP_BOTTOM - h / 2);
+      this.infoBg.setPosition(WIDTH / 2, MAP_BOTTOM - h / 2).setSize(Math.min(WIDTH, this.infoText.width + 24), h);
+    }
   }
 
   hero() { return this.selected ? G.getHero(this.s, this.selected) : null; }
@@ -438,7 +448,7 @@ export class Adventure extends Phaser.Scene {
     this.drawPath();
     const days = Math.ceil(Math.max(0, path[path.length - 1].cost - h.mp) / G.heroMaxMp(h));
     const desc = this.describe(o, tx, ty);
-    this.info(`${desc ? `${desc} - ` : ''}${days ? `${days + 1} days` : 'tap again to go'}`);
+    this.info(`${desc ? `${desc}. ` : ''}${days ? `${days + 1} days away` : 'Tap again to go'}`);
     sfx('tap');
   }
 
@@ -733,10 +743,12 @@ export class Adventure extends Phaser.Scene {
   dayBanner() {
     const s = this.s;
     const week = s.day % 7 === 1;
+    for (const o of this.banner || []) o?.destroy();
     const t = text(this, WIDTH / 2, 300, week ? `Week ${Math.floor((s.day - 1) / 7) + 1}` : `Day ${s.day}`, { size: 32, color: PALETTE.gold }).setDepth(90);
     const t2 = week ? text(this, WIDTH / 2, 336, 'New creatures to recruit!', { color: PALETTE.cream }).setDepth(90) : null;
     const bg = this.add.rectangle(WIDTH / 2, week ? 316 : 300, WIDTH, week ? 84 : 52, hex(PALETTE.ink), 0.7).setDepth(89);
     sfx(week ? 'power' : 'flip');
+    this.banner = [t, t2, bg];
     this.tweens.add({ targets: [t, t2, bg].filter(Boolean), alpha: 0, delay: 900, duration: 400, onComplete: () => { t.destroy(); t2?.destroy(); bg.destroy(); } });
   }
 
