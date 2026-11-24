@@ -1,7 +1,7 @@
 // Tiny Town Builder simulation: the whole city as plain JSON plus derived maps kept off the save.
 // Pure logic (no Phaser) so it runs and is tested under node.
 import {
-  TILE, MAP_W, MAP_H, WEEKS_PER_MONTH, MONTHS, T, ZONE_INFO, MILESTONES, MAX_TIER, GROW, EMPTY_LOT,
+  TILE, WEEKS_PER_MONTH, MONTHS, T, ZONE_INFO, MILESTONES, MAX_TIER, GROW,
   PLACE, LINE_COST, CLEAR_COST, ECON, SCENARIOS, SANDBOX, TOOL_INFO, FUNDS,
 } from './defs.js';
 import { FRAMES } from './sprites.js';
@@ -747,7 +747,6 @@ export function place(s, key, x, y) {
 // ------------------------------------------------------------------ budget
 
 export function budget(s) {
-  const r = rt(s);
   const f = (k) => Math.max(0, (s.fund[k] ?? 100) / 100);
   const fill = Math.min(1, s.workers / Math.max(1, s.jobs.C + s.jobs.I + s.jobs.F));
   const income = [
@@ -774,7 +773,6 @@ export function budget(s) {
   if (loanPay) expense.push(['Loan payments', loanPay, 'loan']);
   const tin = income.reduce((a, x) => a + x[1], 0);
   const tout = expense.reduce((a, x) => a + x[1], 0);
-  void r;
   return { income, expense, tin, tout, net: tin - tout };
 }
 
@@ -859,7 +857,6 @@ const randomBuilding = (s, filter = () => true) => {
 
 /** Start a disaster now (random disasters, or the sandbox buttons). */
 export function trigger(s, kind, events = []) {
-  const r = rt(s);
   const tgt = randomBuilding(s, (b) => b.k === 'grow') || randomBuilding(s);
   const cx = tgt ? tgt.x : Math.floor(W / 2); const cy = tgt ? tgt.y : Math.floor(H / 2);
   if (kind === 'fire') {
@@ -887,7 +884,6 @@ export function trigger(s, kind, events = []) {
     s.active.push({ kind: 'ufo', x: rng(s) < 0.5 ? -1 : W + 1, y: cy, tx: cx + 0.5, ty: cy + 0.5, left: 1.4, zap: 0.15, hp: 1, state: 'fly' });
     events.push({ kind: 'disaster', what: 'ufo', x: cx, y: cy, text: 'A UFO is attacking!' });
   } else return false;
-  void r;
   return true;
 }
 
@@ -1029,8 +1025,8 @@ function monthEnd(s, events) {
   if (s.dis && s.t > 12 && s.pop > 150 && !s.active.length && rng(s) < 0.05) {
     const kinds = ['fire', 'fire', 'fire', 'quake', 'meteor', 'tornado', 'ufo'];
     trigger(s, kinds[Math.floor(rng(s) * kinds.length)], events);
-  } else if (s.pop > 300 && rng(s) < 0.02 * (1 - avgCov(s, 'fire'))) {
-    // Ordinary small fires happen now and then where there's no fire service (even with disasters off).
+  } else if (s.dis && s.pop > 300 && rng(s) < 0.03 * (1 - avgCov(s, 'fire'))) {
+    // With disasters on, small fires also break out now and then where there's no fire service.
     const b = randomBuilding(s, (q) => q.k === 'grow' && rt(s).cov.fire[idx(q.x, q.y)] < 0.3);
     if (b && startFire(s, idx(b.x, b.y))) events.push({ kind: 'disaster', what: 'fire', x: b.x, y: b.y, text: 'A fire broke out!' });
   }

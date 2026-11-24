@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { PALETTE, hex } from '../../../shared/core/palette.js';
+import { PALETTE } from '../../../shared/core/palette.js';
 import { text, button } from '../../../shared/core/ui.js';
 import { WIDTH } from '../../../shared/core/boot.js';
 import { showHowTo } from '../../../shared/core/howto.js';
@@ -102,4 +102,3 @@ export class Title extends Phaser.Scene {
   }
 }
 
-export { hex };

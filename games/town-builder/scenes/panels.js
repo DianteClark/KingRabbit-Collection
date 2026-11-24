@@ -2,7 +2,7 @@
 // milestones, results and confirmations. Each one pauses the city while it is open.
 import { sfx } from '../../../shared/core/sfx.js';
 import * as S from '../logic/sim.js';
-import { FUNDS, ZONE_INFO, MILESTONES, SCENARIOS, ECON, PLACE } from '../logic/defs.js';
+import { ZONE_INFO, MILESTONES, SCENARIOS, ECON } from '../logic/defs.js';
 import { tips, ADVISORS } from '../logic/advisors.js';
 
 export const esc = (v) => String(v).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -298,4 +298,3 @@ export function showScenarios(onPick, best) {
   const p = sheet({ title: 'Scenarios', html, handlers: { pick: ({ id }) => { p.close(true); onPick(id); } } });
 }
 
-export { PLACE };

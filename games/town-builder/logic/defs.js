@@ -23,7 +23,7 @@ export const MILESTONES = [
   { id: 1, name: 'Village', pop: 250 },
   { id: 2, name: 'Town', pop: 1200 },
   { id: 3, name: 'City', pop: 3500 },
-  { id: 4, name: 'Metropolis', pop: 8000 },
+  { id: 4, name: 'Metropolis', pop: 7500 },
 ];
 // Biggest zone building tier allowed at each milestone.
 export const MAX_TIER = [2, 2, 3, 4, 4];

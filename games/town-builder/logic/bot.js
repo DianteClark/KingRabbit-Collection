@@ -179,7 +179,16 @@ function step(s, bot) {
     const need = 6 + s.pop / 300;
     if (s.demand[z] > 0.1 && empty[z] < need && can(500)) {
       const blk = claim(s, bot, z);
-      if (!blk) continue;
+      if (!blk) {
+        // Out of fresh blocks: fill the spare corners of service and power blocks instead.
+        const spare = bot.blocks.filter((b) => (z === 'I' ? b.use === 'P' : b.use === 'S') && !b.filled?.[z]);
+        for (const b of spare.slice(0, 2)) {
+          const res = S.zoneArea(s, z, rectTiles({ x: b.ix, y: b.iy }, { x: b.ix + b.iw - 1, y: b.iy + b.ih - 1 }));
+          b.filled = { ...(b.filled || {}), [z]: true };
+          if (res.ok) did.push(`fill${z}`);
+        }
+        continue;
+      }
       if (z === 'R' && s.ms >= 1) S.place(s, 'park', blk.ix + 2, blk.iy + 2);
       S.zoneArea(s, z, rectTiles({ x: blk.ix, y: blk.iy }, { x: blk.ix + blk.iw - 1, y: blk.iy + blk.ih - 1 }));
       did.push(`zone${z}`);

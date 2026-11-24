@@ -18,7 +18,7 @@ power and water on, and the town grows itself building by building.
 - **Traffic:** every home sends commuters along the roads to the nearest jobs (multi-source BFS); road load drives the traffic map, car pollution, noise and the cars you see.
 - **Land value, pollution, crime** feed appeal; **happiness** adds services, smoke, crime, taxes, jobs, outages, traffic and landmarks (the City panel shows the breakdown).
 - **Money:** monthly taxes by zone (0-20%), upkeep by service with funding 0-150%, road upkeep, $5,000 loans (up to 3, repaid over 5 years, early payoff).
-- **Milestones:** Village 250, Town 1,200, City 3,500, Metropolis 8,000. Each unlocks tools and the landmarks: Mayor's Mansion, Lighthouse, Bank Tower, Grand Hotel, Arena, University, Airport.
+- **Milestones:** Village 250, Town 1,200, City 3,500, Metropolis 7,500. Each unlocks tools and the landmarks: Mayor's Mansion, Lighthouse, Bank Tower, Grand Hotel, Arena, University, Airport.
 - **Advisors:** five advisors (planner, treasurer, safety, health and schools, transport) post the most urgent tip in the strip above the toolbar; tap it for the full list.
 - **Disasters:** fire, earthquake, meteor, tornado and UFO, off by default. Fire coverage puts fires out; police coverage shoots down UFOs; rubble clears itself after a few months. Sandbox can start any disaster from More > Risks.
 - **Life:** cars drive real routes between homes, jobs and the highway, buses now and then, people on the pavements, fire trucks and police cars respond, day/night with window lights and headlights. Speed: pause, 1x (8 s a month), 3x.

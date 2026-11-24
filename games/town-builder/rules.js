@@ -28,7 +28,7 @@ export const RULES = {
         'Land value rises with parks, schools, clinics, police, water views and landmarks, and falls with smoke, crime and traffic.',
         'Keep factories and coal plants away from homes: smoke drags everything down.',
         'Commuters drive from homes to the nearest jobs. Add road links and bus stops if traffic backs up.',
-        'Population milestones (Village 250, Town 1,200, City 3,500, Metropolis 8,000) unlock bigger buildings, services and landmarks.',
+        'Population milestones (Village 250, Town 1,200, City 3,500, Metropolis 7,500) unlock bigger buildings, services and landmarks.',
       ],
     },
     {

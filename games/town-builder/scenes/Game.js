@@ -5,7 +5,7 @@ import { WIDTH, HEIGHT } from '../../../shared/core/boot.js';
 import { showHowTo } from '../../../shared/core/howto.js';
 import { sfx, isMuted, setMuted } from '../../../shared/core/sfx.js';
 import * as S from '../logic/sim.js';
-import { TILE, MAP_W, MAP_H, T, PLACE, TRAYS, TOOL_INFO, ZONE_INFO, MILESTONES, LINE_COST } from '../logic/defs.js';
+import { TILE, MAP_W, MAP_H, T, PLACE, TRAYS, TOOL_INFO, ZONE_INFO, MILESTONES } from '../logic/defs.js';
 import { lPath, rectTiles, idx, inMap, N4, bfs } from '../logic/map.js';
 import { tutStep, tutCheck, tutText, STEPS } from '../logic/tutorial.js';
 import { RULES } from '../rules.js';
@@ -1079,9 +1079,11 @@ export class Game extends Phaser.Scene {
   onDisaster(e) {
     sfx(e.what === 'fire' ? 'smallBoom' : 'boom');
     this.toast(e.text);
-    // Show where it is.
-    this.zoom = Math.max(this.zoom, 1.5);
-    this.centerOn((e.x + 1) * TILE, (e.y + 1) * TILE);
+    // Show where it is (unless the player is in the middle of drawing something).
+    if (!this.gest) {
+      this.zoom = Math.max(this.zoom, 1.5);
+      this.centerOn((e.x + 1) * TILE, (e.y + 1) * TILE);
+    }
     if (e.what === 'quake') {
       this.cameras.main.shake(1500, 0.012);
       for (let k = 0; k < 5; k++) {
@@ -1171,4 +1173,3 @@ export class Game extends Phaser.Scene {
   }
 }
 
-export { LINE_COST };
