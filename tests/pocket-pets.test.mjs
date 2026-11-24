@@ -444,3 +444,47 @@ test('game: a saved journey survives JSON and plays on', () => {
   const b = playBattle(copy, G.wildSetup(copy, 'mewlet', 3), rng);
   assert.ok(['win', 'lose', 'caught', 'ran'].includes(b.result));
 });
+
+test('pets: nicknames are cleaned up, and blank or the species name clears them', () => {
+  const p = mk('mewlet', 5);
+  assert.equal(P.setNick(p, '  Mr <b>Whiskers!!  '), 'Mr bWhiskers'.slice(0, P.NICK_MAX));
+  assert.equal(P.petName(p), p.nick);
+  assert.equal(P.setNick(p, ''), 'Mewlet');
+  assert.equal(p.nick, undefined);
+  P.setNick(p, 'Mewlet');
+  assert.equal(p.nick, undefined);
+});
+
+test('XP: beating a higher-level pet is worth more (up to double), never less', () => {
+  const foe = mk('peeplet', 10);
+  const same = P.xpReward(foe, false, 10);
+  assert.ok(P.xpReward(foe, false, 6) > same * 1.5);
+  assert.equal(P.xpReward(foe, false, 1), same * 2);
+  assert.equal(P.xpReward(foe, false, 30), same);
+  assert.equal(P.xpReward(foe, true, 10), Math.floor(same * 1.5));
+});
+
+test('rematches: after becoming Champion the leaders and Aria fight again with stronger teams', () => {
+  const st = G.newGame(5);
+  G.chooseStarter(st, 'embit');
+  st.badges = [...W.BADGES];
+  for (const id of [...W.BADGES, 'aria']) st.beaten[id] = true;
+  // Not Champion yet: the hall just talks.
+  G.changeMap(st, 'brookton', 3, 7);
+  assert.equal(G.interact(st, 3, 6).t, 'talk');
+  st.champion = true;
+  const a = G.interact(st, 3, 6);
+  assert.equal(a.t, 'battle');
+  assert.ok(a.setup.rematch);
+  assert.ok(Math.min(...a.setup.foeParty.map((p) => p.lv)) > 30);
+  const before = st.badges.length;
+  G.afterBattle(st, a.setup, 'win');
+  assert.equal(st.badges.length, before, 'no extra badge');
+  assert.equal(st.rematches.fern, 1);
+  // Cinder in the cave, and Aria in the tower, rematch too.
+  G.changeMap(st, 'cave', 7, 2);
+  const cinder = G.npcsOn(st).find((n) => n.id === 'cinder');
+  assert.equal(G.interact(st, cinder.x, cinder.y).t, 'battle');
+  for (const id of ['fern', 'cinder', 'marina', 'rocco', 'aria']) assert.ok(W.LEADERS[id].rematch.every(([sp]) => D.SPECIES[sp]), id);
+  assert.ok(G.leaderSetup(st, 'aria').foeParty.length === 6 && G.leaderSetup(st, 'aria').rematch);
+});

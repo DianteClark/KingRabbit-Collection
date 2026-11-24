@@ -11,7 +11,7 @@ import { makeAI, botAction } from '../logic/ai.js';
 import { MOVES, SPECIES, STATUS_INFO } from '../logic/data.js';
 import { TYPE_INFO, typeMult } from '../logic/types.js';
 import { maxHp, petName, petType, xpForLevel, MAX_LEVEL, learnMove, canEvolve } from '../logic/pet.js';
-import { partyPanel, bagPanel, learnPanel, closeAll, blocking } from './panels.js';
+import { partyPanel, bagPanel, learnPanel, nicknamePanel, tipPanel, closeAll, blocking } from './panels.js';
 
 const SCREEN = { x: 8, y: 60, w: 344, h: 266 };
 const POS = [{ x: 96, y: 258 }, { x: 262, y: 148 }];
@@ -209,7 +209,31 @@ export class Battle extends Phaser.Scene {
     this.showPet(0);
     sfx('select');
     await this.say(`Go, ${petName(B.active(b, 0))}!`, 650);
+    await this.tips();
     this.mainMenu();
+  }
+
+  /** First-battle tips, shown once each. */
+  async tips() {
+    const flags = this.state.flags;
+    const show = (title, lines, opts) => new Promise((res) => tipPanel(title, lines, res, opts));
+    if (!flags.tipTypes) {
+      flags.tipTypes = true;
+      await show('Battle tips', [
+        'Tap FIGHT and pick a move. The coloured bar on each move shows its type.',
+        'Every type hits the next one on the wheel twice as hard (STRONG) and the one before it only half as hard (weak).',
+        'Plain moves are never strong or weak. Keep an eye on HP: a Potion from the BAG helps in a pinch.',
+      ], { wheel: true });
+    }
+    if (!flags.tipCatch && this.b.kind === 'wild') {
+      flags.tipCatch = true;
+      await show('Catching pets', [
+        'Wild pets can join your team!',
+        '1. Weaken it with moves (don\'t knock it out).',
+        '2. Open the BAG and throw a Capsule.',
+        'The lower its HP the better. Sleeping or paralysed pets are even easier to catch.',
+      ]);
+    }
   }
 
   clearMenu() { this.menu.removeAll(true); this.ready = false; if (window.__pets) window.__pets.ready = false; }
@@ -487,6 +511,10 @@ export class Battle extends Phaser.Scene {
     const out = G.afterBattle(st, setup, result, caught);
     if (result === 'win' || result === 'caught') {
       if (wasNew) { sfx('coin'); await this.say(`${petName(caught)} was added to your PetDex!`); }
+      if (out.caught) {
+        const name = await new Promise((res) => nicknamePanel(out.caught, res));
+        if (name !== SPECIES[out.caught.sp].name) await this.say(`Say hello to ${name}!`, 800);
+      }
       if (out.caughtTo === 'party') await this.say(`${petName(out.caught)} joined your team!`);
       for (const l of out.lines) { if (out.badge && l.includes('Badge')) sfx('strike'); else if (l.includes('coins')) sfx('coin'); await this.say(l); }
       await this.evolutions();

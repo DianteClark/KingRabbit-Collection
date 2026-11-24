@@ -1,6 +1,6 @@
 # Pocket Pets
 
-**Status:** Playable (v1.0): 8 areas, 30 pets, 4 badges + Champion, adaptive computer tamers
+**Status:** Playable (v1.1): 8 areas, 30 pets, 4 badges + Champion and rematches, adaptive computer tamers
 **Art:** Pocket Pets v1.1 by Aleksandr Makarov (`shared/assets/pocketpets/`: pets, handheld cases, icons, screen
 effects) and the RAS Overworld character sheet by Aleksandr Makarov (tamers on the map). Map tiles, buildings and item
 icons are drawn in code (`tiles.js`, `art.js`) to match.
@@ -78,7 +78,23 @@ change, after battles and menus, and at most once a second while walking.
 - `tests/pocket-pets-sim.test.mjs`: **completability**, the bot (grinds, catches, heals, shops, fights in order) plays the whole game for each starter at tamer skill 0.35 and 1. Its helpers are shared with the main test file.
 - Test hooks: `window.__pets` (`tapTile(x, y)`, `state`, battle `bot()` / `ready`) and `window.__game`.
 
+## v1.1 polish
+
+- **Early game:** XP catch-up bonus (beating a higher-level pet gives up to 2x XP, never less), slightly more XP
+  overall (yield x lv / 6), Meadow Path wilds Lv 3-6 (Fernkit added), Fisher Tom by the pond and Apprentice Bea in
+  Brookton, Fern at Lv 8 / 9 / 11. The new `early game` test plays a first-timer (rival, ~10 wild battles, the route
+  tamers, a few Potions, then Fern, no grinding): 8+ wins in 12 for every starter.
+- **Tamers walk up to you** after the "!" (110 ms a tile, tap to skip), then return to their post after the battle.
+- **Up/down views:** front and back frames are built at load from the side sprites (mirrored round the middle; the
+  front gets a small face, the back has its skin painted with the hair/hood colour). Walking up/down alternates a
+  mirrored frame as a step.
+- **Nicknames** after a catch (optional) and **Rename** in the pet summary (letters, digits, `' . -`, 10 chars).
+- **Rematches:** after the Champion, Halls, Cinder and Aria fight again with Lv 37-43 teams (`LEADERS.*.rematch`).
+- **First-timer help:** one-off tip cards on the first battle (type wheel) and first wild battle (how to catch),
+  clearer directions after the starter, tapping a person's sprite (not just their tile) talks to them, and the camera
+  keeps the speakers above the dialogue box.
+
 ## Ideas for later
 
-Rematches with leaders at higher levels, nicknames, a held-item slot, more areas (a lake town with Surf-free water
+A held-item slot, more areas (a lake town with Surf-free water
 crossing), day/night palette for the LCD screen.

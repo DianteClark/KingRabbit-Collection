@@ -316,7 +316,7 @@ function talkTo(state, npc) {
   }
   if (npc.kind === 'leader') {
     const L = LEADERS[npc.id];
-    if (npc.beaten) return { t: 'talk', npc, lines: [`${L.name}: Go on through. You've earned it.`] };
+    if (npc.beaten && !isRematch(state, npc.id)) return { t: 'talk', npc, lines: [`${L.name}: Go on through. You've earned it.`] };
     return { t: 'battle', npc, setup: leaderSetup(state, npc.id) };
   }
   return { t: 'talk', npc, lines: npc.text || ['...'] };
@@ -338,7 +338,7 @@ function enterBuilding(state, b) {
   if (b.kind === 'house') return { t: 'talk', lines: b.text };
   if (b.kind === 'hall') {
     const L = LEADERS[b.leader];
-    if (state.beaten[b.leader]) return { t: 'talk', lines: [`${L.name}: You already have the ${L.badgeName}. Keep it shining!`] };
+    if (state.beaten[b.leader] && !isRematch(state, b.leader)) return { t: 'talk', lines: [`${L.name}: You already have the ${L.badgeName}. Come back once you are Champion for a rematch!`] };
     if (!canFight(state)) return { t: 'talk', lines: ['Your pets are too tired to battle.'] };
     return { t: 'battle', setup: leaderSetup(state, b.leader) };
   }
@@ -368,14 +368,21 @@ export function trainerSetup(state, npc) {
   };
 }
 
+/** After you become Champion, beaten leaders (and Aria) fight again with stronger teams. */
+export const isRematch = (state, id) => !!(state.champion && state.beaten[id] && LEADERS[id].rematch);
+
 export function leaderSetup(state, id) {
   const L = LEADERS[id];
+  const rematch = isRematch(state, id);
+  const team = rematch ? L.rematch : L.team;
   return {
-    kind: 'trainer', id, leader: true, champion: !!L.champion, badge: L.badge,
-    foeParty: L.team.map(([sp, lv], i) => createPet(sp, lv, { uid: -10 - i })),
-    foe: { name: L.name, title: L.title, items: L.items || {}, ch: L.ch, id },
-    intro: L.intro, lose: L.lose, win: L.win,
-    reward: L.reward * Math.max(...L.team.map(([, lv]) => lv)),
+    kind: 'trainer', id, leader: true, champion: !!L.champion, badge: L.badge, rematch,
+    foeParty: team.map(([sp, lv], i) => createPet(sp, lv, { uid: -10 - i })),
+    foe: { name: L.name, title: L.title, items: rematch ? { maxpotion: 2 } : (L.items || {}), ch: L.ch, id },
+    intro: rematch ? [`${L.name}: So the Champion has come back! My team has trained hard since we last met.`, 'Let\'s see who is stronger now!'] : L.intro,
+    lose: rematch ? [`${L.name}: What a battle! Come back any time.`] : L.lose,
+    win: L.win,
+    reward: L.reward * Math.max(...team.map(([, lv]) => lv)),
     weight: L.skillWeight ?? 1,
   };
 }
@@ -405,6 +412,7 @@ export function afterBattle(state, setup, result, caughtPet) {
         out.lines.push(`You received the ${LEADERS[setup.id].badgeName}!`);
       }
       if (setup.champion) { state.champion = true; state.flags.championAt = state.flags.championAt || Date.now(); }
+      if (setup.rematch) state.rematches = { ...(state.rematches || {}), [setup.id]: ((state.rematches || {})[setup.id] || 0) + 1 };
     }
   } else if (result === 'caught' && caughtPet) {
     const pet = { ...caughtPet, uid: state.nextUid++ };

@@ -83,3 +83,9 @@
 .pp-dex button.unseen .pp-pic { background: #6e7466; }
 .pp-dex button.seen img { filter: brightness(0); opacity: 0.55; }
 .pp-wheel { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin: 4px 0 8px; }
+.pp-input {
+  font: inherit; font-size: 16px; width: 100%; padding: 10px; min-height: 44px;
+  background: #e0e9c4; color: var(--night); border: 3px solid var(--ink); outline: none;
+  -webkit-user-select: text; user-select: text;
+}
+.pp-input:focus { box-shadow: 0 0 0 3px var(--gold); }

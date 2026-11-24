@@ -26,6 +26,14 @@ export function statsOf(pet) {
 export const maxHp = (pet) => statsOf(pet).hp;
 export const speciesOf = (pet) => SPECIES[pet.sp];
 export const petName = (pet) => pet.nick || SPECIES[pet.sp].name;
+
+export const NICK_MAX = 10;
+/** Give a pet a nickname (letters, digits, spaces and - ' . only; blank clears it). Returns the name used. */
+export function setNick(pet, name) {
+  const clean = String(name || '').replace(/[^A-Za-z0-9 '.-]/g, '').replace(/\s+/g, ' ').trim().slice(0, NICK_MAX);
+  if (clean && clean !== SPECIES[pet.sp].name) pet.nick = clean; else delete pet.nick;
+  return petName(pet);
+}
 export const petType = (pet) => SPECIES[pet.sp].type;
 
 /** Moves a line learns at exactly this level. */

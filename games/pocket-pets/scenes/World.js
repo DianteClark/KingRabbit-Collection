@@ -205,6 +205,11 @@ export class World extends Phaser.Scene {
     if (this.dialog) { this.advanceDialog(); return; }
     if (this.busy || p.y < VIEW_TOP || p.y > VIEW_BOTTOM) return;
     const wx = p.x + this.cameras.main.scrollX; const wy = p.y + this.cameras.main.scrollY;
+    // People are drawn a little above their tile, so a tap on a sprite counts as a tap on its person.
+    for (const n of G.npcsOn(this.state)) {
+      const spr = this.npcSprites.get(n.id);
+      if (spr && Math.abs(wx - spr.x) <= 16 && Math.abs(wy - spr.y) <= 18) { this.tapTile(n.x, n.y); return; }
+    }
     this.tapTile(Math.floor(wx / T), Math.floor(wy / T));
   }
 
@@ -557,7 +562,7 @@ export class World extends Phaser.Scene {
     sfx('win');
     this.drawNpcs();
     this.busy = false;
-    this.say([`You received ${petName(pet)}!`, 'Prof. Rowan: And take these 5 Capsules. Weaken a wild pet, then throw one to catch it.', 'Your Pets, Bag and PetDex are on the buttons below. Good luck!'], 7, () => {
+    this.say([`You received ${petName(pet)}!`, 'Prof. Rowan: And take these 5 Capsules. Weaken a wild pet, then throw one to catch it.', 'Head north along Meadow Path to Brookton. Fern, the first Hall leader, waits there.', 'A few Potions from the Pet Shop (blue roof) are a smart buy. Good luck!'], 7, () => {
       const rival = G.npcsOn(st).find((n) => n.id === 'rival1');
       if (rival && !rival.beaten) this.spotted(rival);
     });

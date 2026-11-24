@@ -3,7 +3,7 @@ import { sfx } from '../../../shared/core/sfx.js';
 import { URLS } from '../art.js';
 import { SPECIES, MOVES, ITEMS, ITEM_ORDER, DEX_ORDER, STATUS_INFO, LINES } from '../logic/data.js';
 import { TYPE_INFO, WHEEL, typeMult } from '../logic/types.js';
-import { statsOf, maxHp, petName, xpForLevel, MAX_LEVEL } from '../logic/pet.js';
+import { statsOf, maxHp, petName, xpForLevel, MAX_LEVEL, setNick, NICK_MAX } from '../logic/pet.js';
 import { itemProblem, applyItem } from '../logic/battle.js';
 import * as G from '../logic/game.js';
 import { hpColor } from './common.js';
@@ -156,6 +156,7 @@ export function summaryPanel(state, idx, { onChange, readOnly = false } = {}) {
     <p class="pp-p" style="color:#c9d3ab;margin-top:8px">${esc(evo)}${upcoming ? ` Next moves: ${esc(upcoming)}.` : ''}</p>
     <p class="pp-p">${esc(sp.dex)}</p>`;
   const foot = readOnly ? '' : `
+    <button class="pp-btn small" data-act="rename">Rename</button>
     <button class="pp-btn gold" data-act="lead" ${idx === 0 ? 'disabled' : ''}>Make lead</button>
     <button class="pp-btn small" data-act="up" ${idx === 0 ? 'disabled' : ''}>Up</button>
     <button class="pp-btn small" data-act="down" ${idx === state.party.length - 1 ? 'disabled' : ''}>Down</button>`;
@@ -163,6 +164,7 @@ export function summaryPanel(state, idx, { onChange, readOnly = false } = {}) {
     title: petName(pet), html, foot, wrap: 'center',
     handlers: {
       lead: (d, p) => { G.makeLead(state, idx); onChange?.(); p.close(true); },
+      rename: (d, p) => { p.close(true); nicknamePanel(pet, () => onChange?.()); },
       up: (d, p) => { G.moveInParty(state, idx, -1); onChange?.(); p.close(true); },
       down: (d, p) => { G.moveInParty(state, idx, 1); onChange?.(); p.close(true); },
     },
@@ -339,6 +341,43 @@ export function learnPanel(pet, move, cb) {
       forget: ({ i }) => { panel.close(true); cb(Number(i)); },
       skip: () => { panel.close(true); cb(null); },
     },
+  });
+  return panel;
+}
+
+// ---------------------------------------------------------------- nicknames
+
+/** Ask for a nickname. cb(name) after OK or skip. */
+export function nicknamePanel(pet, cb, { title = 'Nickname' } = {}) {
+  const sp = SPECIES[pet.sp].name;
+  const html = `<div style="display:flex;gap:12px;align-items:center;margin-bottom:10px">${pic(pet.sp)}
+      <p class="pp-p" style="margin:0">Give ${esc(petName(pet))} a nickname? Leave it blank to keep "${esc(sp)}".</p></div>
+    <input class="pp-input" type="text" maxlength="${NICK_MAX}" autocomplete="off" autocapitalize="words" spellcheck="false"
+      value="${esc(pet.nick || '')}" placeholder="${esc(sp)}" aria-label="Nickname">`;
+  const done = (name) => { const n = setNick(pet, name); panel.close(true); sfx('select'); cb(n); };
+  const panel = sheet({
+    title, html, noX: true, wrap: 'center',
+    foot: '<button class="pp-btn gold" data-act="ok">OK</button><button class="pp-btn" data-act="skip">No thanks</button>',
+    handlers: {
+      ok: () => done(panel.el.querySelector('input').value),
+      skip: () => { panel.close(true); cb(petName(pet)); },
+    },
+  });
+  const input = panel.el.querySelector('input');
+  for (const t of ['keydown', 'keyup', 'keypress']) input.addEventListener(t, (e) => { e.stopPropagation(); if (t === 'keydown' && e.key === 'Enter') done(input.value); });
+  return panel;
+}
+
+// ---------------------------------------------------------------- tips
+
+/** A one-off tip card. lines: strings (may hold the type wheel via wheel: true). */
+export function tipPanel(title, lines, cb, { wheel = false } = {}) {
+  const w = WHEEL.map((t) => typeTag(t)).join('<span>&gt;</span>') + `<span>&gt;</span>${typeTag(WHEEL[0])}`;
+  const html = `${wheel ? `<div class="pp-wheel">${w}</div>` : ''}${lines.map((l) => `<p class="pp-p">${esc(l)}</p>`).join('')}`;
+  const panel = sheet({
+    title, html, noX: true, wrap: 'center',
+    foot: '<button class="pp-btn gold" data-act="ok">Got it</button>',
+    handlers: { ok: () => { panel.close(true); cb?.(); } },
   });
   return panel;
 }
