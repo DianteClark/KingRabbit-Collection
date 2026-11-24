@@ -30,8 +30,22 @@ export function openHowTo(scene, alsoPause = []) {
   showHowTo({ ...RULES, sections }, () => scenes.forEach((s) => s.scene.resume()));
 }
 
+/** Change screen once: later taps during the fade are ignored (no double starts). */
 export function go(scene, key, data) {
+  if (scene.leaving) return;
+  scene.leaving = true;
+  scene.input.enabled = false;
   fadeTo(scene, () => scene.scene.start(key, data));
+}
+
+/**
+ * Call at the top of every screen's create(): resets the leave guard and ignores taps for a
+ * moment, so a double tap on the previous screen can't press whatever sits in the same spot here.
+ */
+export function freshScreen(scene, ms = 200) {
+  scene.leaving = false;
+  scene.input.enabled = false;
+  scene.time.delayedCall(ms, () => { if (!scene.leaving) scene.input.enabled = true; });
 }
 
 export function shadowTitle(scene, x, y, str, color = PALETTE.gold, shadow = PALETTE.red) {
@@ -65,6 +79,7 @@ export function modal(scene, title, lines, buttons, { depth = 50 } = {}) {
 }
 
 export function setBackground(scene, color) {
+  freshScreen(scene);
   scene.cameras.main.setBackgroundColor(color).fadeIn(150);
   document.body.style.background = color;
 }

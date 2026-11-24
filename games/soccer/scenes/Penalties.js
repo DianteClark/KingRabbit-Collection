@@ -72,14 +72,18 @@ export class Penalties extends Phaser.Scene {
       text(this, 430, 64 + side * 34, t.short, { color: PALETTE.cream, origin: [0, 0.5] });
       return text(this, WIDTH - 10, 64 + side * 34, '0', { size: 32, color: PALETTE.gold, origin: [1, 0.5] });
     });
-    text(this, RX, 136, `Full time ${this.score[0]} - ${this.score[1]}`, { color: PALETTE.cream });
-    this.msg = text(this, RX, 180, '', { size: 32, color: PALETTE.gold });
+    this.sdLabel = text(this, 526, 122, 'Sudden death', { color: PALETTE.orange }).setVisible(false);
+    text(this, RX, 148, `Full time ${this.score[0]} - ${this.score[1]}`, { color: PALETTE.cream });
+    this.msg = text(this, RX, 188, '', { size: 32, color: PALETTE.gold });
     this.add.rectangle(0, 318, 420, 30, hex(PALETTE.ink), 0.45).setOrigin(0);
     this.help = text(this, CX, 333, '', { color: PALETTE.cream });
 
     // Controls: one Shoot button when you take a kick, Left / Stay / Right when you keep.
     this.shootBtn = button(this, RX, 270, 180, 72, 'SHOOT', () => this.strike(), { size: 32, fill: PALETTE.red, color: PALETTE.cream });
     this.diveBtns = [-1, 0, 1].map((d, i) => button(this, RX - 68 + i * 68, 270, 64, 72, ['LEFT', 'STAY', 'RIGHT'][i], () => this.pickDive(d), { fill: PALETTE.lavender }));
+    // Nothing to press until the first kick is set up.
+    this.shootBtn.setVisible(false);
+    this.diveBtns.forEach((b) => b.setVisible(false));
     this.input.keyboard?.on('keydown-SPACE', () => this.strike());
     this.input.keyboard?.on('keydown-LEFT', () => this.pickDive(-1));
     this.input.keyboard?.on('keydown-DOWN', () => this.pickDive(0));
@@ -90,13 +94,18 @@ export class Penalties extends Phaser.Scene {
   }
 
   drawTally() {
+    // Five slots per row. In sudden death the window slides to the latest kicks (both rows stay
+    // in step); the big number on the right is always the full total.
     const g = this.tally;
     g.clear();
+    const longest = Math.max(this.so.kicks[0].length, this.so.kicks[1].length);
+    const first = Math.max(0, Math.max(5, longest) - 5);
+    this.sdLabel.setVisible(first > 0);
     for (const side of [0, 1]) {
       const kicks = this.so.kicks[side];
-      const n = Math.max(5, kicks.length);
-      for (let i = 0; i < n; i++) {
-        const x = 482 + i * (n > 5 ? 110 / (n - 1) : 22); const y = 64 + side * 34;
+      for (let s = 0; s < 5; s++) {
+        const i = first + s;
+        const x = 482 + s * 22; const y = 64 + side * 34;
         g.fillStyle(hex(PALETTE.ink)).fillCircle(x, y, 10);
         const k = kicks[i];
         const c = k === undefined ? PALETTE.indigo : k ? PALETTE.leaf : PALETTE.red;

@@ -54,6 +54,8 @@ export class Cup extends Phaser.Scene {
   }
 
   start() {
+    if (this.leaving) return;
+    this.leaving = true;
     save.set('cup', newCup(Date.now() & 0x7fffffff));
     save.set('cupRuns', (save.get('cupRuns') || 0) + 1);
     this.scene.restart();
