@@ -281,9 +281,11 @@ export class Match {
       }
       this.movePlayers(dt, true);
     }
-    // Keep the ball on the spot; taker can turn to aim.
+    // Keep the taker and ball on their spots; the taker can turn to aim.
     const b = this.ball;
     b.x = sp.spot.x; b.y = sp.spot.y;
+    t.x = sp.takerPos.x; t.y = sp.takerPos.y;
+    t.vx = 0; t.vy = 0; t.tvx = 0; t.tvy = 0;
     if (humanTakes) {
       this.active = t;
       const s = this.stick();

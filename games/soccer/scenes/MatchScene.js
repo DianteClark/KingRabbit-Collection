@@ -253,7 +253,7 @@ export class MatchScene extends Phaser.Scene {
       const sp = Math.hypot(p.vx, p.vy);
       if (sp > 38) col = loop(ANIM.run, 11, ph);
       else if (sp > 6) col = loop(ANIM.walk, 9, ph);
-      else if (p.role === 'GK' && Math.abs(m.ball.y - (p.side === 0 ? L : 0)) < 130) col = ANIM.gate[0];
+      else if (p.role === 'GK' && Math.hypot(m.ball.x - p.x, m.ball.y - p.y) < 50) col = ANIM.gate[0];
       else col = ANIM.idle[0];
     }
     return `${d}_${col}`;
@@ -267,7 +267,7 @@ export class MatchScene extends Phaser.Scene {
     // Near the top goal look further up so the goal clears the scoreboard; near your own goal
     // keep the ball above the thumb buttons.
     const up = Math.max(0, Math.min(1, (L * 0.45 - b.y) / (L * 0.35)));
-    let tx = OX + b.x + b.vx * 0.15;
+    let tx = OX + W / 2 + (b.x - W / 2) * 0.75 + b.vx * 0.12;
     let ty = OY + b.y + b.vy * 0.2 + 18 - up * 52;
     if (m.phase === PHASE.GOAL) { tx = OX + b.x; ty = OY + b.y + (b.y < L / 2 ? 50 : -30); }
     const k = dt > 0 ? Math.min(1, dt * 5) : 1;

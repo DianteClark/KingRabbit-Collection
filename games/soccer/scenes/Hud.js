@@ -5,6 +5,7 @@ import { WIDTH } from '../../../shared/core/boot.js';
 import { sfx } from '../../../shared/core/sfx.js';
 import { modal, openHowTo, kitChip } from './common.js';
 import { PHASE } from '../logic/match.js';
+import { OX, OY } from './MatchScene.js';
 import { W, L } from '../logic/constants.js';
 import { applyResult, needsPens, matchData } from '../flow.js';
 import { save } from '../save.js';
@@ -135,6 +136,11 @@ export class Hud extends Phaser.Scene {
   drawRadar() {
     const g = this.radar; const m = this.m; const R = RADAR;
     g.clear();
+    // Fade out of the way when the play is right underneath it (top corners).
+    const v = this.ms.cameras.main.worldView;
+    const bx = (OX + m.ball.x - v.x) * 2; const by = (OY + m.ball.y - v.y) * 2;
+    const under = bx > R.x - 40 && by < R.y + R.h + 50;
+    g.setAlpha(under ? 0.25 : 1);
     g.fillStyle(hex(PALETTE.ink), 0.7).fillRect(R.x - 2, R.y - 2, R.w + 4, R.h + 4);
     g.lineStyle(1, 0xffffff, 0.5).strokeRect(R.x, R.y, R.w, R.h);
     g.fillStyle(0xffffff, 0.5).fillRect(R.x, R.y + R.h / 2, R.w, 1);
