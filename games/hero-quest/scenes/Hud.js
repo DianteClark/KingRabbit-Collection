@@ -428,7 +428,7 @@ export class Hud extends Phaser.Scene {
           sfx(res.ok ? 'coin' : 'error');
           this.play.saveNow();
           draw();
-        }, { fill: PALETTE.gold });
+        }, { fill: PALETTE.gold, silent: true });
         c.add([icon, name, desc, b]);
         rows.push({ sync: (cur) => { const short = !cur.why && g.s.gems < cur.price;
           desc.setText(cur.why || (short ? `Need ${cur.price - g.s.gems} more gems` : cur.desc)).setColor(cur.why || short ? PALETTE.sand : PALETTE.lavender);

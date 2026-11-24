@@ -23,7 +23,7 @@ export function text(scene, x, y, str, { size = 16, color = PALETTE.cream, origi
  * Returns a container with .setLabel(), .setEnabled() and .label.
  */
 export function button(scene, x, y, w, h, label, onTap, {
-  fill = PALETTE.lavender, color = PALETTE.night, border = PALETTE.night, size = 16, icon,
+  fill = PALETTE.lavender, color = PALETTE.night, border = PALETTE.night, size = 16, icon, silent = false,
 } = {}) {
   const c = scene.add.container(Math.round(x), Math.round(y));
   const shadow = scene.add.rectangle(0, 4, w, h, hex(PALETTE.ink)).setOrigin(0.5);
@@ -47,7 +47,7 @@ export function button(scene, x, y, w, h, label, onTap, {
   c.on('pointerup', () => {
     if (!enabled || face.y === 0) return;
     face.y = 0;
-    sfx('tap');
+    if (!silent) sfx('tap'); // silent: the caller plays its own sound
     onTap?.();
   });
   c.setLabel = (s) => { lbl.setText(s); return c; };
