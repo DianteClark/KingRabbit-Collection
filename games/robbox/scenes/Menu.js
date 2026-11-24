@@ -46,6 +46,7 @@ export class Menu extends Phaser.Scene {
   /** A little lab strip: the robot walks along, lighting lamps. */
   diorama(top) {
     const cols = 9; const C = 32; const ox = WIDTH / 2 - (cols * C) / 2;
+    this.belt = [];
     const g = this.add.graphics();
     g.fillStyle(hex(PALETTE.ink)).fillRect(0, top, WIDTH, 2).fillRect(0, top + 156, WIDTH, 2);
     for (let r = 0; r < 3; r++) {
@@ -57,7 +58,7 @@ export class Menu extends Phaser.Scene {
         if (r === 0 && c === 6) ref = ART.floorOrange;
         if (r === 2) ref = convRef(1, 0);
         const img = sprite(this, x, y, ref);
-        if (r === 2) this.belt = [...(this.belt || []), img];
+        if (r === 2) this.belt.push(img);
       }
     }
     this.lamps = [2, 5, 8].map((c) => sprite(this, ox + c * C + C / 2, top + 30 + C + C / 2, ART.lamp).setTint(0x55556a));

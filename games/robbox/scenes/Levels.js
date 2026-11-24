@@ -55,7 +55,7 @@ export class Levels extends Phaser.Scene {
     c.add(text(this, 0, -27, l.id, { color: open ? PALETTE.gold : PALETTE.lavender }));
     c.add(fit(text(this, 0, -9, open ? l.name : 'Locked', { color: open ? PALETTE.cream : PALETTE.lavender }), 146));
     if (open) {
-      c.add(starRow(this, 0, 11, starsOf(l), { gap: 24 }));
+      c.add(starRow(this, 0, 11, starsOf(l), { gap: 30 }));
       const best = bestFor(l.id);
       c.add(fit(text(this, 0, 29, best == null ? `Target ${l.target}` : `Best ${best}  Target ${l.target}`, { color: PALETTE.lavender }), 146));
     } else c.add(this.add.image(0, 14, 'icons', 'lock').setTint(0x8a8fc4));

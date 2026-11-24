@@ -48,6 +48,7 @@ export class Play extends Phaser.Scene {
     this.sel = 'main';
     this.undoStack = [];
     this.modalOpen = 0;
+    this.dynObjs = []; this.gearImgs = []; this.press = null; this.drag = null; this.toastObj = null; this.toastBg = null;
     this.speed = SPEEDS.includes(save.get('speed')) ? save.get('speed') : 1;
     this.program = this.loadProgram();
 
@@ -77,6 +78,7 @@ export class Play extends Phaser.Scene {
     this.time.addEvent({ delay: 130, loop: true, callback: () => this.animateTiles() });
     this.coach = this.add.container(0, 0).setDepth(350);
 
+    this.events.off('howto-open');
     this.events.on('howto-open', () => { this.press = null; this.endDrag(null); });
     this.events.once('shutdown', () => { this.input.off('pointermove'); this.input.off('pointerup'); this.input.off('pointerupoutside'); });
 
@@ -108,7 +110,7 @@ export class Play extends Phaser.Scene {
 
   cap(slot) { return this.level.slots[slot] || 0; }
 
-  toastY() { return this.grid.top + this.grid.h - 16; }
+  toastY() { return this.grid.top + 12; }
 
   // ------------------------------------------------------------------ grid drawing
 
@@ -125,15 +127,22 @@ export class Play extends Phaser.Scene {
       return ext;
     };
     // Biggest whole-pixel scale of the 16px art that fits: 3x, 2x, else 1.5x.
-    let C = 24;
-    for (const size of [48, 32]) if (w * size <= 344 && h * size + extraFor(size, size / 4) <= this.grid.h) { C = size; break; }
+    // Keep the bottom of the area free for the message banner when the grid still fits at that size.
+    const BANNER = 50;
+    const fits = (size, room) => w * size <= 344 && h * size + extraFor(size, size / 4) <= room;
+    let C = 24; let room = this.grid.h;
+    for (const size of [48, 32]) {
+      if (fits(size, this.grid.h - BANNER)) { C = size; room = this.grid.h - BANNER; break; }
+      if (fits(size, this.grid.h)) { C = size; break; }
+    }
+    if (C === 24 && fits(24, this.grid.h - BANNER)) room = this.grid.h - BANNER;
     const E = C / 4;
     this.C = C; this.E = E;
     this.rl = Math.round(C * 0.18); // the robot stands a little up its tile
     const ext = extraFor(C, E);
     const total = h * C + ext;
     this.ox = Math.round((WIDTH - w * C) / 2);
-    this.oy = Math.round(this.grid.top + (this.grid.h - total) / 2 + ext);
+    this.oy = Math.round(this.grid.top + (room - total) / 2 + ext);
     this.scaleArt = C / 16;
   }
 
