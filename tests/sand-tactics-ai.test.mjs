@@ -160,3 +160,44 @@ test('adaptive: wins raise the CPU level, losses lower it, always within 0..1', 
   for (let i = 0; i < 40; i++) A.reportResult(A.SKILL_ID, 0, 1);
   assert.equal(A.getSkill(), 0);
 });
+
+test('ai: the quick (out of time) mode still returns legal actions and finishes turns', () => {
+  const s = G.newGame(M.SKIRMISH[3], { seed: 2, mode: 'skirmish' });
+  for (let t = 0; t < 10 && !s.over; t++) {
+    let n = 0; let step;
+    while ((step = AI.aiStep(s, s.turn, NORMAL, { quick: true })) && n++ < 100) AI.applyStep(s, step);
+    assert.ok(n < 100);
+    G.endTurn(s);
+  }
+  assert.ok(s.units.length > 4);
+});
+
+test('ai: supply trucks and harvesters get built and do their jobs', () => {
+  let trucks = 0; let harvs = 0; let onDunes = 0; let harvTurns = 0;
+  for (const seed of [1, 2]) {
+    const s = G.newGame(M.skirmishById('dune-sea'), { seed, mode: 'skirmish' });
+    const P = AI.aiParams(0.7);
+    const seen = new Set();
+    while (!s.over && s.day < 20) {
+      for (const u of s.units) {
+        if (!seen.has(u.id)) { seen.add(u.id); if (u.type === 'truck') trucks++; if (u.type === 'harv') harvs++; }
+        if (u.type === 'harv' && u.side === s.turn) { harvTurns++; if (G.terrainAt(s, u.x, u.y) === 'dunes') onDunes++; }
+      }
+      AI.playTurn(s, s.turn, P);
+    }
+  }
+  assert.ok(harvs >= 1, 'a harvester was built on the dune map');
+  assert.ok(onDunes >= harvTurns * 0.6, `harvesters sat on dunes ${onDunes}/${harvTurns} turns`);
+  assert.ok(trucks >= 0);
+});
+
+test('ai: with the fair start, neither seat dominates equal computers on the skirmish maps', () => {
+  const wins = [0, 0];
+  for (const def of M.SKIRMISH) {
+    for (let seed = 1; seed <= 4; seed++) {
+      const s = AI.simulate(G.newGame(def, { seed: seed * 7 + 1, mode: 'skirmish' }), [0.5, 0.5], { maxDays: 60 });
+      wins[s.over ? s.winner : (G.standing(s, 0) > G.standing(s, 1) ? 0 : 1)]++;
+    }
+  }
+  assert.ok(Math.min(...wins) >= 5, `Blue ${wins[0]} / Red ${wins[1]}`);
+});

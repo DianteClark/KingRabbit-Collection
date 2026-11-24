@@ -1,6 +1,6 @@
 # Hollow Crown
 
-**Status:** Playable (v1.0): overworld, 3 dungeons, bosses, shop, saves, ending
+**Status:** Playable (v1.1): overworld, 3 dungeons, bosses, shop, saves, ending, music, onboarding
 **Game id:** `hero-quest` (`games/hero-quest/`)
 **Art:** LAS Adventure Pack 1.0 and LAS Alchemist Lab 1.02 by Aleksandr Makarov (`shared/assets/las-zelda-adventure/`)
 **Rules text:** `games/hero-quest/rules.js` (gold ? button)
@@ -25,6 +25,15 @@ A short top-down sword-and-dungeon adventure for a phone held in one hand. The G
 
 Progression gates: the boomerang lowers the Ember River bridge (crystal on the far bank); bombs break the rock sealing Hollow Keep and the lake cave.
 
+## First minutes (v1.1)
+- A new game opens with Elder Bram already talking (after the How to Play sheet the very first time); his speech gives the sword and says where to go.
+- Right after the sword, two gold tags point at the stick ("Drag here to walk") and the SWORD button ("Tap to swing"), once.
+- A "Next: ..." toast appears whenever the goal changes (`objective()` in `logic/story.js`); the pause menu repeats it above a 3x3 area map with dungeon entrances numbered 1-3.
+- Fernwick's north exit sits at the end of a visible path, and a path runs through Mosswood to the Mossy Hollow.
+
+## Music and jingles
+`music.js`: a tiny Web Audio sequencer with four original loops (village, field, dungeon, boss), quiet (gain 0.045) and silent under the shared mute; "Music on/off" in the pause menu (saved). Local jingles: `unlock` (keys and boss doors), `door` (shutters opening), `secret` (switch/crystal/bomb reveals), `fanfare` (new items); they duck the music. Other sounds use the shared `sfx`.
+
 ## Rules
 - Hearts are half-heart HP (start 3 hearts). Contact and rocks hurt half a heart; golems, the Golem King and the Hollow King a whole heart. 1 s of blinking invulnerability and a knockback after each hit.
 - Drops (bushes, pots, enemies): gems, 5-gems, hearts (more likely when you're low), bombs (much more likely when you have none).
@@ -33,7 +42,9 @@ Progression gates: the boomerang lowers the Ember River bridge (crystal on the f
 - Falling: back to the last entrance you used (dungeon door or overworld doorway), full hearts, everything kept. Enemies respawn when you re-enter a room; in a dungeon, rooms you cleared stay clear until you leave it.
 - Small keys belong to their dungeon. Locked doors and bomb walls on a room edge are shared by both rooms. Switches, crystals and opened doors stay done for good; blocks reset when you leave the room, so a stuck block can't soft-lock you.
 - Boss rooms seal until the boss falls; then a Heart Container, then a warp orb (or the Crown) appears.
-- Bosses: the Slime King sheds slimes every 3 damage; the Golem King's armour shrugs off the sword unless it's dazed (by a bomb, or by charging into a wall) and the room keeps supplying bombs; the Hollow King's shield only drops to a boomerang hit, he throws rock volleys, teleports, and calls two blue slimes at half health.
+- Tells: a yellow "!" over anything in a wind-up (blue slime lunge, gremlin throw, golem charge, boss charge/volley). The Slime King squats before each jump, arcs through the air, and only hurts on the way down; while it rests it just shoves you. The Hollow King blinks away when his stun ends instead of drifting into you. The Golem King winds up for 0.8 s.
+- Pause > Reset blocks (push-block rooms only) puts the blocks and you back at the doorway you came in; latched switches stay done.
+- Bosses: the Slime King (10 HP, half-heart landings) sheds slimes every 3 damage; the Golem King's armour shrugs off the sword unless it's dazed (by a bomb, or by charging into a wall) and the room keeps supplying bombs; the Hollow King's shield only drops to a boomerang hit, he throws rock volleys, teleports, and calls two blue slimes at half health.
 
 ## Enemies
 Green slime (hops at random), blue slime (lunges when you line up), red slime (follows you, splits in two), gremlin (keeps its distance, throws rocks), golem (charges when lined up, dazed after hitting a wall, double damage while dazed). The boomerang stuns most enemies.
@@ -57,6 +68,9 @@ Green slime (hops at random), blue slime (lunges when you line up), red slime (f
 | `scenes/Play.js` | World camera (2x), sprites, animations, effects, scroll/fade transitions |
 | `scenes/Hud.js` | Top bar, stick and buttons, dialog box, shop, pause (with area map), death screen |
 | `scenes/Title.js`, `scenes/Ending.js`, `scenes/Boot.js` | Menus, ending, loading and baked textures/animations |
+
+## Boss tuning
+Tuned by playing each boss through the real scene with a scripted "human" (decisions at ~8 Hz, reacting to tells: dodge squats/charges, sidestep rocks, attack only in safe windows, boomerang the Hollow King, bomb the Golem King) at the starting pace 4/10 with the hearts you'd have at that point. After tuning it wins every fight, taking 0-5 half hearts (Slime King 17-23 s, Golem King 12-15 s at 12 HP, where the extra hits came from the bot hugging him to drop bombs, Hollow King 13-21 s); every hit it took came from a told attack.
 
 ## Tests
 - `tests/hero-quest.test.mjs`: map validity (sizes, legend, chest/sign/warp/house alignment, matching room edges, no openings to nowhere), the whole-game solver in every key order (every chest, every boss), item gating, every switch puzzle from every doorway, bomb refills near cracked walls, and rules (sword, contact damage and i-frames, shield, keys, block pushing, boomerang, bombs, death/respawn, potions, shop, bosses' immunities, splitting, clear-shutters, enemies stay in bounds, adaptive presets, save round-trip, the hidden cave).

@@ -17,7 +17,7 @@ export const RULES = {
       heading: 'Your turn',
       items: [
         'Drag the map to look around. Tap one of your units to see where it can go (blue) and what it could hit (red).',
-        'Tap a blue tile to move there. Then pick Fire, Capture or Wait at the bottom. Undo puts the unit back if you change your mind.',
+        'Tap a blue tile to move there (or Act here to stay put). Then pick Fire, Capture or Wait at the bottom. Undo puts the unit back if you change your mind.',
         'Tap an enemy inside the red area to move next to it and see the battle forecast. Nothing happens until you tap Fire.',
         'Each unit acts once per turn and then greys out. Tap End Turn when you are done. Next jumps to a unit that can still act.',
         'Tap an enemy unit to see how far it can move and strike next turn.',
@@ -46,7 +46,7 @@ export const RULES = {
       heading: 'Terrain',
       items: [
         terrainLine('sand', 'Wheels move slower.'),
-        terrainLine('dunes', 'Slows tanks and wheels.'),
+        terrainLine('dunes', 'Slows tanks and wheels. Harvesters earn funds here.'),
         terrainLine('oasis', 'Slows tanks and wheels.'),
         terrainLine('mesa', 'Only foot soldiers and drones. Lancers climb fast.'),
         terrainLine('water', 'Only drones fly over.'),
@@ -60,6 +60,7 @@ export const RULES = {
         'Campaign: 8 missions with rising difficulty. Win one to unlock the next.',
         'Skirmish: you (Blue) against the computer on a fair map.',
         '2 Players: pass the phone between turns. Blue moves first.',
+        'In Skirmish and 2 Players, moving first is an edge, so Blue gets no income on day 1 and Red starts with 1000 extra funds.',
       ],
     },
     { heading: 'Saving', text: 'The battle saves itself after every move. Close the page any time and tap Continue to pick up where you left off.' },

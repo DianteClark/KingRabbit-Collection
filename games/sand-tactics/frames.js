@@ -55,7 +55,11 @@ const VEH = {
   drone: { big: true, c: 3, r: 0 },
   heavy: { big: true, c: 0, r: 3 },
   flak: { big: true, c: 3, r: 3 },
+  truck: { big: false, c: 3, r: 6 },
+  harv: { big: false, c: 0, r: 0 },
 };
+/** Small 12px vehicles are drawn at 3x so they read as clearly as the big 24px ones at 2x. */
+export const isSmallVehicle = (art) => !!VEH[art] && !VEH[art].big;
 const FACING = { up: [1, 0], down: [1, 2], left: [0, 1], right: [2, 1] };
 
 export const isFoot = (art) => !!FOOT[art];
@@ -95,7 +99,6 @@ export const TILE = {
   mesaFill: [[24, 184], [40, 184], [24, 200], [40, 200]],
   mesaRing: [56, 184],
   waterRing: [96, 24],
-  waterFill: [[104, 32]],
   oasis: [[40, 24], [40, 24], [40, 40]],
   shrub: [72, 248],
   rocks: [[8, 248], [24, 248]],

@@ -10,6 +10,8 @@ import { skillLabel } from '../adaptive.js';
 import { ITEM } from '../art.js';
 import { VIEW } from './Play.js';
 import { DUNGEONS } from '../logic/constants.js';
+import { objective } from '../logic/story.js';
+import { musicOn, setMusicOn } from '../music.js';
 import { ROOMS } from '../logic/data.js';
 
 const BAR_H = 44;
@@ -71,10 +73,30 @@ export class Hud extends Phaser.Scene {
     this.refresh();
     this.ready = true;
     this.play.banner(true);
+    this.play.hintGoal();
+    // A brand-new adventure: the elder starts talking by himself (after the How to Play sheet
+    // the very first time), so nobody has to guess what to do in the first room.
+    const intro = () => this.time.delayedCall(450, () => this.play.startIntro());
     if (!save.get('seenHelp')) {
       save.set('seenHelp', true);
-      this.time.delayedCall(500, () => this.help());
-    }
+      this.time.delayedCall(500, () => this.help(intro));
+    } else intro();
+  }
+
+  /** One-time pointers at the controls, right after you get the sword. */
+  coach() {
+    if (save.get('coached')) return;
+    save.set('coached', true);
+    const items = [];
+    const tag = (x, y, msg) => {
+      const t = text(this, x, y, msg, { color: PALETTE.night }).setDepth(45);
+      const bg = this.add.rectangle(x, y, t.width + 14, t.height + 8, hex(PALETTE.gold)).setDepth(44).setStrokeStyle(2, hex(PALETTE.ink));
+      items.push(t, bg);
+    };
+    tag(STICK.x + 4, PAD_TOP + 22, 'Drag here to walk');
+    tag(SWORD.x - 6, SWORD.y - 58, 'Tap to swing');
+    this.tweens.add({ targets: items, y: '-=4', yoyo: true, repeat: 7, duration: 380 });
+    this.time.delayedCall(6500, () => this.tweens.add({ targets: items, alpha: 0, duration: 400, onComplete: () => items.forEach((o) => o.destroy()) }));
   }
 
   // ------------------------------------------------------------------ input
@@ -128,6 +150,8 @@ export class Hud extends Phaser.Scene {
   /** Called by Play each frame. */
   readInput() {
     const out = { mx: 0, my: 0, attack: false, item: false, cycle: false };
+    // browser tests can drive the controls (window.__botInput returns an input object)
+    if (window.__botInput && !this.modal && !this.dialog) return { ...out, ...window.__botInput() };
     if (this.modal || this.dialog) { this.press = { attack: false, item: false, cycle: false }; return out; }
     if (this.stick.id !== null) {
       out.mx = this.stick.dx / STICK.r; out.my = this.stick.dy / STICK.r;
@@ -220,7 +244,7 @@ export class Hud extends Phaser.Scene {
     const t = text(this, WIDTH / 2, y, msg, { color: PALETTE.gold, wrap: 330 }).setDepth(41);
     const bg = this.add.rectangle(WIDTH / 2, y, Math.min(WIDTH - 8, t.width + 20), t.height + 10, hex(PALETTE.ink), 0.75).setDepth(40);
     this.lastToast = t; this.lastToastBg = bg;
-    this.tweens.add({ targets: [t, bg], alpha: 0, delay: 1600, duration: 300, onComplete: () => { t.destroy(); bg.destroy(); } });
+    this.tweens.add({ targets: [t, bg], alpha: 0, delay: Math.min(4500, 1300 + msg.length * 45), duration: 300, onComplete: () => { t.destroy(); bg.destroy(); } });
   }
 
   // ------------------------------------------------------------------ dialog box
@@ -265,6 +289,7 @@ export class Hud extends Phaser.Scene {
     const done = d.onDone;
     this.closeDialogBox();
     done?.();
+    if (this.g.s.items.sword && !this.dialog && this.g.mode === 'play') this.coach();
   }
 
   closeDialogBox() {
@@ -290,24 +315,32 @@ export class Hud extends Phaser.Scene {
     if (this.modal || this.dialog || this.play.busy) return;
     this.scene.pause('Play');
     const m = this.openModal((c) => {
-      const top = 52; const h = 556;
-      c.add(panel(this, 30, top, 300, h));
-      c.add(text(this, WIDTH / 2, top + 30, 'Paused', { size: 32, color: PALETTE.gold }));
+      const top = 34; const h = 596;
+      c.add(panel(this, 24, top, WIDTH - 48, h));
+      c.add(text(this, WIDTH / 2, top + 28, 'Paused', { size: 32, color: PALETTE.gold }));
       const s = this.g.s;
       const done = DUNGEONS.filter((d) => s.flags[`boss:${d}`]).length;
-      c.add(text(this, WIDTH / 2, top + 64, `Dungeons ${done}/3   Hearts ${s.maxHp / 2}`, { color: PALETTE.cream }));
-      c.add(text(this, WIDTH / 2, top + 86, `Enemy pace ${skillLabel()}/10`, { color: PALETTE.lavender }));
-      this.drawMap(c, WIDTH / 2, top + 178);
-      const rows = [
-        ['Resume', () => m.close(), PALETTE.gold],
-        ['How to Play', () => { m.close(); this.help(); }],
-        [isMuted() ? 'Sound: Off' : 'Sound: On', (b) => { setMuted(!isMuted()); b.setLabel(isMuted() ? 'Sound: Off' : 'Sound: On'); }],
-        ['Save & Title', () => { this.play.saveNow(); m.close(); this.scene.stop('Play'); this.scene.start('Title'); }],
-        ['All Games', () => { this.play.saveNow(); window.location.href = '../'; }],
-      ];
+      c.add(text(this, WIDTH / 2, top + 60, `Dungeons ${done}/3   Hearts ${s.maxHp / 2}   Pace ${skillLabel()}/10`, { color: PALETTE.cream }));
+      c.add(text(this, WIDTH / 2, top + 98, `Next: ${objective(s)}`, { color: PALETTE.sand, wrap: 280 }));
+      this.drawMap(c, WIDTH / 2, top + 210);
+      const half = (x, label, fn) => { const b = button(this, x, 0, 104, 42, label, () => fn(b), { fill: PALETTE.lavender }); return b; };
+      const rows = [['Resume', () => m.close(), PALETTE.gold]];
+      if (this.g.hasBlocks()) rows.push(['Reset blocks', () => { m.close(); this.play.resetRoom(); }, PALETTE.cream]);
+      rows.push(['How to Play', () => { m.close(); this.help(); }]);
+      rows.push(['audio']);
+      rows.push(['Save & Title', () => { this.play.saveNow(); m.close(); this.scene.stop('Play'); this.scene.start('Title'); }]);
+      rows.push(['All Games', () => { this.play.saveNow(); window.location.href = '../'; }]);
+      const y0 = top + 312; const step = rows.length > 5 ? 48 : 54;
       rows.forEach(([label, fn, fill], i) => {
-        const b = button(this, WIDTH / 2, top + 270 + i * 54, 220, 44, label, () => fn(b), { fill: fill || PALETTE.lavender });
-        c.add(b);
+        const y = y0 + i * step;
+        if (label === 'audio') {
+          const sb = half(WIDTH / 2 - 56, isMuted() ? 'Sound off' : 'Sound on', (b) => { setMuted(!isMuted()); b.setLabel(isMuted() ? 'Sound off' : 'Sound on'); });
+          const mb = half(WIDTH / 2 + 56, musicOn() ? 'Music on' : 'Music off', (b) => { setMusicOn(!musicOn()); b.setLabel(musicOn() ? 'Music on' : 'Music off'); });
+          sb.y = y; mb.y = y;
+          c.add([sb, mb]);
+          return;
+        }
+        c.add(button(this, WIDTH / 2, y, 216, 42, label, fn, { fill: fill || PALETTE.lavender }));
       });
     }, () => this.scene.resume('Play'));
   }
@@ -319,7 +352,7 @@ export class Hud extends Phaser.Scene {
     const cw = 40; const ch = 30; const gap = 4;
     const gr = this.add.graphics();
     c.add(gr);
-    const name = { ow: 'Fernwick Vale', d1: 'Mossy Hollow', d2: 'Ember Lab', d3: 'Hollow Keep' }[area];
+    const name = { ow: 'Fernwick Vale  (1-3: dungeons)', d1: 'Mossy Hollow', d2: 'Ember Lab', d3: 'Hollow Keep' }[area];
     c.add(text(this, cx, cy - 64, name, { color: PALETTE.sand }));
     for (let y = 0; y < 3; y++) {
       for (let x = 0; x < 3; x++) {
@@ -332,12 +365,15 @@ export class Hud extends Phaser.Scene {
         gr.fillStyle(hex(PALETTE.ink)).fillRect(px - 1, py - 1, cw + 2, ch + 2);
         gr.fillStyle(hex(here ? PALETTE.gold : seen ? PALETTE.lavender : PALETTE.indigo)).fillRect(px, py, cw, ch);
         if (r.boss && seen) c.add(text(this, px + cw / 2, py + ch / 2, g.flags[`boss:${area}`] ? 'ok' : '!', { color: PALETTE.red }));
+        // overworld: number the dungeon entrances so you know where you're headed
+        const dun = r.warps.find((w) => w.to.startsWith('d'));
+        if (dun && !here) c.add(text(this, px + cw / 2, py + ch / 2, dun.to[1], { color: g.flags[`boss:d${dun.to[1]}`] ? PALETTE.leaf : PALETTE.red }));
         if (here) c.add(this.add.image(px + cw / 2, py + ch / 2, 'items', itemFrame('sword')));
       }
     }
   }
 
-  help() {
+  help(onClose = null) {
     if (document.getElementById('howto')) return;
     this.scene.pause('Play');
     const sections = [...RULES.sections];
@@ -345,7 +381,7 @@ export class Hud extends Phaser.Scene {
       heading: 'Enemies adapt to you',
       text: `Enemy pace is at ${skillLabel()} of 10 for you right now. Falling eases the enemies off; beating bosses with hearts to spare speeds them up. Only their speed, reactions and heart drops change.`,
     });
-    showHowTo({ ...RULES, sections }, () => { if (!this.modal) this.scene.resume('Play'); });
+    showHowTo({ ...RULES, sections }, () => { if (!this.modal) this.scene.resume('Play'); onClose?.(); });
   }
 
   deathModal(onContinue) {

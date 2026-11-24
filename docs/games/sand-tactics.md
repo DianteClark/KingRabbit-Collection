@@ -1,6 +1,6 @@
 # Sand Tactics
 
-**Status:** Playable (v1.0): 8-mission campaign, 4 skirmish maps vs an adaptive CPU, 2 players on one phone
+**Status:** Playable (v1.1): 8-mission campaign, 4 skirmish maps vs an adaptive CPU, 2 players on one phone
 **Art:** Battle of the Sands v1.2 by Aleksandr Makarov (`shared/assets/battle-of-the-sands/Battle-of-the-Sands-v.1.2/`)
 **Rules text:** `games/sand-tactics/rules.js` (shown by the gold ? button on every screen)
 
@@ -21,8 +21,10 @@ End Turn asks first if units can still act. Tapping during animations skips them
 
 ## Rules in brief (`logic/game.js`, `logic/data.js`)
 
-- **Units (9):** Infantry, Scout, Lancer (bazooka squad) capture; Recon, Tank, Heavy Tank, Flak, Drone are direct;
+- **Units (11):** Infantry, Scout, Lancer (bazooka squad) capture; Recon, Tank, Heavy Tank, Flak, Drone are direct;
   Artillery fires at range 2-3, can't move and fire, never counters. Drones fly over water/mesas, get no terrain cover.
+  Unarmed support: Supply Truck (box-truck sprite) repairs +1 health of each adjacent friend free at turn start;
+  Harvester (harvest-bot sprite) earns 500 funds each turn it starts on dunes. Max 30 units a side.
 - **Damage:** `base[att][def] * attackerHP/10 * (100 - stars * defenderHP) / 100`, floored, HP shown 1-10, no luck,
   so the forecast is exact. Surviving defenders hit back if adjacent and direct.
 - **Terrain:** sand (1 star), dunes and oasis (2, slow tanks and wheels), mesa (4, foot and drones only), water
@@ -45,8 +47,13 @@ End Turn asks first if units can still act. Tapping during animations skips them
 | 7 | Twin Lakes | 11x20 | economy race |
 | 8 | Scorpion's Nest | 11x20 | fortress with heavy tanks and two factories |
 
-Each mission has a briefing, a tip and an outro line. Skirmish maps are built from their top half by `mirror()`
-(180-degree turn, sides swapped), so they are fair apart from Blue moving first.
+Each mission has a briefing, a tip and an outro line. Missions 1-5 carry a `cpuCap` (0.15 / 0.25 / 0.3 / 0.45 / 0.5)
+that limits the computer's adaptive level, so a first-timer can clear the opening missions (decisions only).
+Mission 1 (and the build/capture basics in mission 2) has a step-by-step hint strip ("coach") at the top of the
+map that follows what you are doing; the X hides tips for good. Skirmish maps are built from their top half by `mirror()`
+(180-degree turn, sides swapped). **Fair start** (skirmish and 2 players): Blue gets no income on day 1 and Red
+starts with 1000 extra funds. Measured with CPU-vs-CPU battles over the 4 maps: Blue won 66-72% before; after,
+Blue 98 / Red 94 over 192 games at skills 0.2 / 0.5 / 0.8.
 
 ## Computer player (`logic/ai.js`)
 
@@ -62,6 +69,10 @@ step scores every (unit, destination, action) and takes the best:
   bonus for standing next to threatened own artillery, sitting on its HQ when enemy infantry is near, healing;
 - building: infantry while buildings are open and money is short, otherwise the unit with the best lifetime damage
   per fund against the enemy army (plus a generic mix), with variety and terrain-mobility factors.
+
+On screen the CPU turn shows fights and finished captures; moves off screen (and every plain move in Fast mode)
+are applied at once, Fast hits take about 0.1 s, and past 1.2 s of thinking in one turn `aiStep(..., { quick: true })`
+decides unit by unit. Busy late-game turns take about 1-3 s in Fast mode.
 
 Risk aversion relaxes as days pass so careful sides don't stall. Distance fields from buildings are cached for good,
 the threat map per turn.
@@ -84,6 +95,6 @@ The battle in progress (after every action and turn), campaign unlocks and best 
   determinism, a strong AI beats a weak one, every campaign mission is won by a strong AI against the normal CPU.
 
 ## Next ideas
-- Transport (APC) and supply using the pack's other vehicles (harvest bot, box truck)
+- A transport (APC)
 - Fog of war option
 - A close-up battle cut-in like the handheld games (the units' attack frames are there)

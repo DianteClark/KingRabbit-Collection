@@ -137,5 +137,6 @@ function makeTextures(scene) {
     'kkkkkkkkkkkkkkkk',
   ].map((r) => r.slice(0, 16)), { k: ink, w: '#cfc4b6', g: '#9a8f86', d: '#5d5650', l: '#7d746c', m: '#8a8079' });
   px('spark', 5, 5, ['..w..', '..w..', 'wwyww', '..w..', '..w..'], { w: '#f9f5ef', y: '#e3d245' });
+  px('bang', 5, 10, ['.kkk.', 'kyyyk', 'kyyyk', 'kyyyk', 'kyyyk', '.kyk.', '..k..', '.kkk.', 'kyyyk', '.kkk.'], { k: ink, y: '#e3d245' });
   px('star', 3, 3, ['.y.', 'yyy', '.y.'], { y: '#e3d245' });
 }
