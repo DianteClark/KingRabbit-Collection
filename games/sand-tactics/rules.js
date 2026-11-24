@@ -17,7 +17,7 @@ export const RULES = {
       heading: 'Your turn',
       items: [
         'Drag the map to look around. Tap one of your units to see where it can go (blue) and what it could hit (red).',
-        'Tap a blue tile to move there. Then pick Fire, Capture or Wait at the bottom. Undo puts the unit back if you change your mind.',
+        'Tap a blue tile to move there (or Act here to stay put). Then pick Fire, Capture or Wait at the bottom. Undo puts the unit back if you change your mind.',
         'Tap an enemy inside the red area to move next to it and see the battle forecast. Nothing happens until you tap Fire.',
         'Each unit acts once per turn and then greys out. Tap End Turn when you are done. Next jumps to a unit that can still act.',
         'Tap an enemy unit to see how far it can move and strike next turn.',

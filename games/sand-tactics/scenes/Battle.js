@@ -530,9 +530,10 @@ export class Battle extends Phaser.Scene {
     this.clearPanel();
     const d = UNITS[u.type];
     fit(this.pText(12, 556, `${d.name}  HP ${displayHp(u.hp)}/10  Move ${d.move}`, { color: TEAM_COLOR[u.side] }), 336);
-    this.pText(12, 580, 'Tap a blue tile to move', { color: PALETTE.cream });
-    this.pText(12, 604, 'or tap an enemy to attack it.', { color: PALETTE.lavender });
-    this.pButton(304, 612, 96, 36, 'Cancel', () => this.deselect(), { fill: PALETTE.indigo, color: PALETTE.cream });
+    fit(this.pText(12, 580, 'Tap a blue tile, or an enemy in red.', { color: PALETTE.cream }), 336);
+    // Acting without moving (fire from here, capture, or just wait) is one tap away.
+    this.pButton(96, 616, 168, 38, 'Act here', () => this.moveSelected(u, u.x, u.y), { fill: PALETTE.lavender });
+    this.pButton(280, 616, 144, 38, 'Cancel', () => this.deselect(), { fill: PALETTE.indigo, color: PALETTE.cream });
     this.follow(u.x, u.y);
   }
 
