@@ -34,6 +34,7 @@ export function header(scene, title, onBack, { y = 26, depth = 5000 } = {}) {
   const items = [bg, line];
   if (onBack) items.push(button(scene, 30, y, 48, 36, '<', onBack, { size: 32, fill: PALETTE.cream }));
   const t = text(scene, WIDTH / 2, y, title, { size: title.length > 14 ? 16 : 32, color: PALETTE.cream });
+  fit(t, 228);
   items.push(t);
   items.push(button(scene, WIDTH - 30, y, 48, 36, '?', () => openHowTo(scene), { size: 32, fill: PALETTE.gold }));
   for (const o of items) pin(o).setDepth(depth + 1);

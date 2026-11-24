@@ -13,7 +13,7 @@ export const TYPE_INFO = {
   stone: { name: 'Stone', color: '#8a8478', light: '#cfc6b2', dark: '#3e3a34', why: 'grounds Spark' },
   spark: { name: 'Spark', color: '#d9b625', light: '#f5e27a', dark: '#6b5210', why: 'shocks Tide' },
   tide: { name: 'Tide', color: '#3f74c9', light: '#8fc0f0', dark: '#1c2f6b', why: 'douses Flame' },
-  plain: { name: 'Plain', color: '#9a8fa8', light: '#e0e9c4', dark: '#252525', why: 'no strengths or weaknesses' },
+  plain: { name: 'Plain', color: '#b0789a', light: '#f2c4d6', dark: '#5a2a44', why: 'no strengths or weaknesses' },
 };
 
 /** The type this one beats (or null for Plain). */

@@ -74,8 +74,8 @@ change, after battles and menus, and at most once a second while walking.
   formula), battle flow (forced switch, trainer's next pet, XP, losing), AI (hard picks super-strong moves, switches
   and heals; easy is more random; skill never changes teams), adaptive skill, maps (rectangular, doors and exits
   valid, everything reachable, gates hold until badges), journey rules (box, shop gating, resting, blackout, badges,
-  friendly rival), and **completability**: a bot plays the whole game for each starter at tamer skill 0.35 and 1.
-- `tests/pocket-pets-sim.mjs`: the bot used by the completability tests (grinds, catches, heals, shops, fights in order).
+  friendly rival).
+- `tests/pocket-pets-sim.test.mjs`: **completability**, the bot (grinds, catches, heals, shops, fights in order) plays the whole game for each starter at tamer skill 0.35 and 1. Its helpers are shared with the main test file.
 - Test hooks: `window.__pets` (`tapTile(x, y)`, `state`, battle `bot()` / `ready`) and `window.__game`.
 
 ## Ideas for later

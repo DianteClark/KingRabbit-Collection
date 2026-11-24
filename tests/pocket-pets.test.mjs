@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { G, B, A, P, D, W, playThrough, playBattle } from './pocket-pets-sim.mjs';
+import { G, B, A, P, D, W, playBattle } from './pocket-pets-sim.test.mjs';
 
 const base = '../games/pocket-pets/';
 const T = await import(new URL(`${base}logic/types.js`, import.meta.url).href);
@@ -444,17 +444,3 @@ test('game: a saved journey survives JSON and plays on', () => {
   const b = playBattle(copy, G.wildSetup(copy, 'mewlet', 3), rng);
   assert.ok(['win', 'lose', 'caught', 'ran'].includes(b.result));
 });
-
-// ---------------------------------------------------------------- the whole game
-
-for (const starter of D.STARTERS) {
-  for (const skill of [0.35, 1]) {
-    test(`completable: ${starter} beats all four leaders and the Champion (tamer skill ${skill})`, () => {
-      const r = playThrough({ seed: 11, starter, skill });
-      assert.ok(r.done, r.log.join('\n'));
-      assert.equal(r.badges, 4);
-      assert.ok(r.champion);
-      assert.ok(r.battles < 700, `took ${r.battles} battles`);
-    });
-  }
-}

@@ -1,6 +1,10 @@
-// Shared helper for the Pocket Pets tests: a bot that plays the whole journey through the pure
-// logic modules (no Phaser), the way a sensible player would: grind in the grass, catch a team,
-// heal at clinics, buy potions, beat the tamers and the leaders in order, then the Champion.
+// Pocket Pets: the whole game is completable. A bot plays the journey through the pure logic
+// modules (no Phaser), the way a sensible player would: grind in the grass, catch a team, heal at
+// clinics, buy potions, beat the tamers and the leaders in order, then the Champion.
+// The helpers are also used by pocket-pets.test.mjs.
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { pathToFileURL } from 'node:url';
 const base = '../games/pocket-pets/logic/';
 const imp = (f) => import(new URL(`${base}${f}`, import.meta.url).href);
 const G = await imp('game.js');
@@ -128,3 +132,19 @@ export function playThrough({ seed = 1, starter = 'embit', skill = 0.5, maxBattl
 }
 
 export { typeMult };
+
+// ---------------------------------------------------------------- the whole game
+
+// Only when this file is run itself (pocket-pets.test.mjs imports the helpers above).
+const isMain = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+for (const starter of isMain ? D.STARTERS : []) {
+  for (const skill of [0.35, 1]) {
+    test(`completable: ${starter} beats all four leaders and the Champion (tamer skill ${skill})`, () => {
+      const r = playThrough({ seed: 11, starter, skill });
+      assert.ok(r.done, r.log.join('\n'));
+      assert.equal(r.badges, 4);
+      assert.ok(r.champion);
+      assert.ok(r.battles < 700, `took ${r.battles} battles`);
+    });
+  }
+}

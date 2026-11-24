@@ -377,6 +377,14 @@ export class World extends Phaser.Scene {
     const d = this.dialog;
     const line = d.lines.shift();
     d.t.setText(line);
+    // Too long for the box: show the first part now and the rest on the next tap.
+    if (d.t.height > 96) {
+      const words = line.split(' ');
+      let cut = Math.floor(words.length / 2);
+      for (let i = cut; i > 2; i--) if (/[.!?,]$/.test(words[i - 1])) { cut = i; break; }
+      d.t.setText(words.slice(0, cut).join(' '));
+      d.lines.unshift(words.slice(cut).join(' '));
+    }
     d.shownAt = Date.now();
   }
 

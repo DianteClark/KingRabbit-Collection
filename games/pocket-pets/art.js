@@ -25,8 +25,6 @@ export const ICON = {
 export const CASE = { blue: 0, silver: 1, green: 2, orange: 3, red: 4, pink: 5 };
 export const TYPE_CASE = { flame: 'red', tide: 'blue', leaf: 'green', spark: 'orange', stone: 'silver', plain: 'pink' };
 
-const LCD_LIGHT = [224, 233, 196];
-const LCD_DARK = [37, 37, 37];
 const rgb = (h) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
 
 /** Data URLs for HTML panels: pets[sp], items[id], chars[row]. */
@@ -44,10 +42,9 @@ function canvas(w, h) {
 /** 2D context that is read back with getImageData (kept on the CPU, no GPU stalls). */
 const ctx2d = (c) => c.getContext('2d', { willReadFrequently: true });
 
-/** Colours for a species: [light, dark]. Plain pets keep the original LCD look. */
+/** Colours for a species: [light, dark], from its type. */
 export function petColors(sp) {
   const t = SPECIES[sp].type;
-  if (t === 'plain') return [LCD_LIGHT, LCD_DARK];
   return [rgb(TYPE_INFO[t].light), rgb(TYPE_INFO[t].dark)];
 }
 
