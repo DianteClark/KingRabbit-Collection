@@ -225,10 +225,13 @@ test('a bot can play Hollow Crown from the first line to the ending', () => {
   assert.ok(has(W.trigFlag(ROOMS['d1:0,1'], 'crystal')), 'bridge lowered');
   b.act('d1:0,1', 3, 5, 'left');
   assert.ok(g.s.bigKeys.d1);
+  b.act('d1:1,1', 5, 5, 'down');
   b.unlock('d1:1,1', 5, 1, 'up');
   b.boss('d1:1,0');
   assert.equal(g.room.id, 'ow:0,0', 'warped out of Mossy Hollow');
   assert.equal(g.s.maxHp, 8);
+
+  b.act('ow:1,0', 5, 1, 'left');
 
   // ---- Ember Lab
   b.use('boomerang', 'ow:2,1', 6, 8, 'right');

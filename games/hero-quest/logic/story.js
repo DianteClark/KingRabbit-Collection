@@ -26,7 +26,7 @@ export function shopStock(s) {
       why: !s.items.bombs ? 'Need a bomb bag' : s.bombs >= 10 ? 'Bag is full' : null,
     },
     {
-      id: 'heart', name: 'Heart Charm', price: 120, desc: '+1 heart, one only',
+      id: 'heart', name: 'Heart Charm', price: 100, desc: '+1 heart, one only',
       why: s.flags['bought:heart'] ? 'Sold out' : null,
     },
   ];

@@ -29,7 +29,7 @@ Progression gates: the boomerang lowers the Ember River bridge (crystal on the f
 - Hearts are half-heart HP (start 3 hearts). Contact and rocks hurt half a heart; golems, the Golem King and the Hollow King a whole heart. 1 s of blinking invulnerability and a knockback after each hit.
 - Drops (bushes, pots, enemies): gems, 5-gems, hearts (more likely when you're low), bombs (much more likely when you have none).
 - Potions (max 3) refill all hearts; one is drunk automatically when you'd fall.
-- Shop: potion 30, 5 bombs 20 (needs the bag), Heart Charm 120 (once).
+- Shop: potion 30, 5 bombs 20 (needs the bag), Heart Charm 100 (once).
 - Falling: back to the last entrance you used (dungeon door or overworld doorway), full hearts, everything kept. Enemies respawn when you re-enter a room; in a dungeon, rooms you cleared stay clear until you leave it.
 - Small keys belong to their dungeon. Locked doors and bomb walls on a room edge are shared by both rooms. Switches, crystals and opened doors stay done for good; blocks reset when you leave the room, so a stuck block can't soft-lock you.
 - Boss rooms seal until the boss falls; then a Heart Container, then a warp orb (or the Crown) appears.

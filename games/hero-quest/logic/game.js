@@ -837,7 +837,7 @@ export class Game {
     if (this.rng() > chance) return;
     const low = s.hp <= s.maxHp / 3;
     const table = [
-      ['gem', 5], ['gem5', 1.2],
+      ['gem', 5], ['gem5', 2],
       ['heart', (low ? 4 : 2) * this.tune.heartDrop],
       ['bombs', s.items.bombs ? (s.bombs <= 1 ? 5 : 0.8) : 0],
     ];
