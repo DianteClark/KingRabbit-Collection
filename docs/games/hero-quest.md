@@ -26,7 +26,7 @@ A short top-down sword-and-dungeon adventure for a phone held in one hand. The G
 Progression gates: the boomerang lowers the Ember River bridge (crystal on the far bank); bombs break the rock sealing Hollow Keep and the lake cave.
 
 ## Rules
-- Hearts are half-heart HP (start 3 hearts). Contact and rocks hurt half a heart, golems and bosses a whole one. 1 s of blinking invulnerability and a knockback after each hit.
+- Hearts are half-heart HP (start 3 hearts). Contact and rocks hurt half a heart; golems, the Golem King and the Hollow King a whole heart. 1 s of blinking invulnerability and a knockback after each hit.
 - Drops (bushes, pots, enemies): gems, 5-gems, hearts (more likely when you're low), bombs (much more likely when you have none).
 - Potions (max 3) refill all hearts; one is drunk automatically when you'd fall.
 - Shop: potion 30, 5 bombs 20 (needs the bag), Heart Charm 120 (once).

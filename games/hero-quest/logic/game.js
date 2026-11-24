@@ -603,7 +603,7 @@ export class Game {
       const want = Math.floor((e.maxHp - e.hp) / 3);
       while ((e.shed || 0) < want) {
         e.shed = (e.shed || 0) + 1;
-        if (alive() >= 6) continue;
+        if (alive() >= 5) continue;
         for (const o of [-14, 14]) {
           const s = this.spawnEnemy('slime', e.x + o, e.y + 4, {});
           s.spawnT = 0.4;

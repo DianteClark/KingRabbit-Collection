@@ -216,9 +216,9 @@ export function solvePuzzle(r, flags = {}) {
   const blockFloor = (x, y) => floor(x, y) && !sideOf(x, y);
   const results = [];
   for (const s of starts) results.push(search(s));
-  return { ok: results.length > 0 && results.every((x) => x.ok), results };
+  return { ok: results.length > 0 && results.every((x) => x.ok), results, traps: starts.length ? search(starts[0], true).traps : [] };
 
-  function search(start) {
+  function search(start, all = false) {
     // Cells are numbered y * COLS + x; a state is the sorted block cells plus the lowest cell the
     // player can reach (the player's whole region is equivalent).
     const N = COLS * ROWS;
@@ -241,6 +241,8 @@ export function solvePuzzle(r, flags = {}) {
       }
       return out;
     };
+    const exitCells = starts.map(([x, y]) => y * COLS + x);
+    const graph = new Map();
     const startState = { bs: blocks0.map(([x, y]) => y * COLS + x).sort((m, n) => m - n), p: start[1] * COLS + start[0], prev: null, push: null };
     const visited = new Set();
     const q = [startState];
@@ -250,10 +252,15 @@ export function solvePuzzle(r, flags = {}) {
       const reg = region(st.bs, st.p);
       let low = N; for (const c of reg) if (c < low) low = c;
       const k = `${st.bs.join(',')}|${low}`;
+      if (all && visited.has(k) && st.prev) graph.get(st.prev.key)?.succ.push(k);
       if (visited.has(k)) continue;
       visited.add(k);
       const inReg = new Set(reg);
-      if (swc.every((c) => st.bs.includes(c)) && rewardReachable(new Set(reg.map((c) => `${c % COLS},${Math.floor(c / COLS)}`)))) {
+      if (all) {
+        st.key = k; st.reg = inReg;
+        graph.set(k, { st, succ: [] });
+        if (st.prev) graph.get(st.prev.key)?.succ.push(k);
+      } else if (swc.every((c) => st.bs.includes(c)) && rewardReachable(new Set(reg.map((c) => `${c % COLS},${Math.floor(c / COLS)}`)))) {
         const plan = [];
         for (let n = st; n.push; n = n.prev) plan.unshift(n.push);
         return { ok: true, states: visited.size, start, plan };
@@ -271,7 +278,15 @@ export function solvePuzzle(r, flags = {}) {
         }
       });
     }
-    return { ok: false, states: visited.size };
+    if (!all) return { ok: false, states: visited.size };
+    // States from which no sequence of pushes ever lets you reach a doorway again.
+    const good = new Set([...graph].filter(([, v]) => exitCells.some((c) => v.st.reg.has(c))).map(([k]) => k));
+    for (let changed = true; changed;) {
+      changed = false;
+      for (const [k, v] of graph) if (!good.has(k) && v.succ.some((n) => good.has(n))) { good.add(k); changed = true; }
+    }
+    const traps = [...graph].filter(([k]) => !good.has(k)).map(([, v]) => v.st.bs.map((c) => [c % COLS, Math.floor(c / COLS)]));
+    return { ok: false, states: visited.size, traps };
   }
 
   function rewardReachable(region) {

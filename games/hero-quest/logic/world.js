@@ -1,7 +1,7 @@
 // Room lookup, neighbours, door identities and the dynamic state of cells (opened doors, bombed
 // walls, bridges). Pure functions of the room data and the save flags.
 import { ROOMS } from './data.js';
-import { COLS, ROWS, SIDE_DELTA, OPPOSITE, DOOR_CELL } from './constants.js';
+import { COLS, ROWS, SIDE_DELTA, OPPOSITE } from './constants.js';
 import { WALKABLE } from './tiles.js';
 
 export const room = (id) => ROOMS[id];
@@ -44,12 +44,6 @@ export const trigFlag = (r, kind) => `trig:${r.id}:${kind}`;
 export function charAt(r, x, y) {
   if (x < 0 || y < 0 || x >= COLS || y >= ROWS) return null;
   return r.map[y][x];
-}
-
-/** The door cell of `side` if the room has one there, as [x, y]. */
-export function doorCell(r, side) {
-  const [x, y] = DOOR_CELL[side];
-  return [x, y];
 }
 
 /**

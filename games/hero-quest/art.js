@@ -1,7 +1,5 @@
 // Art for Hollow Crown: the LAS Adventure Pack, LAS Alchemist Lab and pieces of the Minish pack,
 // all by Aleksandr Makarov (iknowkingrabbit). Only the files listed here are bundled.
-const LAS = '../../shared/assets/las-zelda-adventure/LAS-Adventure-Pack-1.0';
-
 import tileset from '../../shared/assets/las-zelda-adventure/LAS-Adventure-Pack-1.0/Tileset/Tileset.png?url';
 import labTiles from '../../shared/assets/las-zelda-adventure/LAS-AlchemistLab-v.1.02/Tileset/AlchemistLabTileset.png?url';
 import items from '../../shared/assets/las-zelda-adventure/LAS-Adventure-Pack-1.0/Item/Items.png?url';
@@ -18,7 +16,6 @@ const CHAR = import.meta.glob('../../shared/assets/las-zelda-adventure/LAS-Adven
 const SLIME = import.meta.glob('../../shared/assets/las-zelda-adventure/LAS-Adventure-Pack-1.0/Enemy/Slimes/*/*.png', { eager: true, query: '?url', import: 'default' });
 
 export const SHEETS = { tileset, labTiles, items, npcs, gremlin, golem, smoke, shadow, showItem, defeat };
-export { LAS };
 
 /** [key, url] for every character strip, keyed like "A-Walk-Down" (A armed, U unarmed, IA sword out). */
 export function charStrips() {

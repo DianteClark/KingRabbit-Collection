@@ -119,12 +119,13 @@ test('each dungeon needs the previous dungeon\'s item (the item opens the new pa
   assert.ok(S.reachable(flags).has('d3:1,2|5,11'), 'bombed rock opens Hollow Keep');
 });
 
-test('every switch puzzle is solvable from every doorway', () => {
+test('every switch puzzle is solvable from every doorway, and blocks can never wall you in', () => {
   const puzzles = rooms.filter((r) => r.on.switch);
   assert.ok(puzzles.length >= 3);
   for (const r of puzzles) {
     const res = S.solvePuzzle(r);
     assert.ok(res.ok, `${r.id} puzzle unsolvable: ${JSON.stringify(res.results)}`);
+    assert.deepEqual(res.traps, [], `${r.id}: blocks can wall you in`);
   }
 });
 

@@ -272,10 +272,8 @@ export class Play extends Phaser.Scene {
     const dt = Math.min(delta / 1000, 0.05);
     const g = this.g;
     if (!this.hud?.ready) return;
-    if (!this.busy) {
-      const input = this.hud?.readInput?.() || {};
-      g.update(dt, input);
-    }
+    const input = this.hud.readInput();   // read every frame so presses during a slide don't linger
+    if (!this.busy) g.update(dt, input);
     this.handleEvents();
     if (!this.busy) this.syncAll(dt);
     else this.animPlayer();

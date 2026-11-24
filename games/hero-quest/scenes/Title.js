@@ -40,8 +40,9 @@ export class Title extends Phaser.Scene {
       button(this, WIDTH / 2, y, 240, 56, 'Start', () => this.start(true), { fill: PALETTE.gold, size: 32 });
       y += 92;
     }
+    text(this, WIDTH / 2, y + 8, 'Three dungeons stand between\nyou and the stolen Crown.', { color: PALETTE.lavender });
     const fin = save.get('finishes') || 0;
-    if (fin) text(this, WIDTH / 2, y - 6, `Crown recovered ${fin}x   best ${fmtTime(save.get('bestTime'))}`, { color: PALETTE.sand });
+    if (fin) text(this, WIDTH / 2, y + 60, `Crown recovered ${fin}x   best ${fmtTime(save.get('bestTime'))}`, { color: PALETTE.sand });
 
     button(this, 128, 600, 200, 40, '< All Games', () => { window.location.href = '../'; }, { fill: PALETTE.indigo, color: PALETTE.cream });
     this.soundBtn = button(this, WIDTH - 54, 600, 92, 40, '', () => { setMuted(!isMuted()); this.syncSound(); });
@@ -82,7 +83,7 @@ export class Title extends Phaser.Scene {
     tile(0, 35, 7, 0, 5, 3); tile(0, 41, 7, 3, 5, 1);
     tile(16, 0, 0, 1, 2, 2);
     tile(13, 0, 3, 3); tile(14, 0, 5, 2); tile(19, 2, 2, 2);
-    tile(10, 0, 3, 1); tile(11, 0, 4, 1); tile(12, 0, 5, 1);
+    tile(14, 0, 4, 1); tile(18, 2, 6, 3); tile(16, 3, 2, 3);
     const hero = this.add.sprite(88, 46, 'A-Walk-Right').setOrigin(0.5, 23 / 32).play('A-Walk-Right');
     const slime = this.add.sprite(150, 54, 'GreenSlime-WalkLeft').setOrigin(0.5, 13 / 16).play('GreenSlime-WalkLeft');
     g.add([hero, slime]);
