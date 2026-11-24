@@ -14,5 +14,5 @@ export const PALETTE = {
   lavender: '#8a8fc4',
 };
 
-/** '#rrggbb' -> 0xrrggbb for Phaser shapes. */
-export const hex = (c) => parseInt(c.slice(1), 16);
+/** '#rrggbb' -> 0xrrggbb for Phaser shapes (numbers pass through unchanged). */
+export const hex = (c) => (typeof c === 'number' ? c : parseInt(c.slice(1), 16));
