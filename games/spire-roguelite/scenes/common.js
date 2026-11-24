@@ -78,8 +78,8 @@ export function playOnce(sprite, name) {
 }
 
 /** Text with a dark outline, for numbers over the battlefield. */
-export function outlined(scene, x, y, str, { size = 16, color = PALETTE.cream, origin = 0.5 } = {}) {
-  return text(scene, x, y, str, { size, color, origin }).setStroke(PALETTE.ink, size >= 32 ? 6 : 4);
+export function outlined(scene, x, y, str, { size = 16, color = PALETTE.cream, origin = 0.5, wrap } = {}) {
+  return text(scene, x, y, str, { size, color, origin, wrap }).setStroke(PALETTE.ink, size >= 32 ? 6 : 4);
 }
 
 /** Number that floats up and fades. */
@@ -91,7 +91,7 @@ export function floatText(scene, x, y, str, color = PALETTE.cream, size = 32) {
 
 /** Short message that pops up and fades away. */
 export function toast(scene, msg, y = HEIGHT / 2, color = PALETTE.gold) {
-  const t = outlined(scene, WIDTH / 2, y, msg, { color }).setDepth(80).setScrollFactor(0);
+  const t = outlined(scene, WIDTH / 2, y, msg, { color, wrap: WIDTH - 24 }).setDepth(80).setScrollFactor(0);
   scene.tweens.add({ targets: t, alpha: 0, delay: 1200, duration: 300, onComplete: () => t.destroy() });
   return t;
 }
@@ -105,8 +105,15 @@ export function box(scene, x, y, w, h, { fill = PALETTE.indigo, border = PALETTE
  * Modal over everything: title, wrapped body text, buttons [[label, fn, fill, color], ...].
  * Returns the container (destroy it to close).
  */
+/** Track open overlays so drag-scrolling underneath them stays off. */
+export function overlayOpened(scene, c) {
+  scene._overlays = (scene._overlays || 0) + 1;
+  c.once('destroy', () => { scene._overlays = Math.max(0, (scene._overlays || 1) - 1); });
+}
+
 export function modal(scene, title, body, buttons, { width = 316, art } = {}) {
   const c = scene.add.container(0, 0).setDepth(100).setScrollFactor(0);
+  overlayOpened(scene, c);
   const dim = scene.add.rectangle(0, 0, WIDTH, HEIGHT, hex(PALETTE.ink), 0.65).setOrigin(0).setInteractive();
   const bodyText = body ? text(scene, WIDTH / 2, 0, body, { wrap: width - 36, color: PALETTE.cream }) : null;
   const artH = art ? 72 : 0;
@@ -241,6 +248,7 @@ export function relicRow(scene, run, x, y, { scale = 2, gap = 34, maxW = WIDTH -
 /** Scrollable list of every relic the hero carries. */
 export function relicList(scene, run) {
   const c = scene.add.container(0, 0).setDepth(110).setScrollFactor(0);
+  overlayOpened(scene, c);
   c.add(scene.add.rectangle(0, 0, WIDTH, HEIGHT, hex(PALETTE.night), 0.97).setOrigin(0).setInteractive());
   c.add(text(scene, WIDTH / 2, 24, `Relics (${run.relics.length})`, { color: PALETTE.gold }));
   const list = scene.add.container(0, 0);
@@ -291,7 +299,11 @@ export function dragScroll(scene, container, top, bottom, contentH) {
   const minY = Math.min(0, bottom - top - contentH);
   const clamp = (v) => Math.max(minY, Math.min(0, v));
   container.y = 0;
-  scene.input.on('pointerdown', (p) => { if (p.y >= top && p.y <= bottom) { startY = p.y; startC = container.y; moved = false; } });
+  scene._overlays = 0;
+  scene.input.on('pointerdown', (p) => {
+    if (scene._overlays > 0) { startY = null; return; }
+    if (p.y >= top && p.y <= bottom) { startY = p.y; startC = container.y; moved = false; }
+  });
   scene.input.on('pointermove', (p) => {
     if (startY === null || !p.isDown) return;
     if (Math.abs(p.y - startY) > 8) moved = true;

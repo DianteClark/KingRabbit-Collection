@@ -20,7 +20,7 @@ const MAX_ENEMIES = 4;
 export function scaling(run) {
   const loop = run.loop || 0;
   const easy = run.mode === 'endless' ? 0.95 : 1;
-  return { hp: easy * (1 + 0.35 * loop), dmg: easy * (1 + 0.2 * loop) };
+  return { hp: easy * (1 + loop), dmg: easy * (1 + 0.45 * loop) };
 }
 
 function makeEnemy(s, run, id, rng) {
@@ -29,7 +29,14 @@ function makeEnemy(s, run, id, rng) {
   const base = d.hp[0] + Math.floor(next(rng) * (d.hp[1] - d.hp[0] + 1));
   const hp = Math.max(1, Math.round(base * sc.hp));
   const e = { uid: s.uidNext++, id, hp, maxHp: hp, block: 0, st: { ...(d.start || {}) }, mem: {}, turn: 0, hist: [], move: null, dead: false };
-  if (sc.dmg > 1 && (d.boss || d.elite) && run.loop) e.st.str = (e.st.str || 0) + run.loop; // late loops hit harder
+  // Endless loops: every enemy starts stronger, elites and bosses even more, and they keep growing
+  // (Ritual), so long, slow fights with a bloated deck get dangerous.
+  const loop = run.loop || 0;
+  if (loop) {
+    e.st.str = (e.st.str || 0) + loop * ((d.boss || d.elite) ? 2 : 1);
+    e.st.ritual = (e.st.ritual || 0) + loop;
+    if (d.boss || d.elite) e.st.artifact = (e.st.artifact || 0) + loop;
+  }
   d.init?.(e, { rng: () => next(rng) });
   return e;
 }
