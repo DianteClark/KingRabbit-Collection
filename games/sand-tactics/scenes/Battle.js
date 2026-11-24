@@ -136,8 +136,10 @@ export class Battle extends Phaser.Scene {
       const by = (p.y + 1) * T;
       if (!v) {
         v = { img: sprite(this, cx, by, buildingRef(p.kind, p.owner), 2).setOrigin(0.5, 1), owner: null };
-        v.plate = this.add.rectangle(p.x * T + 1, p.y * T + T - 9, T - 2, 8, BLUE, 0.9).setOrigin(0);
-        this.propLayer.add([v.plate, v.img]);
+        this.propLayer.add(v.img);
+        // Small owner flag in the corner so ownership reads at a glance.
+        v.plate = this.add.rectangle(p.x * T + 3, p.y * T + T - 3, 9, 7, BLUE).setOrigin(0, 1).setStrokeStyle(1, 0x040303);
+        this.labelLayer.add(v.plate);
         v.cap = text(this, p.x * T + 4, p.y * T + 2, '', { origin: [0, 0], color: PALETTE.cream });
         v.capBg = this.add.rectangle(p.x * T + 2, p.y * T + 2, 20, 18, hex(PALETTE.ink), 0.85).setOrigin(0);
         this.labelLayer.add([v.capBg, v.cap]);
@@ -145,11 +147,13 @@ export class Battle extends Phaser.Scene {
       }
       if (v.owner !== p.owner) {
         setRef(this, v.img, buildingRef(p.kind, p.owner)); v.owner = p.owner;
-        v.plate.setFillStyle(p.owner === 0 ? BLUE : p.owner === 1 ? RED : 0xcfc6b8, p.owner < 0 ? 0.6 : 0.9);
+        v.plate.setFillStyle(p.owner === 0 ? BLUE : p.owner === 1 ? RED : 0xcfc6b8, 1).setVisible(p.owner >= 0);
       }
       const capturing = p.capBy && G.unitById(s, p.capBy);
-      v.cap.setText(capturing ? `${p.cap}` : '').setColor(capturing ? TEAM_COLOR[capturing.side] : PALETTE.cream);
+      // Capture progress: points left, on a flag in the capturing side's colour.
+      v.cap.setText(capturing ? `${p.cap}` : '').setColor(PALETTE.cream);
       v.capBg.setVisible(!!capturing).setSize(v.cap.width + 6, 18);
+      if (capturing) v.capBg.setFillStyle(capturing.side === 0 ? 0x2c4a80 : 0x6e2224, 1).setStrokeStyle(1, 0xf9f5ef);
     }
     this.propLayer.sort('y');
   }
@@ -666,7 +670,7 @@ export class Battle extends Phaser.Scene {
       const y = top + 64 + i * rowH;
       const ok = s.funds[side] >= d.cost;
       const row = this.add.container(0, 0).setAlpha(ok ? 1 : 0.45);
-      row.add(this.add.rectangle(20, y + 2, WIDTH - 40, rowH - 4, hex(i % 2 ? PALETTE.indigo : 0x3a3456), 1).setOrigin(0));
+      row.add(this.add.rectangle(20, y + 2, WIDTH - 40, rowH - 4, i % 2 ? hex(PALETTE.indigo) : 0x3a3456, 1).setOrigin(0));
       const art = d.art;
       const icon = sprite(this, 44, y + rowH / 2, unitRef(art, side, side === 0 ? 'right' : 'left'), isFoot(art) || ['recon', 'tank'].includes(t) ? 3 : 2);
       if (isFoot(art) && side === 1) icon.setFlipX(true);
@@ -712,6 +716,7 @@ export class Battle extends Phaser.Scene {
   }
 
   endTurn() {
+    (this.sideScroll ||= {})[this.s.turn] = { ...this.scroll };
     this.clearHighlights();
     this.ui = { mode: 'idle' };
     this.nextIdx = -1;
@@ -730,8 +735,11 @@ export class Battle extends Phaser.Scene {
     if (s.controllers[side] === 'cpu') { await this.banner(`${SIDES[side].name}'s turn`, side); this.runCpu(); return; }
     const twoPlayers = s.controllers[0] === 'human' && s.controllers[1] === 'human';
     const begin = () => {
-      const focus = G.unitsOf(s, side)[0] || G.hqOf(s, side);
-      if (focus && twoPlayers) this.centerOn(focus.x, focus.y);
+      // Look where this commander was looking at the end of their last turn (or at their HQ).
+      const back = this.sideScroll?.[side];
+      const focus = G.hqOf(s, side) || G.unitsOf(s, side)[0];
+      if (back) this.panTo(back.x, back.y);
+      else if (focus && announce) this.centerOn(focus.x, focus.y);
       this.showIdlePanel();
       if (report && report.income) toast(this, `Day ${s.day}: +${money(report.income)} funds${report.repaired.length ? `, ${report.repaired.length} repaired` : ''}`, 500, PALETTE.gold);
     };

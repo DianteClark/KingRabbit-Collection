@@ -47,7 +47,7 @@ export function setRef(scene, img, ref) {
 const FOOT = { inf: 'inf', hinf: 'hinf', scout: 'scout' };
 const FOOT_ANIM = { idle: 0, walk: 4, attack: 8, death: 12 };
 // Vehicles: each type is a 3x3 block of facings (the middle is empty).
-// Small ones are 12x12 frames at (12 + 24c, 12 + 24r); big ones 24x24 at (12 + 32c, 232 + 32r).
+// Small ones are 12x12 frames at (36 + 24c, 12 + 24r); big ones 24x24 at (12 + 32c, 232 + 32r).
 const VEH = {
   recon: { big: false, c: 0, r: 3 },
   tank: { big: false, c: 3, r: 0 },
@@ -66,7 +66,7 @@ export function unitRef(art, side, facing = 'right', anim = 'idle', i = 0) {
   const v = VEH[art];
   const [dc, dr] = FACING[facing] || FACING.right;
   const c = v.c + dc; const r = v.r + dr;
-  return v.big ? [`veh${TEAM[side]}`, 12 + 32 * c, 232 + 32 * r, 24, 24] : [`veh${TEAM[side]}`, 12 + 24 * c, 12 + 24 * r, 12, 12];
+  return v.big ? [`veh${TEAM[side]}`, 12 + 32 * c, 232 + 32 * r, 24, 24] : [`veh${TEAM[side]}`, 36 + 24 * c, 12 + 24 * r, 12, 12];
 }
 
 // ---------- Buildings ----------
