@@ -20,8 +20,8 @@ export const ENEMY = {
   gremlin: { hp: 3, w: 10, h: 10, dmg: 1 },
   golem: { hp: 6, w: 14, h: 14, dmg: 2, heavy: true },
   slimeKing: { hp: 10, w: 32, h: 20, dmg: 1, boss: true },
-  golemKing: { hp: 10, w: 26, h: 24, dmg: 2, boss: true, heavy: true },
-  hollowKing: { hp: 12, w: 20, h: 22, dmg: 2, boss: true },
+  golemKing: { hp: 12, w: 26, h: 24, dmg: 2, boss: true, heavy: true },
+  hollowKing: { hp: 12, w: 20, h: 22, dmg: 1, boss: true },
 };
 
 const DIRS4 = ['down', 'left', 'right', 'up'];
@@ -49,7 +49,9 @@ function aligned(e, p, tol, range) {
 }
 
 /** Contact damage applies? (dazed / stunned enemies are harmless, except a stunned boss's bulk) */
-export const harmful = (e) => !e.dead && e.spawnT <= 0 && e.stun <= 0 && e.state !== 'dazed' && e.state !== 'vanish';
+export const harmful = (e) => !e.dead && e.spawnT <= 0 && e.stun <= 0 && e.state !== 'dazed' && e.state !== 'vanish' && e.state !== 'appear'
+  // the Slime King only hurts as it comes down on you; while it rests it is your turn
+  && !(e.kind === 'slimeKing' && !(e.state === 'hop' && e.t < 0.4));
 
 export function updateEnemy(e, g, dt) {
   const T = g.tune;
@@ -63,7 +65,11 @@ export function updateEnemy(e, g, dt) {
   if (e.stun > 0) {
     e.stun -= dt;
     e.anim = 'hit';
-    if (e.stun <= 0 && e.kind === 'hollowKing') { e.shield = true; g.emit({ type: 'sfx', name: 'power' }); }
+    if (e.stun <= 0 && e.kind === 'hollowKing') {
+      // shield back up, and he blinks away rather than drifting into you
+      e.shield = true; e.state = 'vanish'; e.t = 0.45;
+      g.emit({ type: 'sfx', name: 'power' });
+    }
     return;
   }
   const p = g.p;
@@ -266,7 +272,7 @@ function charger(e, g, dt, { T, p, dx, dy }, o) {
   if (r.blocked) e.t = 0;
   const line = e.cd <= 0 ? aligned(e, p, 10, o.range) : null;
   if (line && g.lineClear(e.x, e.y, p.x, p.y)) {
-    e.dir = line; e.state = 'windup'; e.t = 0.6 * T.windup;
+    e.dir = line; e.state = 'windup'; e.t = (e.boss ? 0.8 : 0.6) * T.windup;
   }
 }
 

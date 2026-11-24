@@ -4,6 +4,7 @@ import { text, button, fadeTo } from '../../../shared/core/ui.js';
 import { WIDTH } from '../../../shared/core/boot.js';
 import { sfx } from '../../../shared/core/sfx.js';
 import { fmtTime } from './Title.js';
+import { playMusic } from '../music.js';
 
 const STORY = [
   'The Hollow King crumbled to dust,',
@@ -24,6 +25,7 @@ export class Ending extends Phaser.Scene {
   create() {
     this.cameras.main.setBackgroundColor(PALETTE.night).fadeIn(800, 249, 245, 239);
     sfx('win');
+    playMusic('village');
     const s = this.stats;
     const crown = this.add.image(WIDTH / 2, 92, 'items', 2 * 8 + 7).setScale(4);
     this.tweens.add({ targets: crown, y: 84, yoyo: true, repeat: -1, duration: 900, ease: 'Sine.easeInOut' });
