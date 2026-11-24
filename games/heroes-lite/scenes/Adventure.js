@@ -696,8 +696,11 @@ export class Adventure extends Phaser.Scene {
     sfx(humanWon ? 'win' : 'lose');
     const lost = res.sides[humanAttacks ? 0 : 1].lost.map((l) => `${l.lost} ${CREATURES[l.type].name}`);
     const lines = [];
-    lines.push({ text: lost.length ? `You lost: ${lost.join(', ')}` : 'No losses!', color: lost.length ? PALETTE.orange : PALETTE.leaf });
-    for (const m of out.msgs) if (!m.includes('gains 0')) lines.push(m);
+    const iFled = res.fled && res.fled.side === (humanAttacks ? 0 : 1);
+    if (iFled && res.fled.how === 'retreat') lines.push({ text: 'Your army was left behind.', color: PALETTE.orange });
+    else lines.push({ text: lost.length ? `You lost: ${lost.join(', ')}` : 'No losses!', color: lost.length ? PALETTE.orange : PALETTE.leaf });
+    for (const m of out.msgs) if (!m.includes('gains 0') && !m.includes('the army is lost')) lines.push(m);
+    if (iFled) lines.push('The hero waits at your Tavern.');
     const title = humanWon ? 'Victory!' : res.fled ? (res.fled.how === 'retreat' ? 'Retreat' : 'Surrender') : 'Defeat';
     await this.say(title, lines);
     saveGame(s);
