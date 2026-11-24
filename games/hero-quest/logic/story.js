@@ -88,3 +88,34 @@ export function objective(s) {
   }
   return 'The Crown is home. Look for secrets, or rest easy.';
 }
+
+/**
+ * Every line the game can show, for layout checks: { dialog: [string], toast: [string] }.
+ * Walks each NPC through the story states, all signs, item messages, objectives and shop text.
+ */
+export function allTexts(rooms, extraToasts = []) {
+  const base = () => ({ items: { sword: false, boomerang: false, bombs: false }, flags: {}, potions: 0, bombs: 0, gems: 0, done: false });
+  const stages = [];
+  let s = base(); stages.push(s);
+  const step = (fn) => { s = JSON.parse(JSON.stringify(s)); fn(s); stages.push(s); };
+  step((t) => { t.items.sword = true; });
+  step((t) => { t.flags['seen:d1:1,2'] = true; });
+  step((t) => { t.items.boomerang = true; t.flags['boss:d1'] = true; });
+  step((t) => { t.flags['trig:ow:2,1:crystal'] = true; });
+  step((t) => { t.items.bombs = true; t.bombs = 10; t.flags['boss:d2'] = true; });
+  step((t) => { t.flags['chest:in:cave:5,5'] = true; t.flags['cell:ow:2,0:5,4'] = true; });
+  step((t) => { t.flags['boss:d3'] = true; t.done = true; t.potions = 3; t.flags['bought:heart'] = true; });
+  const dialog = new Set(); const toast = new Set(extraToasts);
+  const npcs = new Set(Object.values(rooms).flatMap((r) => r.npcs.map((n) => n.who)));
+  for (const st of stages) {
+    for (const who of npcs) for (const l of talk(who, st).lines) dialog.add(l);
+    toast.add(`Next: ${objective(st)}`);
+    for (const it of shopStock(st)) { if (it.why) toast.add(it.why); }
+  }
+  for (const r of Object.values(rooms)) {
+    for (const lines of Object.values(r.signs)) lines.forEach((l) => dialog.add(l));
+    if (r.hint) toast.add(r.hint);
+  }
+  for (const lines of Object.values(ITEM_TEXT)) lines.forEach((l) => dialog.add(l));
+  return { dialog: [...dialog], toast: [...toast] };
+}
