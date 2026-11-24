@@ -6,7 +6,7 @@ const { generate, lPath, rectTiles, idx } = await import('../games/town-builder/
 const { PLACE, MILESTONES, SCENARIOS, T } = await import('../games/town-builder/logic/defs.js');
 const { runBot } = await import('../games/town-builder/logic/bot.js');
 const { tips } = await import('../games/town-builder/logic/advisors.js');
-const { STEPS, tutCheck } = await import('../games/town-builder/logic/tutorial.js');
+const { STEPS, tutCheck, tutText } = await import('../games/town-builder/logic/tutorial.js');
 const { FRAMES } = await import('../games/town-builder/logic/sprites.js');
 
 /** A tiny starter town next to the highway: roads, homes, shops, industry, power and water. */
@@ -250,6 +250,11 @@ test('town builder: the first-minutes guide follows what the player does', () =>
   tutCheck(s); assert.equal(STEPS[s.tut].id, 'zoneR');
   S.zoneArea(s, 'R', rectTiles({ x: x + 1, y: y - 2 }, { x: x + 4, y: y - 1 }));
   tutCheck(s); assert.equal(STEPS[s.tut].id, 'power');
+  // A turbine out in a field doesn't count until it's linked up.
+  S.place(s, 'wind', x + 1, y - 10);
+  tutCheck(s); assert.equal(STEPS[s.tut].id, 'power');
+  assert.match(tutText(s, STEPS[s.tut]), /not linked/);
+  S.undo(s);
   S.place(s, 'wind', x + 1, y - 4);
   tutCheck(s); assert.equal(STEPS[s.tut].id, 'jobs');
   S.zoneArea(s, 'C', rectTiles({ x: x + 5, y: y - 2 }, { x: x + 7, y: y - 1 }));

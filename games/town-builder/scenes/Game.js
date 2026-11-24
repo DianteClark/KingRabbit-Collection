@@ -7,7 +7,7 @@ import { sfx, isMuted, setMuted } from '../../../shared/core/sfx.js';
 import * as S from '../logic/sim.js';
 import { TILE, MAP_W, MAP_H, T, PLACE, TRAYS, TOOL_INFO, ZONE_INFO, MILESTONES, LINE_COST } from '../logic/defs.js';
 import { lPath, rectTiles, idx, inMap, N4, bfs } from '../logic/map.js';
-import { tutStep, tutCheck, STEPS } from '../logic/tutorial.js';
+import { tutStep, tutCheck, tutText, STEPS } from '../logic/tutorial.js';
 import { RULES } from '../rules.js';
 import { store } from '../store.js';
 import { CARS } from './Boot.js';
@@ -633,6 +633,7 @@ export class Game extends Phaser.Scene {
   }
 
   selectTool(tool, cat, quiet) {
+    if (!quiet && isDrag(tool) && !store.get('tipPan')) { store.set('tipPan', true); this.time.delayedCall(50, () => this.toast('Tip: while drawing, use two fingers to move the map.')); }
     this.tool = tool;
     this.cat = cat;
     this.ghost.setVisible(false);
@@ -746,7 +747,12 @@ export class Game extends Phaser.Scene {
   setOverlay(k) {
     this.overlay = k;
     this.drawOverlay();
-    if (k) { sfx('select'); this.chip.setLabel(`${S.OVERLAYS[k]}  X`).setVisible(true); } else this.chip.setVisible(false);
+    if (k) {
+      sfx('select');
+      this.chip.setLabel(`${S.OVERLAYS[k]}  X`).setVisible(true);
+      const bad = ['pol', 'crime', 'traffic'].includes(k);
+      this.setInfoText(`${S.OVERLAYS[k]} map: ${bad ? 'red is high, green is low' : 'green is good, red is poor'}.\nTap the ${S.OVERLAYS[k]} X button to hide it.`, PALETTE.cream, 5000);
+    } else this.chip.setVisible(false);
     this.layoutChip();
   }
 
@@ -789,7 +795,7 @@ export class Game extends Phaser.Scene {
       return;
     }
     const k = STEPS.indexOf(step);
-    this.bannerText.setText(step.text);
+    this.bannerText.setText(tutText(s, step));
     this.bannerStep.setText(`${k + 1}/${STEPS.length}`);
     const h = Math.max(64, this.bannerText.height + 14);
     this.bannerBg.height = h;
@@ -867,7 +873,7 @@ export class Game extends Phaser.Scene {
     for (const e of events) {
       switch (e.kind) {
         case 'grow': case 'decline': changed = true;
-          if (e.kind === 'grow' && this.time.now - this.lastGrowSfx > 1200) { this.lastGrowSfx = this.time.now; sfx('bounce'); }
+          if (e.kind === 'grow' && this.time.now - this.lastGrowSfx > 4000) { this.lastGrowSfx = this.time.now; sfx('bounce'); }
           break;
         case 'wreck': changed = true; this.dust(e); break;
         case 'month': this.saveDue = true; changed = true; break;

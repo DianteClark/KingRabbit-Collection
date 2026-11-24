@@ -8,18 +8,20 @@ const count = (s, fn) => { let n = 0; for (let i = 0; i < s.zone.length; i++) if
 export const STEPS = [
   {
     id: 'road', tray: 'road', tool: 'road',
-    text: 'Welcome, Mayor! Tap Roads, pick Road, then drag on the grass to build a road off the highway.',
+    text: 'Welcome, Mayor! Tap Road, pick the road, then drag on the grass to build a road off the highway.',
     done: (s) => count(s, (i) => s.road[i]) >= (s.tutRoads0 || 15) + 6,
   },
   {
     id: 'zoneR', tray: 'zone', tool: 'zone:R',
-    text: 'Tap Zones, pick Residential (green) and drag a rectangle beside your road. Homes grow there.',
+    text: 'Tap Zone, pick Residential (green R) and drag a rectangle beside your road. Homes grow there.',
     done: (s) => count(s, (i) => s.zone[i] === 'R' && rt(s).roadDist[i] <= 3) >= 6,
   },
   {
     id: 'power', tray: 'util', tool: 'wind',
-    text: 'Homes need power. Tap Utilities and put a Wind Turbine right next to your road or zones.',
-    done: (s) => s.blds.some((b) => PLACE[b.k]?.power),
+    text: (s) => (s.blds.some((b) => PLACE[b.k]?.power)
+      ? 'That plant is not linked up. Undo and place it touching your road or zones, or draw a Power Line to it.'
+      : 'Homes need power. Tap Power, pick the Wind Turbine and tap the map right next to your road or zones.'),
+    done: (s) => s.blds.some((b) => PLACE[b.k]?.power) && s.zone.some((z, i) => z && rt(s).lotPower[i]),
   },
   {
     id: 'jobs', tray: 'zone', tool: 'zone:C',
@@ -28,7 +30,7 @@ export const STEPS = [
   },
   {
     id: 'water', tray: 'util', tool: 'wtower',
-    text: 'Add a Water Tower near your zones so houses can grow bigger later.',
+    text: 'Tap Power again and add a Water Tower by your zones, so houses can grow bigger later.',
     done: (s) => s.blds.some((b) => PLACE[b.k]?.svc === 'water'),
   },
   {
@@ -39,6 +41,7 @@ export const STEPS = [
 ];
 
 export const tutStep = (s) => (s.tut != null && s.tut < STEPS.length ? STEPS[s.tut] : null);
+export const tutText = (s, step) => (typeof step.text === 'function' ? step.text(s) : step.text);
 
 /** Move on past every step already done. Returns true when the step changed. */
 export function tutCheck(s) {
