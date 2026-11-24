@@ -1,0 +1,71 @@
+/* Star Drifter HTML sheets (events, stores, rewards, the ship screen) drawn over the canvas.
+   Text is 16px or 32px only, like the rest of the collection. */
+.sd-wrap {
+  position: fixed; inset: 0; z-index: 80;
+  background: rgba(4, 3, 3, 0.6);
+  display: flex; align-items: center; justify-content: center;
+  padding: max(10px, env(safe-area-inset-top)) 8px max(10px, env(safe-area-inset-bottom));
+  touch-action: auto;
+}
+.sd-sheet {
+  width: 100%; max-width: 420px; max-height: 100%;
+  display: flex; flex-direction: column;
+  background: var(--indigo); color: var(--cream);
+  border: 4px solid var(--ink);
+  box-shadow: inset 0 0 0 3px var(--lavender), 0 6px 0 var(--ink);
+  font-size: 16px; line-height: 1.4;
+}
+.sd-sheet.tall { height: 100%; }
+.sd-head { padding: 10px 10px 4px; display: flex; align-items: center; gap: 8px; }
+.sd-head h2 { margin: 0; font-weight: normal; font-size: 16px; color: var(--gold); flex: 1; line-height: 1.25; text-align: center; overflow-wrap: anywhere; }
+.sd-head h2.big { font-size: 32px; line-height: 1.1; }
+.sd-icon-btn {
+  font: inherit; font-size: 16px; min-width: 44px; height: 44px; padding: 0 8px; flex: 0 0 auto;
+  background: var(--lavender); color: var(--night);
+  border: 3px solid var(--ink); box-shadow: 0 3px 0 var(--ink); cursor: pointer;
+}
+.sd-icon-btn.help { background: var(--gold); }
+.sd-icon-btn:active { transform: translateY(3px); box-shadow: none; }
+.sd-sub { padding: 0 14px 6px; color: var(--lavender); text-align: center; }
+.sd-scroll { overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 4px 12px 10px; touch-action: pan-y; flex: 1 1 auto; min-height: 0; }
+.sd-foot { display: flex; gap: 8px; padding: 8px 12px 12px; flex-wrap: wrap; }
+.sd-btn {
+  font: inherit; flex: 1; min-width: 70px; min-height: 44px; padding: 8px;
+  background: var(--lavender); color: var(--night);
+  border: 3px solid var(--ink); box-shadow: 0 4px 0 var(--ink); cursor: pointer; text-align: center;
+  line-height: 1.25;
+}
+.sd-btn.gold { background: var(--gold); }
+.sd-btn.red { background: var(--red); color: var(--cream); }
+.sd-btn.green { background: var(--leaf); color: var(--cream); }
+.sd-btn.blue { background: #3d6fa8; color: var(--cream); }
+.sd-btn.small { flex: 0 0 auto; min-width: 64px; padding: 6px 8px; }
+.sd-btn:disabled { opacity: 0.45; cursor: default; }
+.sd-btn:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 1px 0 var(--ink); }
+.sd-btn small { display: block; font-size: 16px; color: var(--wine); }
+.sd-btn.red small, .sd-btn.green small, .sd-btn.blue small { color: var(--sand); }
+.sd-choice { display: block; width: 100%; text-align: left; margin-bottom: 10px; }
+.sd-p { margin: 0 0 10px; }
+.sd-p.dim { color: var(--lavender); }
+.sd-lines { margin: 6px 0 10px; padding: 0; list-style: none; }
+.sd-lines li { padding: 2px 0; color: var(--sand); }
+.sd-lines li.bad { color: #f3b0a8; }
+.sd-h3 { margin: 12px 0 4px; font-weight: normal; color: var(--sand); }
+.sd-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 2px solid rgba(4, 3, 3, 0.35); }
+.sd-row:last-child { border-bottom: 0; }
+.sd-row .grow { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.sd-row .name { color: var(--cream); }
+.sd-row .meta { color: var(--lavender); }
+.sd-row .sd-btn { flex: 0 0 auto; }
+.sd-pips { display: inline-flex; gap: 2px; vertical-align: middle; flex-wrap: wrap; }
+.sd-pips i { display: inline-block; width: 8px; height: 12px; background: var(--night); border: 1px solid var(--ink); }
+.sd-pips i.on { background: var(--leaf); }
+.sd-pips i.new { background: var(--gold); }
+.sd-tabs { display: flex; gap: 6px; padding: 0 12px 6px; }
+.sd-tabs .sd-btn { padding: 6px 4px; }
+.sd-tabs .sd-btn.on { background: var(--gold); }
+.sd-tag { display: inline-block; padding: 0 6px; margin-right: 4px; background: var(--night); color: var(--sand); }
+.sd-tag.blue { background: #3d6fa8; color: var(--cream); }
+.sd-res { display: flex; justify-content: center; gap: 14px; padding: 0 12px 6px; color: var(--cream); flex-wrap: wrap; }
+.sd-res b { font-weight: normal; color: var(--gold); }
+.sd-ico { width: 32px; height: 32px; flex: 0 0 auto; image-rendering: pixelated; background-repeat: no-repeat; }

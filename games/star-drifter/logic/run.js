@@ -132,7 +132,7 @@ export function nextSector(run) {
   run.stats.sectors = run.sector;
   startSector(run);
   run.fuel += 2;
-  run.note = isFinal(run) ? 'The Throne Gate. The Hegemony flagship waits at the far beacon. End this. (+2 fuel from the relay)' : `Welcome to ${sectorName(run)}. The relay beacon tops up your tanks: +2 fuel.`;
+  run.note = isFinal(run) ? 'The Throne Gate. The flagship waits at the top beacon. The relay gives you 2 fuel.' : `Welcome to ${sectorName(run)}. The relay beacon gives you 2 fuel.`;
   return true;
 }
 
