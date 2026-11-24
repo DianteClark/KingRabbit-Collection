@@ -63,7 +63,16 @@ export class Cup extends Phaser.Scene {
     ['QF', 'SF', 'Final'].forEach((n, r) => text(this, colX[r], top, n, { color: r === cup.round && cup.alive && !cup.champion ? PALETTE.gold : PALETTE.lavender }));
     for (let r = 0; r < 3; r++) {
       const list = cup.rounds[r];
-      if (!list) continue;
+      if (!list) {
+        // Slots still to be decided
+        const n = 8 >> r;
+        for (let i = 0; i < n; i++) {
+          const y = top + 30 + (rowsH / n) * (i + 0.5);
+          this.add.rectangle(colX[r], y, 108, 28, hex(PALETTE.ink)).setAlpha(0.6);
+          text(this, colX[r], y, '?', { color: PALETTE.indigo });
+        }
+        continue;
+      }
       const n = list.length;
       const nextRound = cup.rounds[r + 1] || (cup.champion ? [cup.champion] : null);
       list.forEach((id, i) => {

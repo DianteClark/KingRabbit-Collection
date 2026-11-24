@@ -14,7 +14,7 @@ import { applyResult } from '../flow.js';
 
 // Drawn at 2x like the match. Goal line at GY, the mouth is GOAL_W * 2 wide.
 const S = 2;
-const GY = 262;
+const GY = 300;
 const MOUTH = GOAL_W * S;
 const SPOT_Y = GY + PEN_D * S;
 const AIM_RANGE = 1.18;   // the sweeping marker goes a little past the posts
@@ -68,9 +68,9 @@ export class Penalties extends Phaser.Scene {
       text(this, 12, 74 + side * 36, t.short, { color: PALETTE.cream, origin: [0, 0.5] });
       return text(this, WIDTH - 14, 74 + side * 36, '0', { size: 32, color: PALETTE.gold, origin: [1, 0.5] });
     });
-    text(this, WIDTH / 2, 166, `Full time ${this.score[0]} - ${this.score[1]}`, { color: PALETTE.cream });
-    this.msg = text(this, WIDTH / 2, 196, '', { size: 32, color: PALETTE.gold });
-    this.help = text(this, WIDTH / 2, 470, '', { color: PALETTE.cream });
+    text(this, WIDTH / 2, 168, `Full time ${this.score[0]} - ${this.score[1]}`, { color: PALETTE.cream });
+    this.msg = text(this, WIDTH / 2, 202, '', { size: 32, color: PALETTE.gold });
+    this.help = text(this, WIDTH / 2, 486, '', { color: PALETTE.cream });
 
     // Controls: one Shoot button when you take a kick, Left / Stay / Right when you keep.
     this.shootBtn = button(this, WIDTH / 2, 560, 200, 64, 'SHOOT', () => this.strike(), { size: 32, fill: PALETTE.red, color: PALETTE.cream });

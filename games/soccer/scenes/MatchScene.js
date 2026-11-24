@@ -160,6 +160,7 @@ export class MatchScene extends Phaser.Scene {
         case 'post': case 'bar': sfx('hit'); this.cameras.main.shake(120, 0.004); this.hud.toast(e.type === 'post' ? 'Off the post!' : 'Off the bar!'); break;
         case 'save': sfx('thud'); this.hud.toast(e.caught ? 'Great save!' : 'Saved!'); break;
         case 'block': sfx('bounce'); break;
+        case 'hurdle': sfx('flip'); break;
         case 'goal': this.onGoal(e); break;
         case 'whistle': sfx(e.kind === 'kickoff' ? 'select' : 'power'); if (e.kind === 'half') this.hud.banner('HALF TIME'); if (e.kind === 'full') this.hud.banner('FULL TIME'); break;
         case 'throwin': this.hud.toast(e.side === 0 ? 'Your throw-in' : 'Their throw-in'); break;
@@ -242,6 +243,7 @@ export class MatchScene extends Phaser.Scene {
     let col;
     if (p.celebrate && m.phase === PHASE.GOAL) col = loop(ANIM.jump, 8, ph);
     else if (p.dejected && m.phase === PHASE.GOAL) return `0_${loop(ANIM.ohno, 5, ph)}`;
+    else if (p.stunT > 0 && p.tackleCool > 0 && !p.won && p.role !== 'GK') return `${dirIndex(p.slideX, p.slideY)}_${ANIM.tackle[3]}`;
     else if (p.stunT > 0) return `0_${ANIM.damage[Math.min(3, Math.floor((0.7 - p.stunT) * 8))] || 21}`;
     else if (p.diveT > 0) return `${p.diveVx > 0 ? 2 : 6}_${ANIM.tackle[Math.min(3, Math.floor((0.45 - p.diveT) * 10))]}`;
     else if (p.tackleT > 0) col = ANIM.tackle[Math.min(3, Math.floor((0.32 - p.tackleT) * 13))];
@@ -262,8 +264,11 @@ export class MatchScene extends Phaser.Scene {
     const b = m.ball;
     const cam = this.cameras.main;
     // Lead the ball a little and keep it above the thumb controls.
+    // Near the top goal look further up so the goal clears the scoreboard; near your own goal
+    // keep the ball above the thumb buttons.
+    const up = Math.max(0, Math.min(1, (L * 0.45 - b.y) / (L * 0.35)));
     let tx = OX + b.x + b.vx * 0.15;
-    let ty = OY + b.y + b.vy * 0.2 + 18;
+    let ty = OY + b.y + b.vy * 0.2 + 18 - up * 52;
     if (m.phase === PHASE.GOAL) { tx = OX + b.x; ty = OY + b.y + (b.y < L / 2 ? 50 : -30); }
     const k = dt > 0 ? Math.min(1, dt * 5) : 1;
     this.camPos.x += (tx - this.camPos.x) * k;

@@ -442,6 +442,7 @@ export class Match {
     const dir = s ? { x: s.x, y: s.y } : { x: p.fx, y: p.fy };
     const comingToMe = b.intended === p || (!b.owner && dist(p.x, p.y, b.x, b.y) < 26 && b.lastTouch && b.lastTouch.side === p.side && b.lastTouch !== p);
     if (this.input.shoot && !this.charging && (pressed.shoot) && (b.owner === p || comingToMe)) this.charging = true;
+    if (this.charging && b.owner !== p && !comingToMe) { this.charging = false; this.charge = 0; }   // lost it
     if (this.charging && this.input.shoot) this.charge = Math.min(1, this.charge + dt / 0.75);
 
     if (b.owner === p) {
@@ -699,15 +700,18 @@ export class Match {
     for (const { p, d } of near) {
       if (p.stunT > 0) continue;
       // Slide tackle: wins the ball from anyone, or pokes a loose ball on.
-      if (p.tackleT > 0 && d < 7.5 && b.z < 5 && (!b.owner || b.owner.side !== p.side)) {
+      if (p.tackleT > 0 && d < (b.owner ? 6.5 : 7.5) && b.z < 5 && (!b.owner || b.owner.side !== p.side)) {
         const victim = b.owner;
-        // A CPU slide on a dribbler can be skipped over; yours almost always connect.
+        // Whether a slide on a dribbler connects: the tackler's timing against the dribbler's
+        // skill at hopping over it.
         if (victim && !p.slideRolled) {
           p.slideRolled = true;
-          const hit = this.isHuman(p) ? 0.92 : 0.45 + 0.35 * this.params[p.side].tackle / 1.7;
-          if (this.rng() > hit) { p.missed = true; }
+          const hit = this.isHuman(p) ? 0.72 : 0.42 + 0.3 * this.params[p.side].tackle / 1.7;
+          const evade = this.isHuman(victim) ? 0.12 : this.humanSide === victim.side ? 0.15 : 0.08 + 0.3 * (1 - this.params[victim.side].react / 0.4);
+          if (this.rng() > hit * (1 - evade)) { p.missed = true; this.emit('hurdle', { side: victim.side }); }
         }
         if (victim && p.missed) continue;
+        p.won = true;
         if (victim) { victim.stunT = 0.7; victim.holdT = 0; }
         b.owner = null;
         const sp = 70 + this.rng() * 30;
@@ -827,7 +831,8 @@ function tickTimers(p, dt) {
       p[k] -= dt;
       if (p[k] <= 0) {
         p[k] = 0;
-        if (k === 'tackleT') p.recoverT = 0.35;
+        // A slide that didn't win the ball leaves you on the floor for a moment.
+        if (k === 'tackleT') { if (p.won) p.recoverT = 0.3; else { p.stunT = 0.45; p.vx = 0; p.vy = 0; } }
         if (k === 'diveT') { p.stunT = 0.35; p.vx = 0; p.vy = 0; }
       }
     }
@@ -898,7 +903,7 @@ export function tackle(m, p, dir) {
   if (p.tackleCool > 0 || p.stunT > 0 || p.tackleT > 0) return false;
   const d = norm(dir.x, dir.y);
   if (d.d === 0) return false;
-  p.tackleT = TACKLE_T; p.tackleCool = 0.9; p.slideRolled = false; p.missed = false;
+  p.tackleT = TACKLE_T; p.tackleCool = 0.9; p.slideRolled = false; p.missed = false; p.won = false;
   p.slideX = d.x; p.slideY = d.y; p.fx = d.x; p.fy = d.y;
   m.emit('slide', { side: p.side });
   return true;
