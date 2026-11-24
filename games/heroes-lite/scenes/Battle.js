@@ -48,7 +48,10 @@ export class Battle extends Phaser.Scene {
     this.buildUi();
     this.syncAll();
     window.__heroes = { ...(window.__heroes || {}), battle: this };
-    this.input.on('pointerup', (p) => this.tap(p));
+    // A tap counts only if it also started on the field, so the tap that closes a popup
+    // (or the hint) never falls through to the grid underneath.
+    this.input.on('pointerdown', (p) => { this.downOk = !this.blocked(p); });
+    this.input.on('pointerup', (p) => { if (this.downOk && !this.blocked(p)) this.tap(p); this.downOk = false; });
     hint(this, 'battle', 'Your stack has a gold frame. Tap a lit square to move, or a red-framed enemy to attack. Auto fights for you.', 548);
     this.time.delayedCall(300, () => this.next());
   }
@@ -288,11 +291,15 @@ export class Battle extends Phaser.Scene {
     this.play(ev).then(() => { this.busy = false; this.next(); });
   }
 
-  tap(p) {
-    if (this.busy || document.getElementById('howto')) return;
-    if (this.children.list.some((c) => c.depth >= 100 && c.active)) return;
+  blocked(p) {
+    if (document.getElementById('howto')) return true;
+    if (this.children.list.some((c) => c.depth >= 100 && c.active)) return true;
     const hb = this.hintBox?.active ? this.hintBox.bounds : null;
-    if (hb && p.y >= hb.top && p.y <= hb.bottom) return;
+    return !!(hb && p.y >= hb.top && p.y <= hb.bottom);
+  }
+
+  tap(p) {
+    if (this.busy) return;
     const x = Math.floor((p.x - OX) / CELL); const y = Math.floor((p.y - OY) / CELL);
     if (!C.inGrid(x, y)) return;
     const b = this.b;

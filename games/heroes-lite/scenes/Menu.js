@@ -14,6 +14,7 @@ export class Menu extends Phaser.Scene {
   constructor() { super('Menu'); }
 
   create() {
+    this.leaving = false;
     setBackground(this, PALETTE.night);
     // Little diorama: grass, a town, a hero and some troops.
     for (let x = 0; x < WIDTH; x += 32) for (let y = 76; y < 188; y += 32) sprite(this, x + 16, y + 16, groundFrame('grass')).setAlpha(0.9);
@@ -102,6 +103,8 @@ export class Menu extends Phaser.Scene {
   }
 
   start(s) {
+    if (this.leaving) return;
+    this.leaving = true;
     clearGame();
     const state = newGame(s, { faction: this.faction });
     saveGame(state);
@@ -111,6 +114,8 @@ export class Menu extends Phaser.Scene {
   }
 
   resume(saved) {
+    if (this.leaving) return;
+    this.leaving = true;
     store.state = saved;
     go(this, 'Adventure', {});
   }

@@ -29,6 +29,7 @@ export class Adventure extends Phaser.Scene {
 
   init(data) {
     this.fresh = !!data?.fresh;
+    this.endLock = 0;
     this.overShown = false;
     this.banner = null;
     this.townCycle = -1;
@@ -402,6 +403,7 @@ export class Adventure extends Phaser.Scene {
   }
 
   nextHero() {
+    if (this.busy || this.modalOpen()) return;
     const hs = G.heroesOf(this.s, 0);
     if (!hs.length) return;
     const i = hs.findIndex((h) => h.id === this.selected);
@@ -412,9 +414,10 @@ export class Adventure extends Phaser.Scene {
     }
   }
 
-  help() { openHowTo(this); }
+  help() { if (!this.busy) openHowTo(this); }
 
   leave() {
+    if (this.busy && !this.s.over) return;
     const skip = !!save.get('skipMoves');
     modal(this, 'Menu', ['Your game is saved after every move.'], [
       ['Back to game', null],
@@ -584,7 +587,7 @@ export class Adventure extends Phaser.Scene {
       return;
     }
     if (r.choice?.kind === 'dwelling') { await this.dwellingModal(h, o); return; }
-    if (r.open === 'town') { this.openTown(o.id); return; }
+    if (r.open === 'town') { this.openTown(o.id, true); return; }
     if (r.art) {
       await new Promise((res) => modal(this, 'Artifact!', [r.msg], [['Great', res]], {
         extra: 44, content: (c, y) => c.add(sprite(this, WIDTH / 2, y + 20, artifactFrame(ARTIFACTS[r.art].icon), 2)),
@@ -723,7 +726,8 @@ export class Adventure extends Phaser.Scene {
 
   // ---------- Towns and heroes ----------
 
-  openTown(id) {
+  openTown(id, force = false) {
+    if (!force && (this.busy || this.modalOpen())) return;
     const towns = G.townsOf(this.s, 0);
     if (!towns.length) return;
     let t = id ? G.getObj(this.s, id) : null;
@@ -743,6 +747,7 @@ export class Adventure extends Phaser.Scene {
   }
 
   openHero() {
+    if (this.busy || this.modalOpen()) return;
     const h = this.hero();
     if (!h) return;
     openHeroPanel(this, h, () => this.refreshUi());
@@ -751,7 +756,8 @@ export class Adventure extends Phaser.Scene {
   // ---------- Ending the day / computer turns ----------
 
   async endDay() {
-    if (this.busy) return;
+    // The lock stops a fast double tap from ending two days in a row.
+    if (this.busy || this.time.now < (this.endLock || 0)) return;
     this.busy = true;
     if (!hintSeen('endday') && hintSeen('town')) this.doneTip('endday');
     this.hintBox?.destroy(); this.hintBox = null;
@@ -796,7 +802,8 @@ export class Adventure extends Phaser.Scene {
       news.push(...s.news);
     }
     this.info('');
-    this.endBtn.setEnabled(true);
+    this.endLock = this.time.now + 900;
+    this.time.delayedCall(900, () => this.endBtn.setEnabled(true));
     this.selected = G.getHero(s, this.selected) ? this.selected : (G.heroesOf(s, 0)[0]?.id ?? null);
     this.refreshObjects(); this.refreshHeroes(); this.drawFog(); this.refreshUi();
     saveGame(s);

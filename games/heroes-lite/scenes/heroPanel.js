@@ -72,7 +72,7 @@ export function openHeroPanel(scene, h, onClose) {
   sk.forEach(([id, lv], i) => {
     const x = 18 + (i % 2) * 164; const y = 236 + Math.floor(i / 2) * 22;
     const t = text(scene, x, y, `${LEVEL_WORD[lv]} ${SKILLS[id].name}`, { origin: [0, 0.5], color: PALETTE.cream });
-    t.setInteractive({ useHandCursor: true }).on('pointerup', () => toast(scene, `${SKILLS[id].name}: ${SKILLS[id].desc[lv - 1]}`, 590));
+    t.setInteractive({ useHandCursor: true }).on('pointerup', () => toast(scene, `${SKILLS[id].name}: ${SKILLS[id].desc[lv - 1]}`, 556));
     c.add(t);
   });
   // Army.
@@ -86,7 +86,7 @@ export function openHeroPanel(scene, h, onClose) {
   y += 28;
   h.artifacts.slice(0, 9).forEach((a, i) => {
     const img = sprite(scene, 34 + i * 36, y, artifactFrame(ARTIFACTS[a].icon), 2);
-    img.setInteractive({ useHandCursor: true }).on('pointerup', () => toast(scene, `${ARTIFACTS[a].name}: ${ARTIFACTS[a].desc}`, 590));
+    img.setInteractive({ useHandCursor: true }).on('pointerup', () => toast(scene, `${ARTIFACTS[a].name}: ${ARTIFACTS[a].desc}`, 556));
     c.add(img);
   });
   if (h.artifacts.length) y += 30;
@@ -95,7 +95,7 @@ export function openHeroPanel(scene, h, onClose) {
   y += 28;
   h.spells.forEach((sp, i) => {
     const img = sprite(scene, 34 + i * 36, y, spellFrame(SPELLS[sp].icon), 2);
-    img.setInteractive({ useHandCursor: true }).on('pointerup', () => toast(scene, `${SPELLS[sp].name} (${SPELLS[sp].cost} mana): ${SPELLS[sp].desc}`, 590));
+    img.setInteractive({ useHandCursor: true }).on('pointerup', () => toast(scene, `${SPELLS[sp].name} (${SPELLS[sp].cost} mana): ${SPELLS[sp].desc}`, 556));
     c.add(img);
   });
   c.add(button(scene, WIDTH / 2, HEIGHT - 52, 200, 40, 'Close', close, { fill: PALETTE.gold }));
