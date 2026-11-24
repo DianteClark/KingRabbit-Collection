@@ -18,6 +18,12 @@ const WORLD_W = L + OX * 2;
 const WORLD_H = W + OY * 2;
 const ZOOM = 2;
 const HUD_H = 22;   // the scoreboard bar covers this many world pixels at the top
+const CORNER_SLACK = 48;
+// Screen areas (640x360) taken by the thumb controls; the camera keeps the ball out of them.
+const KEEP_OUT = [
+  { x0: 466, y0: 214, x1: 640, y1: 360 },   // Shoot / Pass
+  { x0: 0, y0: 232, x1: 172, y1: 360 },     // stick ghost
+];
 
 /** The match itself: pitch, players and ball. Controls and scoreboard live in the Hud scene. */
 export class MatchScene extends Phaser.Scene {
@@ -45,7 +51,8 @@ export class MatchScene extends Phaser.Scene {
     cam.setZoom(ZOOM);
     // Room above the top touchline for the scoreboard bar, and below the bottom one so play
     // there can rise clear of the thumb controls in the corners.
-    cam.setBounds(0, OY - HUD_H - 8, WORLD_W, W + HUD_H + 8 + 34);
+    // Extra slack past the corners lets the camera lift play there clear of the thumb controls.
+    cam.setBounds(-CORNER_SLACK, OY - HUD_H - 8, WORLD_W + CORNER_SLACK * 2, W + HUD_H + 8 + 34 + CORNER_SLACK);
     cam.roundPixels = true;
     cam.fadeIn(200);
 
@@ -68,7 +75,7 @@ export class MatchScene extends Phaser.Scene {
 
   drawPitch() {
     // Grass covers the run-off too; tile scale 1 keeps the art's own pixels.
-    this.add.tileSprite(-40, -40, WORLD_W + 80, WORLD_H + 120, 'grassTile').setOrigin(0).setDepth(-100);
+    this.add.tileSprite(-80, -40, WORLD_W + 160, WORLD_H + 160, 'grassTile').setOrigin(0).setDepth(-100);
     const g = this.add.graphics().setDepth(-90);
     // Markings are described in pitch coordinates (x across, y along) and rotated onto the screen.
     const line = (x, y, w, h) => {
@@ -291,8 +298,23 @@ export class MatchScene extends Phaser.Scene {
     let tx = bs.x + v.x * 0.22 + (ours ? attackX * 28 : 0);
     // Across the pitch, lean toward the middle so both touchlines stay in view, and sit the ball a
     // touch above centre: the stick and buttons live in the bottom corners.
-    let ty = OY + W / 2 + (bs.y - OY - W / 2) * 0.8 + v.y * 0.12 + 6;
+    // Corners lean further toward the middle so the goal mouth is in shot with the taker.
+    const corner = m.sp && m.sp.type === 'corner' && (m.phase === PHASE.SETUP || m.phase === PHASE.TAKING);
+    let ty = OY + W / 2 + (bs.y - OY - W / 2) * (corner ? 0.45 : 0.8) + v.y * 0.12 + 6;
     if (m.phase === PHASE.GOAL) { tx = bs.x + (b.y < L / 2 ? -60 : 60); ty = bs.y; }
+    // Where would the ball land on screen? Keep it out from under the thumb controls: slide the
+    // view sideways first (so the goal stays in shot), and lift it only if that isn't enough.
+    const bnd = cam.getBounds();
+    const clampX = (x) => Math.max(bnd.x + 160, Math.min(bnd.right - 160, x));
+    const clampY = (y) => Math.max(bnd.y + 90, Math.min(bnd.bottom - 90, y));
+    tx = clampX(tx); ty = clampY(ty);
+    for (const k of KEEP_OUT) {
+      let sx = (bs.x - (tx - 160)) * ZOOM; const sy = (bs.y - b.z - (ty - 90)) * ZOOM;
+      if (!(sx > k.x0 && sx < k.x1 && sy > k.y0 && sy < k.y1)) continue;
+      tx = clampX(tx + (k.x0 > 0 ? (sx - k.x0 + 16) : -(k.x1 - sx + 16)) / ZOOM);
+      sx = (bs.x - (tx - 160)) * ZOOM;
+      if (sx > k.x0 && sx < k.x1) ty = clampY(ty + (sy - k.y0 + 12) / ZOOM);
+    }
     const k = dt > 0 ? Math.min(1, dt * 5) : 1;
     this.camPos.x += (tx - this.camPos.x) * k;
     this.camPos.y += (ty - this.camPos.y) * k;

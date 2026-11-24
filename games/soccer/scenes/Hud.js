@@ -24,6 +24,7 @@ export class Hud extends Phaser.Scene {
   constructor() { super('Hud'); }
 
   init({ matchScene }) {
+    this.leaving = false;
     this.ms = matchScene;
     this.m = matchScene.match;
     this.stick = { id: null, ox: STICK.x, oy: STICK.y, dx: 0, dy: 0 };
@@ -38,12 +39,13 @@ export class Hud extends Phaser.Scene {
     this.add.rectangle(0, BAR_H, WIDTH, 2, hex(PALETTE.ink)).setOrigin(0);
     button(this, 24, 22, 40, 36, '<', () => this.pause(), { size: 32, fill: PALETTE.cream });
     button(this, WIDTH - 24, 22, 40, 36, '?', () => this.help(), { size: 32, fill: PALETTE.gold });
-    kitChip(this, 62, 22, home);
-    kitChip(this, 338, 22, away);
-    text(this, 96, 22, home.short, { color: PALETTE.cream });
-    text(this, 304, 22, away.short, { color: PALETTE.cream });
-    this.scoreText = text(this, 200, 21, '0 - 0', { size: 32, color: PALETTE.gold });
-    this.clockText = text(this, 410, 22, '', { color: PALETTE.lavender });
+    kitChip(this, 58, 22, home);
+    kitChip(this, 292, 22, away);
+    text(this, 88, 22, home.short, { color: PALETTE.cream });
+    text(this, 262, 22, away.short, { color: PALETTE.cream });
+    this.scoreText = text(this, 175, 21, '0 - 0', { size: 32, color: PALETTE.gold });
+    // Right-aligned so long labels ("Run 23 2nd 89'") grow leftward, clear of the arrow.
+    this.clockText = text(this, 456, 22, '', { color: PALETTE.lavender, origin: [1, 0.5] });
     this.mode = this.modeLabel();
 
     this.dirG = this.add.graphics();   // which way you're attacking, next to the clock
@@ -55,6 +57,7 @@ export class Hud extends Phaser.Scene {
     this.hintBg = null;
 
     this.setupInput();
+    if (!this.resumeHooked) { this.resumeHooked = true; this.events.on('resume', () => this.resetTouches()); }
     this.refresh();
     if (!save.get('seenHelp')) {
       save.set('seenHelp', true);
@@ -198,11 +201,16 @@ export class Hud extends Phaser.Scene {
     else if (!haveIt && !coming && !taking) { passLbl = 'TACKLE'; shootLbl = 'SWITCH'; }
     this.passLabel.setText(passLbl);
     this.shootLabel.setText(shootLbl);
+    // Buttons only do something in open play or on your own restart; otherwise show them dimmed.
+    const live = m.phase === PHASE.PLAY || (taking && m.sp.taker.role !== 'GK');
+    const dim = live ? 1 : 0.35;
     const btn = (c, down, fill) => {
-      g.fillStyle(hex(PALETTE.ink), 0.55).fillCircle(c.x, c.y + 4, c.r);
-      g.fillStyle(hex(fill), down ? 0.95 : 0.7).fillCircle(c.x, c.y + (down ? 3 : 0), c.r - 2);
-      g.lineStyle(3, hex(PALETTE.ink), 0.8).strokeCircle(c.x, c.y + (down ? 3 : 0), c.r - 2);
+      g.fillStyle(hex(PALETTE.ink), 0.55 * dim).fillCircle(c.x, c.y + 4, c.r);
+      g.fillStyle(hex(fill), (down ? 0.95 : 0.7) * dim).fillCircle(c.x, c.y + (down ? 3 : 0), c.r - 2);
+      g.lineStyle(3, hex(PALETTE.ink), 0.8 * dim).strokeCircle(c.x, c.y + (down ? 3 : 0), c.r - 2);
     };
+    this.passLabel.setAlpha(live ? 1 : 0.5);
+    this.shootLabel.setAlpha(live ? 1 : 0.5);
     const pd = this.buttons.pass.size > 0 || (this.keys && (this.keys.X.isDown || this.keys.J.isDown));
     const sd = this.buttons.shoot.size > 0 || (this.keys && (this.keys.SPACE.isDown || this.keys.K.isDown));
     btn(PASS, pd, passLbl === 'TACKLE' ? PALETTE.orange : PALETTE.indigo);
@@ -231,7 +239,7 @@ export class Hud extends Phaser.Scene {
       this.hintBg?.destroy();
       this.hintBg = null;
       if (msg) {
-        this.hintBg = this.add.rectangle(WIDTH / 2, this.hint.y, this.hint.width + 20, 28, hex(PALETTE.ink), 0.6);
+        this.hintBg = this.add.rectangle(this.hint.x, this.hint.y, this.hint.width + 20, 28, hex(PALETTE.ink), 0.6);
         this.children.moveBelow(this.hintBg, this.hint);
       }
     }
@@ -268,12 +276,19 @@ export class Hud extends Phaser.Scene {
   setModal(on) {
     this.modalOpen = on;
     this.ms.paused = on;
+    this.resetTouches();
+  }
+
+  /** Forget held touches (a finger lifted over a popup or the How to Play sheet never reports). */
+  resetTouches() {
     this.buttons.pass.clear(); this.buttons.shoot.clear();
     this.stick = { id: null, ox: STICK.x, oy: STICK.y, dx: 0, dy: 0 };
+    this.input.manager?.pointers?.forEach((p) => p.reset?.());
   }
 
   help() {
     if (this.modalOpen) return;
+    this.resetTouches();
     openHowTo(this, [this.ms]);
   }
 
@@ -328,6 +343,9 @@ export class Hud extends Phaser.Scene {
   }
 
   leave(key, data) {
+    if (this.leaving) return;      // one exit only, however fast the taps
+    this.leaving = true;
+    this.input.enabled = false;
     this.cameras.main.fadeOut(150, 28, 22, 24);
     this.ms.cameras.main.fadeOut(150, 28, 22, 24);
     this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
