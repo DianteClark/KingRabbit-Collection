@@ -7,6 +7,8 @@ import {
 } from '../logic/constants.js';
 import { teamById, keeperKits } from '../logic/teams.js';
 import { kitTexture, dirIndex, ANIM } from '../sprites.js';
+import { markStarted } from '../flow.js';
+import { sound } from '../sound.js';
 
 // World layout: the pitch's (0, 0) corner sits at (OX, OY) in world pixels; the camera draws at 2x.
 export const OX = 48;
@@ -52,6 +54,7 @@ export class MatchScene extends Phaser.Scene {
     this.camPos = { x: OX + W / 2, y: OY + L / 2 };
     cam.centerOn(this.camPos.x, this.camPos.y);
 
+    markStarted(this.data0);
     this.scene.launch('Hud', { matchScene: this });
     this.hud = this.scene.get('Hud');
     window.__soccer = this;
@@ -153,20 +156,25 @@ export class MatchScene extends Phaser.Scene {
     const m = this.match;
     for (const e of m.events) {
       switch (e.type) {
-        case 'pass': case 'throw': case 'cross': sfx('move'); break;
-        case 'shot': case 'header': sfx('shoot'); break;
+        case 'pass': case 'throw': case 'cross': sound('pass'); break;
+        case 'shot': case 'header': sound('shot'); break;
         case 'tackle': case 'steal': sfx('capture'); break;
         case 'slide': sfx('flip'); break;
         case 'post': case 'bar': sfx('hit'); this.cameras.main.shake(120, 0.004); this.hud.toast(e.type === 'post' ? 'Off the post!' : 'Off the bar!'); break;
         case 'save': sfx('thud'); this.hud.toast(e.caught ? 'Great save!' : 'Saved!'); break;
-        case 'block': sfx('bounce'); break;
+        case 'block': sound('touch'); break;
         case 'hurdle': sfx('flip'); break;
         case 'goal': this.onGoal(e); break;
-        case 'whistle': sfx(e.kind === 'kickoff' ? 'select' : 'power'); if (e.kind === 'half') this.hud.banner('HALF TIME'); if (e.kind === 'full') this.hud.banner('FULL TIME'); break;
-        case 'throwin': this.hud.toast(e.side === 0 ? 'Your throw-in' : 'Their throw-in'); break;
-        case 'corner': this.hud.toast(e.side === 0 ? 'Corner to you' : 'Corner to them'); break;
-        case 'goalkick': this.hud.toast('Goal kick'); break;
-        case 'out': sfx('tap'); break;
+        case 'whistle':
+          if (e.kind === 'kickoff') sound('whistle');
+          if (e.kind === 'half') { sound('whistleLong'); this.hud.banner('HALF TIME'); }
+          if (e.kind === 'full') { sound('whistleFull'); this.hud.banner('FULL TIME'); }
+          break;
+        case 'ends': this.hud.banner('SECOND HALF', PALETTE.gold, this.match.ends[0] === 1 ? 'Ends swapped: you attack DOWN' : 'Ends swapped: you attack UP'); break;
+        case 'throwin': sound('whistle'); this.hud.toast(e.side === 0 ? 'Your throw-in' : 'Their throw-in'); break;
+        case 'corner': sound('whistle'); this.hud.toast(e.side === 0 ? 'Corner to you' : 'Corner to them'); break;
+        case 'goalkick': sound('whistle'); this.hud.toast('Goal kick'); break;
+        case 'out': break;
         case 'switch': sfx('tap'); break;
         default: break;
       }

@@ -3,7 +3,7 @@
 export const RULES = {
   title: 'Pocket Soccer',
   sections: [
-    { heading: 'Goal', text: 'Five-a-side football: score more goals than the other team before the final whistle. You play in blue and always attack up the screen.' },
+    { heading: 'Goal', text: 'Five-a-side football: score more goals than the other team before the final whistle. You play in blue. You attack up the screen in the first half; the teams change ends at half time, so in the second half you attack down. The little arrow next to the clock and the gold goal on the mini-map always show your way.' },
     {
       heading: 'Controls',
       items: [
@@ -20,7 +20,7 @@ export const RULES = {
     {
       heading: 'Rules',
       items: [
-        'Two halves. The clock shows 90 minutes but a match lasts a few real minutes (set Short, Normal or Long on the menu).',
+        'Two halves, changing ends at half time. The clock shows 90 minutes but a match lasts a few real minutes (set Short, Normal or Long on the menu).',
         'Ball over a touchline: throw-in to the other team. Over a goal line: a corner if a defender touched it last, otherwise a goal kick.',
         'Restarts are quick: the taker plays it with PASS (to a teammate) or SHOOT (a cross from a corner, a long throw). Kick-offs: just start running.',
         'Keepers dive and catch. They can only use their hands in their own penalty box. Your keeper is run by the computer.',
@@ -31,7 +31,7 @@ export const RULES = {
       heading: 'Modes',
       items: [
         'Quick Match: pick any opponent. Harder teams have more stars.',
-        'Cup: eight teams, knockout. Quarter-final, semi-final, final. A draw goes to a penalty shoot-out; lose once and the run is over. Your progress is saved between rounds.',
+        'Cup: eight teams, knockout. Quarter-final, semi-final, final. A draw goes to a penalty shoot-out; lose once and the run is over. Your progress is saved between rounds. Leaving a Cup or Endless match before the end (pause menu, closing the app) counts as a 3-0 defeat.',
         'Endless: a slightly easier ladder of matches against gradually stronger teams. Your score is your wins in a row; a draw goes to penalties, a defeat ends the run.',
       ],
     },
