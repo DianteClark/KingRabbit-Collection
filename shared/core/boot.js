@@ -34,6 +34,9 @@ export async function startGame({ scenes, background = PALETTE.night, orientatio
     roundPixels: true,
     scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
     input: { activePointers: 4 },
+    // All sound comes from shared/core/sfx.js; Phaser's own audio context would only trigger
+    // 'AudioContext was not allowed to start' warnings before the first tap.
+    audio: { noAudio: true },
     scene: scenes,
   });
 
