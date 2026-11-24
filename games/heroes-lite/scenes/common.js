@@ -87,6 +87,13 @@ export function modal(scene, title, lines, buttons, { width = 316, extra = 0, co
   return c;
 }
 
+/** Short number for tight spaces: 123456 -> "123k", 1234567 -> "1.2M". */
+export function shortNum(n) {
+  if (n < 100000) return `${n}`;
+  if (n < 1000000) return `${Math.floor(n / 1000)}k`;
+  return `${(Math.floor(n / 100000) / 10).toFixed(1)}M`;
+}
+
 /** Row of resource icons + amounts. Returns { update(res) }. */
 export function resourceBar(scene, y, depth = 10) {
   const keys = ['gold', 'wood', 'ore', 'gems'];
@@ -98,7 +105,7 @@ export function resourceBar(scene, y, depth = 10) {
   });
   return {
     items,
-    update(res) { for (const it of items) it.t.setText(`${res[it.k]}`); },
+    update(res) { for (const it of items) it.t.setText(shortNum(res[it.k])); },
   };
 }
 

@@ -58,7 +58,7 @@ export class Town extends Phaser.Scene {
     const spots = [[38, 140], [38, 186], [92, 186], [268, 186], [322, 186], [322, 140]];
     for (let i = 0; i < 6; i++) if (t.built[`dw${i}`]) this.view.add(sprite(this, spots[i][0], spots[i][1] + 16, dwellingFrame(t.faction, i), 1.5).setOrigin(0.5, 1));
     const vh = G.visitingHero(this.s, t);
-    if (vh) this.view.add(sprite(this, WIDTH / 2, 196, heroFrame(vh.faction === 'necro' ? 'heroN' : 'heroC', vh.might, 0), 2));
+    if (vh) this.view.add(sprite(this, WIDTH / 2 + 34, 188, heroFrame(vh.faction === 'necro' ? 'heroN' : 'heroC', vh.might, 0), 2));
     const bg = this.add.rectangle(WIDTH / 2, 92, 210, 24, hex(PALETTE.ink), 0.7);
     this.view.add(bg);
     this.view.add(text(this, WIDTH / 2, 92, `+${G.townIncome(t)} gold a day`, { color: PALETTE.gold }));
@@ -110,7 +110,7 @@ export class Town extends Phaser.Scene {
     if (st.reason === 'Built today') lines.push({ text: 'You can build once per day.', color: PALETTE.orange });
     if (st.reason === 'Cost') lines.push({ text: 'Not enough resources.', color: PALETTE.orange });
     if (st.reason === 'Built') lines.push({ text: 'Already built.', color: PALETTE.leaf });
-    const btns = st.ok ? [['Build', () => { G.build(this.s, t, bid); sfx('place'); saveGame(this.s); this.refresh(); toast(this, `${buildingName(bid, t.faction)} built!`, 600); }], ['Cancel', null]] : [['OK', null]];
+    const btns = st.ok ? [['Build', () => { G.build(this.s, t, bid); sfx('place'); saveGame(this.s); this.refresh(); toast(this, `${buildingName(bid, t.faction)} built!`, 150); }], ['Cancel', null]] : [['OK', null]];
     modal(this, buildingName(bid, t.faction), lines, btns);
   }
 
@@ -143,7 +143,7 @@ export class Town extends Phaser.Scene {
   recruitAll() {
     let got = 0;
     for (let i = 5; i >= 0; i--) if (this.town.built[`dw${i}`] && this.town.stock[i] > 0) got += G.recruit(this.s, this.town, i, this.town.stock[i]);
-    if (got) { sfx('coin'); toast(this, `${got} creatures recruited`, 600); } else { sfx('error'); toast(this, 'Not enough gold or no free slot', 600); }
+    if (got) { sfx('coin'); toast(this, `${got} creatures recruited`, 150); } else { sfx('error'); toast(this, 'Not enough gold or no free slot', 150); }
     saveGame(this.s);
     this.refresh();
   }
@@ -153,28 +153,30 @@ export class Town extends Phaser.Scene {
     const type = FACTIONS[t.faction].creatures[tier]; const c = CREATURES[type];
     const p = this.s.players[0];
     const max = Math.min(t.stock[tier], G.maxAffordable(p.res, c.cost));
-    if (max <= 0) { toast(this, 'Not enough gold', 600); sfx('error'); return; }
+    if (max <= 0) { toast(this, 'Not enough gold', 150); sfx('error'); return; }
     let n = max;
     let label = null; let costT = null;
     const m = modal(this, `Recruit ${c.name}`, [`${t.stock[tier]} available`], [
       ['Recruit', () => {
         const got = G.recruit(this.s, t, tier, n);
-        if (got) { sfx('coin'); toast(this, `${got} ${c.name} recruited`, 600); } else { sfx('error'); toast(this, 'No free army slot', 600); }
+        if (got) { sfx('coin'); toast(this, `${got} ${c.name} recruited`, 150); } else { sfx('error'); toast(this, 'No free army slot', 150); }
         saveGame(this.s); this.refresh();
       }],
       ['Cancel', null],
     ], {
-      extra: 120,
+      extra: 164,
       content: (cc, y) => {
-        cc.add(sprite(this, WIDTH / 2, y + 20, unitFrame(c.sprite), 3));
-        label = text(this, WIDTH / 2, y + 66, '', { size: 32, color: PALETTE.cream });
-        costT = text(this, WIDTH / 2, y + 100, '', { color: PALETTE.gold });
-        const upd = () => { label.setText(`${n}`); costT.setText(costText(c.cost, n)); };
+        // Creature and the chosen amount on one line, the stepper below, then the price.
+        cc.add(sprite(this, WIDTH / 2 - 60, y + 22, unitFrame(c.sprite), 3));
+        label = text(this, WIDTH / 2 + 20, y + 22, '', { size: 32, color: PALETTE.cream });
+        costT = text(this, WIDTH / 2, y + 134, '', { color: PALETTE.gold });
+        const upd = () => { label.setText(`x ${n}`); costT.setText(costText(c.cost, n)); };
         cc.add([label, costT]);
-        cc.add(button(this, 70, y + 66, 48, 40, '-', () => { n = Math.max(1, n - 1); upd(); }, { size: 32 }));
-        cc.add(button(this, 124, y + 66, 48, 40, '1', () => { n = 1; upd(); }));
-        cc.add(button(this, 236, y + 66, 48, 40, '+', () => { n = Math.min(max, n + 1); upd(); }, { size: 32 }));
-        cc.add(button(this, 290, y + 66, 52, 40, 'Max', () => { n = max; upd(); }));
+        const by = y + 84;
+        cc.add(button(this, 66, by, 56, 44, '-', () => { n = Math.max(1, n - 1); upd(); }, { size: 32 }));
+        cc.add(button(this, 138, by, 56, 44, '1', () => { n = 1; upd(); }));
+        cc.add(button(this, 222, by, 56, 44, '+', () => { n = Math.min(max, n + 1); upd(); }, { size: 32 }));
+        cc.add(button(this, 294, by, 56, 44, 'Max', () => { n = max; upd(); }));
         upd();
       },
     });
@@ -214,14 +216,14 @@ export class Town extends Phaser.Scene {
     y += 30;
     spells.forEach((sp, i) => {
       const img = this.put(sprite(this, 30 + i * 40, y, spellFrame(SPELLS[sp].icon), 2));
-      img.setInteractive({ useHandCursor: true }).on('pointerup', () => toast(this, `${SPELLS[sp].name}: ${SPELLS[sp].desc}`, 610));
+      img.setInteractive({ useHandCursor: true }).on('pointerup', () => toast(this, `${SPELLS[sp].name}: ${SPELLS[sp].desc}`, 150));
     });
   }
 
   move(from, slot) {
     if (G.transfer(this.s, this.town, from, slot)) { sfx('place'); saveGame(this.s); this.refresh(); } else {
       sfx('error');
-      toast(this, from === 'hero' ? 'A hero must keep one stack' : 'No free slot', 610);
+      toast(this, from === 'hero' ? 'A hero must keep one stack' : 'No free slot', 150);
     }
   }
 
@@ -243,7 +245,7 @@ export class Town extends Phaser.Scene {
     sfx('power');
     saveGame(this.s);
     this.refresh();
-    toast(this, `${h.name} joins you!`, 610);
+    toast(this, `${h.name} joins you!`, 150);
   }
 
   // ---------- Trade ----------
@@ -270,7 +272,7 @@ export class Town extends Phaser.Scene {
   }
 
   trade(r, n) {
-    if (G.trade(this.s, 0, r, n)) { sfx('coin'); saveGame(this.s); this.refresh(); } else { sfx('error'); toast(this, n > 0 ? 'Not enough gold' : `No ${r} to sell`, 610); }
+    if (G.trade(this.s, 0, r, n)) { sfx('coin'); saveGame(this.s); this.refresh(); } else { sfx('error'); toast(this, n > 0 ? 'Not enough gold' : `No ${r} to sell`, 150); }
   }
 }
 
