@@ -6,13 +6,48 @@ let ctx = null;
 let muted = false;
 try { muted = localStorage.getItem(KEY) === '1'; } catch { /* ignore */ }
 
+function create() {
+  try { ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch { ctx = null; }
+  return ctx;
+}
+
+/**
+ * The one shared Web Audio context for every game (music and effects should both use it).
+ * Phones suspend audio when the app is backgrounded or the screen sleeps ('suspended', or
+ * 'interrupted' on iOS), and only let it restart during a tap. wake() below handles that.
+ */
+export function audioContext() {
+  if (!ctx) create();
+  if (ctx && ctx.state !== 'running') ctx.resume?.().catch(() => {});
+  return ctx;
+}
+
 function audio() {
   if (muted) return null;
-  try {
-    ctx ??= new (window.AudioContext || window.webkitAudioContext)();
-    if (ctx.state === 'suspended') ctx.resume();
-    return ctx;
-  } catch { return null; }
+  return audioContext();
+}
+
+/** Try to get sound going again. On a tap, a context that refuses to resume is replaced. */
+function wake(fromGesture) {
+  if (!ctx) return;
+  if (ctx.state === 'running') return;
+  const p = ctx.resume?.();
+  if (!fromGesture || !p) return;
+  p.then(() => {
+    // iOS sometimes leaves a context 'interrupted' for good after a phone call or long sleep.
+    if (ctx.state !== 'running') { try { ctx.close(); } catch { /* ignore */ } create(); listeners.forEach((f) => f(ctx)); }
+  }).catch(() => { try { ctx.close(); } catch { /* ignore */ } create(); listeners.forEach((f) => f(ctx)); });
+}
+
+const listeners = new Set();
+/** Games with their own audio graph (music) can re-attach when the context is replaced. */
+export function onAudioReset(fn) { listeners.add(fn); return () => listeners.delete(fn); }
+
+if (typeof window !== 'undefined') {
+  for (const ev of ['pointerdown', 'touchend', 'keydown']) window.addEventListener(ev, () => wake(true), { capture: true, passive: true });
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) wake(false); });
+  window.addEventListener('pageshow', () => wake(false));
+  window.addEventListener('focus', () => wake(false));
 }
 
 /** One note: freq Hz (or [from, to] slide), duration s, wave type, volume, start delay s. */

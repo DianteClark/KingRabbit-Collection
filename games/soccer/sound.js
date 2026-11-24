@@ -1,15 +1,11 @@
 // Pocket Soccer's own sounds (whistle, kicks), synthesized like shared/core/sfx.js and silent
 // whenever the shared mute is on. Everything else still uses sfx().
-import { isMuted } from '../../shared/core/sfx.js';
+import { isMuted, audioContext } from '../../shared/core/sfx.js';
 
-let ctx = null;
+// Uses the shared audio context, which wakes itself up after the app was in the background.
 function audio() {
   if (isMuted()) return null;
-  try {
-    ctx ??= new (window.AudioContext || window.webkitAudioContext)();
-    if (ctx.state === 'suspended') ctx.resume();
-    return ctx;
-  } catch { return null; }
+  return audioContext();
 }
 
 /** Referee's pea whistle: a high tone warbled fast by a second oscillator. */
