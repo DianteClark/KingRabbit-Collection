@@ -30,6 +30,7 @@ export const CAMPAIGN = [
     brief: 'Commander, a Crimson Scorpion patrol has crossed into the Azure Dunes. Your squad is all we have out here. Drive them off: destroy every enemy unit or capture their command post (HQ).',
     tip: 'Tap a unit, tap a blue tile to move, then choose Fire or Wait. Units on dunes, cities and mesas take less damage.',
     outro: 'The patrol is broken. But scouts report a bigger Scorpion force heading for the oasis towns.',
+    cpuCap: 0.15,
     funds: [0, 0],
     rows: [
       '..:..h..^^.',
@@ -64,6 +65,7 @@ export const CAMPAIGN = [
     brief: 'The Scorpions want the oasis towns. Every city you hold pays 1000 funds a day. Send infantry to capture them, and build more troops at your factory.',
     tip: 'Move infantry onto a city and choose Capture. It takes a couple of days (20 points, minus the squad\'s HP each day). Tap your factory to build.',
     outro: 'The oasis road is ours, and so is its income. The Scorpions are falling back across the dune sea.',
+    cpuCap: 0.25,
     funds: [2000, 0],
     rows: [
       '^..h.f..:..',
@@ -104,7 +106,8 @@ export const CAMPAIGN = [
     brief: 'Scorpion armour is rolling across the dune sea. Tanks are slowed by dunes but hit hard. Lancers are cheap and deadly against vehicles.',
     tip: 'Tap an enemy to see where it can move and strike next turn. Attack first: the defender strikes back weaker.',
     outro: 'Their armour is burning in the dunes. Next: the gun line they have dug in behind the mesas.',
-    funds: [4000, 1000],
+    cpuCap: 0.3,
+    funds: [6000, 1000],
     rows: [
       '..:..h..:.^',
       '.:c.:..f:..',
@@ -126,7 +129,7 @@ export const CAMPAIGN = [
     units: [
       '...........',
       '.....i.....',
-      '...t...t...',
+      '...t.......',
       '....i......',
       '...........',
       '...........',
@@ -137,7 +140,7 @@ export const CAMPAIGN = [
       '...........',
       '...........',
       '....I.T....',
-      '...L.......',
+      '...L...L...',
       '.....R.I...',
       '...........',
     ],
@@ -148,6 +151,7 @@ export const CAMPAIGN = [
     brief: 'Scorpion artillery is dug in behind the mesas and shells anything that comes close. Bring your own guns, and keep them safe behind a wall of tanks.',
     tip: 'Artillery fires 2-3 tiles away but can\'t move and fire on the same turn, and it can\'t strike back. Guard it with other units.',
     outro: 'The guns are silent. General Vask is furious and is throwing everything he has at our HQ.',
+    cpuCap: 0.45,
     funds: [3000, 2000],
     rows: [
       '^...h...^^.',
@@ -188,7 +192,8 @@ export const CAMPAIGN = [
     brief: 'A huge Scorpion column is heading for our HQ. Reinforcements arrive in 7 days. Hold the mesa passes until then, or break them first.',
     tip: 'Units in a narrow pass on good terrain hold off much bigger forces. Repair hurt units on your own buildings.',
     outro: 'Reinforcements have arrived and the column is spent. But something is buzzing over the lakes...',
-    funds: [6000, 11000],
+    cpuCap: 0.5,
+    funds: [6000, 7000],
     survive: { side: 0, days: 7 },
     rows: [
       '.f..h..f...',
@@ -210,7 +215,7 @@ export const CAMPAIGN = [
       '...........',
       '...........',
       '...........',
-      '...k.......',
+      '...t.......',
       '..t...t....',
       '...a..i....',
       '.i..r...i..',

@@ -50,7 +50,7 @@ export class Menu extends Phaser.Scene {
     button(this, WIDTH / 2, y + 58, 300, 46, 'Skirmish vs CPU', () => go(this, 'Menu', { view: 'skirmish' }), { fill: PALETTE.lavender });
     button(this, WIDTH / 2, y + 116, 300, 46, '2 Players (one phone)', () => go(this, 'Menu', { view: 'versus' }), { fill: PALETTE.lavender });
 
-    text(this, WIDTH / 2, 566, 'Art: Aleksandr Makarov', { color: PALETTE.indigo });
+    text(this, WIDTH / 2, 566, 'Art: Aleksandr Makarov', { color: PALETTE.lavender });
     button(this, 86, 612, 156, 40, '< All Games', () => { window.location.href = '../'; }, { fill: PALETTE.indigo, color: PALETTE.cream });
     this.lvlBtn = button(this, 226, 612, 108, 40, `CPU Lv ${skillLabel()}`, () => this.levelInfo(), { fill: PALETTE.indigo, color: PALETTE.cream });
     this.soundBtn = button(this, 320, 612, 68, 40, '', () => { setMuted(!isMuted()); this.syncSound(); });
@@ -168,6 +168,7 @@ export class Menu extends Phaser.Scene {
         const saved = loadBattle();
         const lines = [kind === 'versus' ? 'Blue moves first. Hand the phone over when you end your turn.' : 'Capture the CPU\'s HQ or destroy all its units.'];
         lines.push({ text: `Starting funds ${m.funds[0]}. Every building pays 1000 a day.`, color: PALETTE.lavender });
+        lines.push({ text: 'Blue moves first, so Blue gets no income on day 1 and Red starts with 1000 extra.', color: PALETTE.lavender });
         if (saved && !saved.over) lines.push({ text: 'This replaces your battle in progress.', color: PALETTE.orange });
         modal(this, m.name, lines, [['Start', () => this.start(m, kind)], ['Back', null]], { row: true });
       });

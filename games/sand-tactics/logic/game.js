@@ -40,6 +40,8 @@ export function parseMap(def) {
   return { w, h, terrain, props, units };
 }
 
+export const FAIR_BONUS = 1000;
+
 /**
  * New game from a map definition.
  * opts: seed, controllers ['human'|'cpu', ...], mode ('campaign' | 'skirmish' | 'versus'), missionId.
@@ -63,7 +65,12 @@ export function newGame(def, opts = {}) {
     funds: [...(def.funds || [0, 0])],
     income: def.income ?? INCOME,
     survive: def.survive || null, // { side, days }: that side wins on reaching day days + 1
+    // Moving first is a real edge: in fair (skirmish / 2-player) games Blue gets no income on day 1
+    // and Red starts with FAIR_BONUS extra funds (measured with computer-vs-computer battles).
+    fairStart: opts.fairStart ?? (opts.mode === 'skirmish' || opts.mode === 'versus'),
     controllers: opts.controllers || ['human', 'cpu'],
+    // Early campaign missions keep the computer gentle whatever its adaptive level (decisions only).
+    cpuCap: def.cpuCap ?? 1,
     everHad: [false, false],
     stats: [0, 1].map(() => ({ built: 0, lost: 0, kills: 0, captured: 0, damage: 0 })),
     over: false,
@@ -71,6 +78,7 @@ export function newGame(def, opts = {}) {
     reason: null,
     rng: { s: (opts.seed ?? 1) >>> 0 },
   };
+  if (s.fairStart) s.funds[1] += FAIR_BONUS;
   for (const u of m.units) addUnit(s, u.type, u.side, u.x, u.y, false);
   beginTurn(s);
   return s;
@@ -357,7 +365,7 @@ export function beginTurn(s) {
     endGame(s, s.survive.side, 'survive');
     return report;
   }
-  report.income = incomeOf(s, side);
+  report.income = s.fairStart && side === 0 && s.day === 1 ? 0 : incomeOf(s, side);
   s.funds[side] += report.income;
   for (const u of s.units) {
     if (u.side !== side) continue;
@@ -371,6 +379,24 @@ export function beginTurn(s) {
     s.funds[side] -= cost;
     u.hp = Math.min(100, u.hp + gain);
     report.repaired.push({ id: u.id, gain });
+  }
+  // Supply trucks patch up neighbours for free; harvesters on dunes earn funds.
+  report.supplied = [];
+  report.harvest = 0;
+  for (const t of s.units) {
+    if (t.side !== side) continue;
+    const d = UNITS[t.type];
+    if (d.supply) {
+      for (const u of s.units) {
+        if (u.side !== side || u === t || u.hp >= 100 || dist(u.x, u.y, t.x, t.y) !== 1) continue;
+        u.hp = Math.min(100, u.hp + 10);
+        report.supplied.push(u.id);
+      }
+    }
+    if (d.harvest && terrainAt(s, t.x, t.y) === 'dunes') {
+      s.funds[side] += d.harvest;
+      report.harvest += d.harvest;
+    }
   }
   return report;
 }

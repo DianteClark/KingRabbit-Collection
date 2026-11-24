@@ -10,7 +10,7 @@ import { UNITS, UNIT_ORDER, TERRAIN, SIDES, displayHp, isRanged } from '../logic
 import { aiStep, aiParams } from '../logic/ai.js';
 import { mapById, CAMPAIGN } from '../logic/maps.js';
 import {
-  frame, sprite, setRef, unitRef, isFoot, buildingRef, BOOM, SHOT, DEATH, CURSOR, TILE,
+  frame, sprite, setRef, unitRef, isFoot, isSmallVehicle, buildingRef, BOOM, SHOT, DEATH, CURSOR, TILE,
 } from '../frames.js';
 import { save, saveBattle, loadBattle, clearBattle, missionWon, recordSkirmish } from '../save.js';
 import { getSkill, reportResult, SKILL_ID } from '../adaptive.js';
@@ -103,17 +103,44 @@ export class Battle extends Phaser.Scene {
           tile(...pick(TILE.sand), px, py);
           if (k === 'sand' && rnd() < 0.06) tile(...pick(TILE.sandDecal), px, py);
           if (k === 'dunes') ring(TILE.dunesRing, x, y, qx, qy, (o) => o === 'dunes', pick(TILE.dunesFill));
-          if (k === 'mesa') { tile(...pick(TILE.mesaFill), px, py); ring(TILE.mesaRing, x, y, qx, qy, (o) => o === 'mesa', pick(TILE.mesaFill)); }
-          if (k === 'water') ring(TILE.waterRing, x, y, qx, qy, (o) => o === 'water', TILE.waterFill[0]);
+          if (k === 'mesa') { tile(...TILE.mesaFill[0], px, py); ring(TILE.mesaRing, x, y, qx, qy, (o) => o === 'mesa', TILE.mesaFill[rnd() < 0.8 ? 0 : 1]); }
+          if (k === 'water') {
+            // The pond ring's middle is see-through: lay deep water under it first.
+            const deep = rnd() < 0.7 ? [72, 24] : [80, 24];
+            tile(...deep, px, py);
+            ring(TILE.waterRing, x, y, qx, qy, (o) => o === 'water', deep);
+          }
           if (k === 'oasis') tile(...pick(TILE.oasis), px, py);
         }
+      }
+    }
+    // Second pass: edges and objects that may poke into neighbouring cells.
+    const obj = (ref, px, py) => { const [kk, f] = frame(this, ['tiles', ...ref, 8, 8]); rt.drawFrame(kk, f, px, py); };
+    for (let y = 0; y < s.h; y++) {
+      for (let x = 0; x < s.w; x++) {
+        const k = t(x, y);
+        const bx = x * 16; const by = y * 16;
         if (k === 'oasis') {
-          const [kk, f] = frame(this, ['tiles', ...TILE.shrub, 8, 8]);
-          rt.drawFrame(kk, f, x * 16 + 4, y * 16 + 3);
+          // Grass edges: light lip on top/left, shadow under the bottom/right, like the tileset's grass pieces.
+          const other = (dx, dy) => G.inMap(s, x + dx, y + dy) && t(x + dx, y + dy) !== 'oasis';
+          if (other(0, -1)) rt.fill(0xa6b880, 1, bx, by, 16, 1);
+          if (other(-1, 0)) rt.fill(0xa6b880, 1, bx, by, 1, 16);
+          if (other(0, 1)) rt.fill(0x2e4a3a, 1, bx, by + 15, 16, 1);
+          if (other(1, 0)) rt.fill(0x2e4a3a, 1, bx + 15, by, 1, 16);
+          // A little pool and palms (shrubs) make it an oasis.
+          const pool = rnd() < 0.55;
+          if (pool) {
+            rt.fill(0x1e5f66, 1, bx + 3, by + 9, 7, 4);
+            rt.fill(0x2a8a8a, 1, bx + 4, by + 9, 5, 3);
+            rt.fill(0x7fd4c8, 1, bx + 5, by + 10, 2, 1);
+          }
+          obj(TILE.shrub, bx + (pool ? 7 : 4), by + (pool ? 1 : 3));
+          if (!pool || rnd() < 0.5) obj(TILE.shrub, bx + (pool ? 0 : 1), by + (pool ? 0 : 8));
         }
-        if (k === 'mesa' && rnd() < 0.5) {
-          const [kk, f] = frame(this, ['tiles', ...pick(TILE.rocks), 8, 8]);
-          rt.drawFrame(kk, f, x * 16 + 2 + Math.floor(rnd() * 6), y * 16 + 1 + Math.floor(rnd() * 4));
+        if (k === 'mesa') {
+          // Boulders on every plateau so mesas read as rough high ground.
+          obj(pick(TILE.rocks), bx + 1 + Math.floor(rnd() * 4), by + Math.floor(rnd() * 3));
+          if (rnd() < 0.6) obj(pick(TILE.rocks), bx + 7 + Math.floor(rnd() * 2), by + 5 + Math.floor(rnd() * 2));
         }
       }
     }
@@ -172,8 +199,7 @@ export class Battle extends Phaser.Scene {
       sprs.push(back, front);
       if (u.side === 1) for (const sp of sprs) sp.setFlipX(true);
     } else {
-      // Small vehicles (12px art) are drawn at 3x so they read as clearly as the big 24px ones at 2x.
-      const small = art === 'recon' || art === 'tank';
+      const small = isSmallVehicle(art);
       sprs.push(sprite(this, 0, UNITS[u.type].air ? -4 : 0, unitRef(art, u.side, this.facingFor(u)), small ? 3 : 2));
     }
     if (UNITS[u.type].air) {
@@ -211,7 +237,7 @@ export class Battle extends Phaser.Scene {
       v.hp.setText(hp < 10 ? `${hp}` : '');
       v.hpBg.setVisible(hp < 10);
       const dim = u.done && u.side === s.turn && !s.over;
-      for (const sp of v.sprs) { if (dim) sp.setTint(0x8a8080); else sp.clearTint(); }
+      for (const sp of v.sprs) { if (dim) sp.setTint(0xa8a0a0); else sp.clearTint(); }
     }
     for (const [id, v] of this.views) if (!alive.has(id)) { v.c.destroy(); this.views.delete(id); }
     this.unitLayer.sort('y');
@@ -232,7 +258,9 @@ export class Battle extends Phaser.Scene {
     const maxX = Math.max(0, this.mapW - WIDTH);
     const maxY = Math.max(0, this.mapH - VIEW_H);
     this.scroll.x = Phaser.Math.Clamp(x, 0, maxX);
-    this.scroll.y = Phaser.Math.Clamp(y, 0, maxY);
+    // While a hint strip covers the top of the map, allow scrolling a little further so row 0 can be seen.
+    const minY = -Math.max(0, (this.coachBox?.active ? this.coachBox.hitH : 0) - this.oy);
+    this.scroll.y = Phaser.Math.Clamp(y, minY, maxY);
     this.world.setPosition(Math.round(this.ox - this.scroll.x), Math.round(TOP + this.oy - this.scroll.y));
   }
 
@@ -269,7 +297,7 @@ export class Battle extends Phaser.Scene {
     this.input.on('pointerdown', (p) => {
       if (this.modalOpen()) { down = null; return; }
       if (this.busy) { this.skipping = true; down = null; return; }
-      if (p.y < TOP || p.y > BOTTOM) { down = null; return; }
+      if (p.y < TOP || p.y > BOTTOM || this.coachHit(p)) { down = null; return; }
       down = { x: p.x, y: p.y, sx: this.scroll.x, sy: this.scroll.y, drag: false };
     });
     this.input.on('pointermove', (p) => {
@@ -336,6 +364,7 @@ export class Battle extends Phaser.Scene {
   showIdlePanel(info) {
     this.clearPanel();
     this.ui = { mode: 'idle' };
+    this.time.delayedCall(0, () => this.coachUpdate());
     const lines = info || this.defaultInfo();
     lines.forEach((l, i) => fit(this.pText(12, 556 + i * 24, l.text || l, { color: l.color || PALETTE.cream }), 210));
     if (this.isHumanTurn()) {
@@ -495,14 +524,16 @@ export class Battle extends Phaser.Scene {
 
   selectUnit(u) {
     sfx('select');
+    this.time.delayedCall(0, () => this.coachUpdate());
     const reach = this.showRanges(u);
     this.ui = { mode: 'selected', id: u.id, reach };
     this.clearPanel();
     const d = UNITS[u.type];
     fit(this.pText(12, 556, `${d.name}  HP ${displayHp(u.hp)}/10  Move ${d.move}`, { color: TEAM_COLOR[u.side] }), 336);
-    this.pText(12, 580, 'Tap a blue tile to move', { color: PALETTE.cream });
-    this.pText(12, 604, 'or tap an enemy to attack it.', { color: PALETTE.lavender });
-    this.pButton(304, 612, 96, 36, 'Cancel', () => this.deselect(), { fill: PALETTE.indigo, color: PALETTE.cream });
+    fit(this.pText(12, 580, 'Tap a blue tile, or an enemy in red.', { color: PALETTE.cream }), 336);
+    // Acting without moving (fire from here, capture, or just wait) is one tap away.
+    this.pButton(96, 616, 168, 38, 'Act here', () => this.moveSelected(u, u.x, u.y), { fill: PALETTE.lavender });
+    this.pButton(280, 616, 144, 38, 'Cancel', () => this.deselect(), { fill: PALETTE.indigo, color: PALETTE.cream });
     this.follow(u.x, u.y);
   }
 
@@ -545,6 +576,7 @@ export class Battle extends Phaser.Scene {
   /** Action buttons after a (not yet committed) move. */
   showActions(u) {
     const s = this.s;
+    this.time.delayedCall(0, () => this.coachUpdate());
     const [x, y] = this.ui.to;
     const moved = x !== u.x || y !== u.y;
     const targets = G.targetsFrom(s, u, x, y, moved);
@@ -585,6 +617,7 @@ export class Battle extends Phaser.Scene {
 
   showForecast(u, v) {
     const s = this.s;
+    this.time.delayedCall(0, () => this.coachUpdate());
     const [x, y] = this.ui.to;
     const f = G.forecast(s, u, x, y, v);
     this.ui.mode = 'confirm';
@@ -633,6 +666,7 @@ export class Battle extends Phaser.Scene {
   }
 
   afterAction() {
+    this.coachActs = (this.coachActs || 0) + 1;
     this.refreshUnits();
     this.refreshHud();
     saveBattle(this.s);
@@ -659,8 +693,8 @@ export class Battle extends Phaser.Scene {
     this.showCursor(p.x, p.y);
     const c = this.add.container(0, 0).setDepth(100);
     c.add(this.add.rectangle(0, 0, WIDTH, HEIGHT, hex(PALETTE.ink), 0.65).setOrigin(0).setInteractive());
-    const rowH = 50;
-    const top = 26;
+    const rowH = 46;
+    const top = 8;
     const h = 64 + UNIT_ORDER.length * rowH + 62;
     c.add(panel(this, 8, top, WIDTH - 16, h, { fill: PALETTE.night, inner: PALETTE.sand }));
     c.add(text(this, WIDTH / 2, top + 22, 'Build', { size: 32, color: PALETTE.gold }));
@@ -674,12 +708,12 @@ export class Battle extends Phaser.Scene {
       const row = this.add.container(0, 0).setAlpha(ok ? 1 : 0.45);
       row.add(this.add.rectangle(20, y + 2, WIDTH - 40, rowH - 4, i % 2 ? hex(PALETTE.indigo) : 0x3a3456, 1).setOrigin(0));
       const art = d.art;
-      const icon = sprite(this, 44, y + rowH / 2, unitRef(art, side, side === 0 ? 'right' : 'left'), isFoot(art) || ['recon', 'tank'].includes(t) ? 3 : 2);
+      const icon = sprite(this, 44, y + rowH / 2, unitRef(art, side, side === 0 ? 'right' : 'left'), isFoot(art) || isSmallVehicle(art) ? 3 : 2);
       if (isFoot(art) && side === 1) icon.setFlipX(true);
       row.add(icon);
-      row.add(text(this, 74, y + 15, d.name, { origin: [0, 0.5], color: PALETTE.cream }));
-      row.add(text(this, WIDTH - 30, y + 15, money(d.cost), { origin: [1, 0.5], color: ok ? PALETTE.gold : PALETTE.orange }));
-      row.add(fit(text(this, 74, y + 35, `Move ${d.move}${d.range[1] > 1 ? `  Range ${d.range[0]}-${d.range[1]}` : ''}  ${shortRole(t)}`, { origin: [0, 0.5], color: PALETTE.lavender }), WIDTH - 104));
+      row.add(text(this, 74, y + 14, d.name, { origin: [0, 0.5], color: PALETTE.cream }));
+      row.add(text(this, WIDTH - 30, y + 14, money(d.cost), { origin: [1, 0.5], color: ok ? PALETTE.gold : PALETTE.orange }));
+      row.add(fit(text(this, 74, y + 33, `Move ${d.move}${d.range[1] > 1 ? `  Range ${d.range[0]}-${d.range[1]}` : ''}  ${shortRole(t)}`, { origin: [0, 0.5], color: PALETTE.lavender }), WIDTH - 104));
       const z = this.add.zone(20, y + 2, WIDTH - 40, rowH - 4).setOrigin(0).setInteractive({ useHandCursor: true });
       z.on('pointerup', () => {
         if (!ok) { sfx('error'); toast(this, full ? 'Unit limit reached' : 'Not enough funds', 600, PALETTE.orange, 700, 120); return; }
@@ -734,7 +768,7 @@ export class Battle extends Phaser.Scene {
     const s = this.s;
     if (s.over) { this.showResult(); return; }
     const side = s.turn;
-    if (s.controllers[side] === 'cpu') { await this.banner(`${SIDES[side].name}'s turn`, side); this.runCpu(); return; }
+    if (s.controllers[side] === 'cpu') { if (!this.fast) await this.banner(`${SIDES[side].name}'s turn`, side); this.runCpu(); return; }
     const twoPlayers = s.controllers[0] === 'human' && s.controllers[1] === 'human';
     const begin = () => {
       // Look where this commander was looking at the end of their last turn (or at their HQ).
@@ -743,7 +777,13 @@ export class Battle extends Phaser.Scene {
       if (back) this.panTo(back.x, back.y);
       else if (focus && announce) this.centerOn(focus.x, focus.y);
       this.showIdlePanel();
-      if (report && report.income) toast(this, `Day ${s.day}: +${money(report.income)} funds${report.repaired.length ? `, ${report.repaired.length} repaired` : ''}`, 500, PALETTE.gold);
+      if (report) {
+        const bits = [];
+        if (report.income || report.harvest) bits.push(`+${money(report.income + (report.harvest || 0))} funds`);
+        const fixed = report.repaired.length + (report.supplied?.length || 0);
+        if (fixed) bits.push(`${fixed} repaired`);
+        if (bits.length) toast(this, `Day ${s.day}: ${bits.join(', ')}`, 500, PALETTE.gold);
+      }
     };
     if (twoPlayers && announce) {
       this.clearPanel();
@@ -760,7 +800,7 @@ export class Battle extends Phaser.Scene {
       bg.setScale(1, 0); t.setAlpha(0);
       this.tweens.add({ targets: bg, scaleY: 1, duration: 120 });
       this.tweens.add({ targets: t, alpha: 1, duration: 120 });
-      this.time.delayedCall(this.fast ? 500 : 900, () => {
+      this.time.delayedCall(this.fast ? 300 : 900, () => {
         this.tweens.add({ targets: [bg, t], alpha: 0, duration: 150, onComplete: () => { bg.destroy(); t.destroy(); res(); } });
       });
     });
@@ -779,44 +819,65 @@ export class Battle extends Phaser.Scene {
   async runCpu() {
     const s = this.s;
     const side = s.turn;
-    const P = aiParams(getSkill());
+    const P = aiParams(Math.min(getSkill(), s.cpuCap ?? 1));
     this.busy = true;
     this.cpuRunning = true;
+    this.coachUpdate();
     this.showCpuPanel();
     this.clearHighlights();
     let guard = 0;
+    let think = 0;
     while (!s.over && s.turn === side && guard++ < 300) {
       if (!this.scene.isActive()) return;
       while (this.modalOpen() && this.scene.isActive()) await new Promise((r) => setTimeout(r, 150));
-      const step = aiStep(s, side, P);
+      // Cap the thinking per turn: past the budget the computer decides unit by unit.
+      const t0 = performance.now();
+      const step = aiStep(s, side, P, { quick: think > 1200 });
+      think += performance.now() - t0;
       if (!step) break;
       if (step.kind === 'build') {
         G.build(s, step.x, step.y, step.type);
-        await this.follow(step.x, step.y);
-        sfx('coin');
+        const shown = this.onScreen(step.x, step.y);
         this.refreshUnits();
-        const u = G.unitAt(s, step.x, step.y);
-        const v = this.views.get(u.id);
-        v.c.setScale(0.2);
-        await this.tweenP({ targets: v.c, scale: 1, duration: this.dur(220), ease: 'Back.Out' });
+        if (shown || !this.fast) {
+          if (!shown) await this.follow(step.x, step.y);
+          sfx('coin');
+          const u = G.unitAt(s, step.x, step.y);
+          const v = this.views.get(u.id);
+          v.c.setScale(0.2);
+          await this.tweenP({ targets: v.c, scale: 1, duration: this.dur(220), ease: 'Back.Out' });
+        }
         this.refreshHud();
       } else {
         const u = G.unitById(s, step.cmd.id);
-        await this.follow(u.x, u.y);
+        const from = [u.x, u.y];
         const events = G.act(s, step.cmd);
-        await this.playEvents(events);
+        const big = events.some((e) => e.type === 'attack' || e.type === 'captured' || e.type === 'over');
+        const seen = this.onScreen(...from) || this.onScreen(...step.cmd.to);
+        if (big) {
+          // Fights and finished captures are always shown.
+          if (!this.onScreen(...from) || !this.onScreen(...step.cmd.to)) await this.follow(...from);
+          await this.playEvents(events, this.fast);
+        } else if (seen && !this.fast) {
+          // Plain moves on screen: animate (briskly in Fast mode), no camera moves.
+          await this.playEvents(events, this.fast);
+        }
+        // Moves that happen off screen (or any plain move in Fast mode) are applied at once (batched).
         this.refreshUnits();
         this.refreshHud();
+        if (!big && !seen) continue;
       }
       saveBattle(s);
       this.skipping = false;
-      await this.wait(this.fast ? 40 : 160);
+      if (!this.fast) await this.wait(120);
     }
     this.cpuRunning = false;
     this.busy = false;
     this.skipping = false;
+    this.cpuStats = { think: Math.round(think), steps: guard };
     if (!this.scene.isActive()) return;
-    if (s.over) { this.refreshUnits(); saveBattle(s); this.showResult(); return; }
+    saveBattle(s);
+    if (s.over) { this.refreshUnits(); this.showResult(); return; }
     const report = G.endTurn(s);
     saveBattle(s);
     this.refreshUnits();
@@ -824,9 +885,84 @@ export class Battle extends Phaser.Scene {
     this.startTurnFlow(true, report);
   }
 
+  // ---------- First-mission coach ----------
+
+  coachOn() {
+    const id = this.s.mapId;
+    return this.s.mode === 'campaign' && (id === 'm1' || id === 'm2') && !save.get('seenTips') && !this.s.over;
+  }
+
+  /** Short step-by-step hint strip at the top of the map while learning (mission 1). */
+  coachUpdate() {
+    if (!this.scene.isActive()) return;
+    this.coachBox?.destroy();
+    this.coachBox = null;
+    this.coachPulse?.destroy();
+    this.coachPulse = null;
+    if (!this.coachOn() || !this.isHumanTurn() || this.busy || this.modalOpen()) return;
+    const s = this.s;
+    const mode = this.ui.mode;
+    const acts = this.coachActs || 0;
+    const ready = G.readyUnits(s, s.turn);
+    let msg = null;
+    let pulse = null;
+    if (s.mapId === 'm2') {
+      const sel = this.ui.id && G.unitById(s, this.ui.id);
+      if (mode === 'selected' && sel && UNITS[sel.type].capture) msg = 'Walk onto a grey city, then choose Capture. Cities pay 1000 funds a day.';
+      else if (mode === 'idle' && s.day <= 2 && ready.length) {
+        msg = 'Your factory (blue flag) builds units: tap it. Infantry is cheap and captures cities.';
+        pulse = G.hqOf(s, 0) && s.props.find((p) => p.kind === 'factory' && p.owner === 0 && !G.unitAt(s, p.x, p.y));
+      } else if (mode === 'idle' && !ready.length && s.day <= 2) msg = 'Tap End Turn. New units can move next turn.';
+    } else if (mode === 'selected') msg = 'Blue tiles: where it can move. Red: what it could hit. Tap a blue tile, or tap an enemy in red to attack it.';
+    else if (mode === 'moved') msg = this.ui.targets?.length ? 'Not moved for real yet! Tap Fire to attack, Wait to stay, or Undo.' : 'Not moved for real yet! Tap Wait to stay here, or Undo to pick again.';
+    else if (mode === 'target') msg = 'Tap the enemy you want to hit.';
+    else if (mode === 'confirm') msg = 'This is the forecast: how much damage you deal and take back. Tap Fire! to attack.';
+    else if (mode === 'idle') {
+      if (!ready.length) msg = 'Everyone has acted. Tap End Turn (bottom right). The enemy moves next.';
+      else if (acts === 0 && s.day === 1) {
+        msg = 'Welcome, Commander! Tap one of your blue units to give it orders.';
+        pulse = ready.find((u) => u.type === 'tank') || ready[0];
+      } else if (s.day === 1) msg = `Good! ${ready.length} unit${ready.length > 1 ? 's' : ''} can still act this turn. Tap one, or tap Next.`;
+      else if (s.day === 2 && acts < 8) msg = 'Strike first: a hurt unit hits back weaker. Gang up on one enemy at a time.';
+      else if (s.day === 3 && acts < 14) msg = 'Tip: tap an enemy to see where it can reach next turn. Dunes and oases give cover.';
+    }
+    if (!msg) return;
+    const c = this.add.container(0, 0).setDepth(55);
+    const t = text(this, 12, TOP + 8, msg, { origin: [0, 0], color: PALETTE.gold, wrap: WIDTH - 64, align: 'left' });
+    const h = Math.max(36, t.height + 14);
+    const bg = this.add.rectangle(0, TOP + 1, WIDTH, h, hex(PALETTE.ink), 0.88).setOrigin(0);
+    const x = text(this, WIDTH - 22, TOP + 1 + h / 2, 'X', { color: PALETTE.cream });
+    c.add([bg, t, x]);
+    c.hitH = h;
+    this.coachBox = c;
+    if (pulse) {
+      const [cx, cy] = this.cellCenter(pulse.x, pulse.y);
+      const ring = this.add.circle(cx, cy, 18).setStrokeStyle(3, 0xe3d245);
+      this.tweens.add({ targets: ring, scale: 1.35, alpha: 0.2, yoyo: true, repeat: -1, duration: 500 });
+      this.fxLayer.add(ring);
+      this.coachPulse = ring;
+    }
+  }
+
+  /** Taps on the hint strip: the x (or a tap anywhere on it) offers to turn hints off. */
+  coachHit(p) {
+    const c = this.coachBox;
+    if (!c || !c.active || p.y > TOP + 1 + c.hitH) return false;
+    if (p.x > WIDTH - 48) {
+      modal(this, 'Hide tips?', ['You can read everything again under the gold ? button.'], [['Hide tips', () => { save.set('seenTips', true); this.coachUpdate(); }], ['Keep them', null]], { row: true });
+    }
+    return true;
+  }
+
+  /** Is map tile (x, y) inside the visible map area? */
+  onScreen(x, y) {
+    const px = x * T + T / 2 + this.ox - this.scroll.x; const py = y * T + T / 2 + this.oy - this.scroll.y;
+    return px > 0 && px < WIDTH && py > 0 && py < VIEW_H;
+  }
+
   // ---------- Animation ----------
 
-  dur(ms) { return this.skipping ? 0 : Math.round(ms * (this.fast ? 0.4 : 1)); }
+  dur(ms) { return this.skipping ? 0 : Math.round(ms * (this.fast ? 0.25 : 1)); }
 
   wait(ms) {
     const d = this.dur(ms);
@@ -862,12 +998,12 @@ export class Battle extends Phaser.Scene {
     this.unitLayer.sort('y');
   }
 
-  async playEvents(events) {
+  async playEvents(events, quickMoves = false) {
     for (const e of events) {
       if (e.type === 'move') {
         const u = G.unitById(this.s, e.id) || { id: e.id };
         sfx('move');
-        await this.animateMove(u, e.path);
+        await this.animateMove(u, e.path, quickMoves);
       } else if (e.type === 'attack' || e.type === 'counter') {
         await this.animateHit(e);
       } else if (e.type === 'capture') {
@@ -888,6 +1024,7 @@ export class Battle extends Phaser.Scene {
   async animateHit(e) {
     const a = this.views.get(e.a); const d = this.views.get(e.d);
     if (!a || !d) return;
+    if (this.fast || this.skipping) { await this.quickHit(e, a, d); return; }
     const ax = a.c.x; const ay = a.c.y; const dx = d.c.x; const dy = d.c.y;
     // Face the target.
     const facing = Math.abs(dx - ax) >= Math.abs(dy - ay) ? (dx > ax ? 'right' : 'left') : (dy < ay ? 'up' : 'down');
@@ -940,6 +1077,23 @@ export class Battle extends Phaser.Scene {
       await this.tweenP({ targets: d.c, alpha: 0, duration: this.dur(150) });
     }
     await this.wait(120);
+  }
+
+  /** Fast mode: one flash and a number, about a tenth of a second per hit. */
+  async quickHit(e, a, d) {
+    const dx = d.c.x; const dy = d.c.y;
+    sfx(e.killed ? 'boom' : 'hit');
+    const boom = this.add.image(dx, dy, ...frame(this, BOOM(e.killed ? 1 : 0))).setScale(e.killed ? 3 : 2);
+    this.fxLayer.add(boom);
+    for (const sp of d.sprs) sp.setTintFill(0xffffff);
+    this.floatText(null, null, `-${e.dmg}%`, PALETTE.cream, dx, dy - 20);
+    if (!this.skipping) await new Promise((r) => this.time.delayedCall(110, r));
+    boom.destroy();
+    for (const sp of d.sprs) sp.clearTint();
+    const hp = displayHp(e.hp);
+    d.hp.setText(hp < 10 && hp > 0 ? `${hp}` : ''); d.hpBg.setVisible(hp < 10 && hp > 0);
+    if (e.killed) d.c.setAlpha(0);
+    void a;
   }
 
   unitTypeOfView(id) {
@@ -1027,6 +1181,7 @@ export class Battle extends Phaser.Scene {
       lines.push({ text: `${reason} on day ${s.day}.`, color: PALETTE.gold });
       if (s.mode === 'campaign') {
         const i = CAMPAIGN.findIndex((m) => m.id === s.mapId);
+        if (i === 0) save.set('seenTips', true);
         missionWon(i, s.mapId, s.day);
         if (def.outro) lines.push(def.outro);
         const next = CAMPAIGN[i + 1];
@@ -1080,6 +1235,6 @@ function moveLine(tk) {
 function shortRole(t) {
   return {
     inf: 'Captures', lancer: 'Anti-vehicle', scout: 'Fast, captures', recon: 'Fast', tank: 'All-round',
-    heavy: 'Very tough', arty: 'Ranged', flak: 'Anti-air', drone: 'Flies',
+    heavy: 'Very tough', arty: 'Ranged', flak: 'Anti-air', drone: 'Flies', truck: 'Repairs neighbours', harv: 'Dune income',
   }[t];
 }
