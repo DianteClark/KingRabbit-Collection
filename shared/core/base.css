@@ -1,0 +1,75 @@
+@font-face {
+  font-family: 'BoldPixels';
+  src: url('../fonts/boldpixels/boldpixels.woff2') format('woff2'),
+       url('../fonts/boldpixels/boldpixels.woff') format('woff');
+  font-weight: normal;
+  font-style: normal;
+  font-display: block;
+}
+
+:root {
+  --ink: #040303;
+  --night: #1c1618;
+  --indigo: #47416b;
+  --leaf: #6c8c50;
+  --gold: #e3d245;
+  --orange: #d88038;
+  --red: #a13d3b;
+  --wine: #4e282e;
+  --plum: #9a407e;
+  --sand: #f0d472;
+  --cream: #f9f5ef;
+  --lavender: #8a8fc4;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: var(--night);
+  color: var(--cream);
+  font-family: 'BoldPixels', monospace;
+  font-size: 16px;
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* Game pages: the canvas fills the screen and never scrolls. */
+body.game { overflow: hidden; touch-action: none; }
+#game { position: fixed; inset: 0; }
+#game canvas { image-rendering: pixelated; }
+
+/* Shown whenever a phone is held sideways. */
+#rotate {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: var(--night);
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 16px;
+  text-align: center;
+  font-size: 32px;
+  padding: 24px;
+}
+#rotate .phone {
+  width: 48px;
+  height: 80px;
+  border: 6px solid var(--cream);
+  border-radius: 8px;
+  animation: tilt 2s steps(4) infinite;
+}
+#rotate small { font-size: 16px; color: var(--lavender); }
+@keyframes tilt {
+  0%, 40% { transform: rotate(-90deg); }
+  60%, 100% { transform: rotate(0deg); }
+}
+@media (orientation: landscape) and (max-height: 540px) {
+  #rotate { display: flex; }
+}

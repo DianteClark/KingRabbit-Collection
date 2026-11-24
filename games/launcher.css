@@ -1,0 +1,56 @@
+#launcher {
+  max-width: 440px;
+  margin: 0 auto;
+  min-height: 100%;
+  padding: max(24px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+header { text-align: center; }
+h1 {
+  margin: 8px 0 0;
+  font-size: 32px;
+  font-weight: normal;
+  line-height: 1.1;
+  color: var(--gold);
+  text-shadow: 0 4px 0 var(--red);
+}
+h1 span { color: var(--cream); text-shadow: 0 4px 0 var(--indigo); }
+header p { margin: 12px 0 0; color: var(--lavender); }
+
+#games { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 16px; }
+
+.card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px;
+  color: var(--cream);
+  text-decoration: none;
+  background: var(--indigo);
+  border: 4px solid var(--ink);
+  box-shadow: inset 0 0 0 3px var(--lavender), 0 6px 0 var(--ink);
+  transition: transform 60ms steps(1);
+}
+a.card:active { transform: translateY(4px); box-shadow: inset 0 0 0 3px var(--lavender), 0 2px 0 var(--ink); }
+.card img {
+  width: 64px;
+  height: 64px;
+  flex: none;
+  image-rendering: pixelated;
+  border: 3px solid var(--ink);
+}
+.info { display: flex; flex-direction: column; gap: 6px; }
+.info strong { font-weight: normal; font-size: 16px; color: var(--gold); }
+.info span { color: var(--cream); line-height: 1.3; }
+.info em { font-style: normal; color: var(--sand); }
+.card.soon { filter: grayscale(0.85); opacity: 0.6; }
+
+footer {
+  margin-top: auto;
+  text-align: center;
+  color: var(--lavender);
+  line-height: 1.5;
+}

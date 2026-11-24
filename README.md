@@ -1,1 +1,65 @@
-# KingRabbit-Collection
+# KingRabbit Collection
+
+A bundle of small, portrait-only HTML games for phones, all built from
+Aleksandr Makarov's (iknowkingrabbit) pixel-art packs.
+
+**Play:** https://dianteclark.github.io/KingRabbit-Collection/
+
+| Game | Status | Link |
+|---|---|---|
+| Game Night (Tic-Tac-Toe, Reversi, Yacht dice) | Playable | [/game-night/](https://dianteclark.github.io/KingRabbit-Collection/game-night/) |
+| Spire Roguelite | Planned | |
+| Heroes Lite | Planned | |
+| Tiny City | Planned | |
+
+Progress on each game is tracked on the GitHub Project board, with one label per game.
+
+## How it's set up
+
+```
+games/
+  index.html, launcher.*   the "pick a game" page (site root)
+  public/                  icons, thumbnails, web-app manifest
+  <game-id>/               one folder per game -> published at /<game-id>/
+shared/
+  core/                    code every game uses (portrait scaling, rotate screen, saving, UI)
+  games.js                 the launcher's list of games
+  assets/                  the full art pack (see shared/assets/README.md)
+  fonts/boldpixels/        the BoldPixels font
+tests/                     rule tests, run on every push
+docs/games/                a one-page design doc per game
+```
+
+- Built with **Phaser 3** and **Vite**. Every game runs at 360×640 and scales to fit the phone.
+- Holding the phone sideways pauses the game and shows a "turn your phone upright" screen.
+- A game only ships the sprites it actually imports, never the whole art pack.
+
+## Publishing
+
+Every push to `main` runs the tests, builds every game, and publishes the site to
+GitHub Pages (`.github/workflows/deploy.yml`). This takes about a minute.
+
+## Adding a game
+
+1. Create `games/<game-id>/index.html` and `main.js`. Copying `games/game-night/` is the quickest start.
+2. Call `startGame({ scenes: [...] })` from `shared/core/boot.js`.
+3. Add the game to `shared/games.js` with status `hidden` (only reachable by its link), `soon`, or `playable`.
+4. Add a 32×32 thumbnail at `games/public/thumbs/<game-id>.png`.
+5. Write `docs/games/<game-id>.md`.
+
+## Running locally
+
+```bash
+npm install
+npm run dev      # http://localhost:5173 (open the Network URL on your phone, same Wi-Fi)
+npm test
+npm run build    # output in dist/
+```
+
+## Licenses
+
+- **Code:** MIT (`LICENSE`)
+- **Art:** Aleksandr Makarov, used with permission. It is **not** MIT-licensed (`shared/assets/LICENSE-ART.md`).
+- **Font:** BoldPixels by YukiPixels, CC BY-SA 4.0
+
+See `CREDITS.md` for the full list.
