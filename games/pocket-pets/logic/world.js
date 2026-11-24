@@ -105,12 +105,14 @@ export const MAPS = {
       { x: 5, y: 0, to: 'brookton', tx: 6, ty: 16 }, { x: 6, y: 0, to: 'brookton', tx: 7, ty: 16 },
       { x: 5, y: 25, to: 'sproutvale', tx: 5, ty: 1 }, { x: 6, y: 25, to: 'sproutvale', tx: 6, ty: 1 },
     ],
-    wild: { rate: 0.14, grass: [['peeplet', 2, 5, 40], ['mewlet', 2, 5, 30], ['tadling', 3, 5, 20], ['emberkit', 3, 5, 10]] },
+    wild: { rate: 0.14, grass: [['peeplet', 3, 6, 35], ['mewlet', 3, 6, 25], ['tadling', 3, 6, 20], ['emberkit', 4, 6, 12], ['fernkit', 4, 6, 8]] },
     npcs: [
       { id: 'r1_pip', x: 4, y: 19, ch: SP.kid, name: 'Pip', title: 'Bug Kid', kind: 'trainer', face: 'right', sight: 3,
         team: [['peeplet', 4], ['peeplet', 4]], reward: 10, intro: ['Pip: My Peeplets will peck you to pieces!'], lose: ['Pip: Peep...'] },
       { id: 'r1_mae', x: 8, y: 7, ch: SP.lass, name: 'Mae', title: 'Lass', kind: 'trainer', face: 'left', sight: 3,
         team: [['mewlet', 5], ['tadling', 5]], reward: 12, intro: ['Mae: You look new. Let me show you how it\'s done!'], lose: ['Mae: Okay, you\'re pretty good.'] },
+      { id: 'r1_tom', x: 1, y: 17, ch: SP.bard, name: 'Tom', title: 'Fisher', kind: 'trainer', face: 'right', sight: 5,
+        team: [['tadling', 6], ['peeplet', 7]], reward: 12, intro: ['Tom: Nothing biting today. Let\'s battle instead!'], lose: ['Tom: Tide pets hate Spark moves. Remember that!'] },
       { id: 'r1_tip', x: 10, y: 22, ch: SP.bard, name: 'Old man', kind: 'talk', face: 'left',
         text: ['Every type beats the next one round the wheel:', 'Flame > Leaf > Stone > Spark > Tide > Flame.', 'Plain pets have no strengths and no weaknesses.'] },
     ],
@@ -153,6 +155,10 @@ export const MAPS = {
     npcs: [
       { id: 'bk_guard', x: 7, y: 1, ch: SP.guard, name: 'Guard', kind: 'gate', need: { badges: 1 }, aside: [8, 2], face: 'down',
         text: ['Guard: Whisperwood is full of strong wild pets.', 'Come back once you have Fern\'s Leaf Badge.'] },
+      { id: 'bk_apprentice', x: 4, y: 9, ch: SP.lass, name: 'Bea', title: 'Apprentice', kind: 'trainer', face: 'right', sight: 3,
+        team: [['sprigling', 7], ['fernkit', 8]], reward: 12,
+        intro: ['Bea: I train at Fern\'s Hall! Let me see if you\'re ready for her.'],
+        lose: ['Bea: You\'re ready. Fern\'s pets love Sleep Pollen, so bring a Cure Drop!'] },
       { id: 'bk_girl', x: 12, y: 15, ch: SP.girl, name: 'Girl', kind: 'talk', face: 'left',
         text: ['Fern uses Leaf pets.', 'Flame burns Leaf! A Flame pet hits it twice as hard.'] },
       { id: 'bk_man', x: 3, y: 14, ch: SP.bard, name: 'Man', kind: 'gift', face: 'right', item: 'capsule', n: 5,
@@ -394,7 +400,7 @@ export const MAPS = {
 // Badge leaders and the champion. `badge` is the badge number they give.
 export const LEADERS = {
   fern: { name: 'Fern', title: 'Leader', ch: 9, type: 'leaf', badge: 1, badgeName: 'Leaf Badge', reward: 40, skillWeight: 1,
-    team: [['fernkit', 10], ['sprigling', 11], ['budhorn', 14]], items: { potion: 2 },
+    team: [['fernkit', 8], ['sprigling', 9], ['budhorn', 11]], items: { potion: 1 },
     intro: ['Fern: Welcome to Brookton Hall!', 'My Leaf pets grow stronger in every battle. Let\'s see yours!'],
     lose: ['Fern: Wonderful! You\'ve earned the Leaf Badge.', 'The guard will let you into Whisperwood now.'], win: ['Fern: Train a little more and come back!'] },
   cinder: { name: 'Cinder', title: 'Leader', ch: 3, type: 'flame', badge: 2, badgeName: 'Ember Badge', reward: 45, skillWeight: 1,

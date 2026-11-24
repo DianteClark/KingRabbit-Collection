@@ -112,8 +112,8 @@ export function playThrough({ seed = 1, starter = 'embit', skill = 0.5, maxBattl
 
   const steps = [
     () => tamer('sproutvale', 'rival1', 'route1', 6),
-    () => { grindIn('route1', 7); shopFor(state, 'basic'); return tamer('route1', 'r1_pip', 'route1', 7) && tamer('route1', 'r1_mae', 'route1', 8); },
-    () => { grindIn('route1', 12); shopFor(state, 'town'); return leader('fern', 'route1', 13); },
+    () => { grindIn('route1', 7); shopFor(state, 'basic'); return tamer('route1', 'r1_pip', 'route1', 7) && tamer('route1', 'r1_mae', 'route1', 8) && tamer('route1', 'r1_tom', 'route1', 8); },
+    () => { grindIn('route1', 10); shopFor(state, 'town'); return tamer('brookton', 'bk_apprentice', 'route1', 10) && leader('fern', 'route1', 12); },
     () => { grindIn('woods', 14); shopFor(state, 'town'); return tamer('woods', 'wd_ivy', 'woods', 14) && tamer('woods', 'wd_rook', 'woods', 15) && tamer('woods', 'wd_ash', 'woods', 15); },
     () => { grindIn('cave', 18); return tamer('cave', 'cv_dig', 'cave', 17) && tamer('cave', 'cv_volt', 'cave', 18) && leader('cinder', 'cave', 19); },
     () => { shopFor(state, 'city'); grindIn('cave', 22); return tamer('peakside', 'rival2', 'cave', 22) && leader('marina', 'cave', 24); },
@@ -129,6 +129,32 @@ export function playThrough({ seed = 1, starter = 'embit', skill = 0.5, maxBattl
     levels: state.party.map((p) => `${P.petName(p)} ${p.lv}`),
     badges: state.badges.length, champion: state.champion,
   };
+}
+
+/**
+ * A first-timer: the rival, about ten wild battles on Meadow Path (catching new kinds), its three
+ * tamers, Brookton's apprentice, a few Potions from the shop, then Fern. No extra grinding.
+ */
+export function firstTimer(seed, starter, skill = 0.35, wilds = 10) {
+  const st = G.newGame(seed); const rng = makeRng(seed * 13 + 1);
+  G.chooseStarter(st, starter);
+  const npc = (m, id) => W.MAPS[m].npcs.find((n) => n.id === id);
+  playBattle(st, G.trainerSetup(st, npc('sproutvale', 'rival1')), rng, { skill });
+  const route = W.MAPS.route1;
+  for (let i = 0; i < wilds; i++) {
+    const { sp, lv } = G.rollWild(route.wild.grass, rng);
+    const cap = !st.dex.caught[sp] && st.bag.capsule > 0 ? 'capsule' : null;
+    playBattle(st, G.wildSetup(st, sp, lv), rng, { skill, catchItem: cap });
+    if (i === 4) G.healAll(st);
+    if (i === 5) for (const t of route.npcs.filter((n) => n.kind === 'trainer')) { playBattle(st, G.trainerSetup(st, t), rng, { skill }); G.healAll(st); }
+  }
+  for (const t of W.MAPS.brookton.npcs.filter((n) => n.kind === 'trainer')) { G.healAll(st); playBattle(st, G.trainerSetup(st, t), rng, { skill }); }
+  G.healAll(st);
+  while (st.coins >= 160 && (st.bag.potion || 0) < 4) G.buy(st, 'potion');
+  if (st.coins >= 80) G.buy(st, 'curedrop');
+  const lead = Math.max(...st.party.map((p) => p.lv));
+  const b = playBattle(st, G.leaderSetup(st, 'fern'), rng, { skill });
+  return { win: b.result === 'win', lead };
 }
 
 export { typeMult };
@@ -147,4 +173,13 @@ for (const starter of isMain ? D.STARTERS : []) {
       assert.ok(r.battles < 700, `took ${r.battles} battles`);
     });
   }
+}
+
+for (const starter of isMain ? D.STARTERS : []) {
+  test(`early game: a first-timer with ${starter} can beat Fern without grinding`, () => {
+    let wins = 0; let lv = 0;
+    for (let seed = 1; seed <= 12; seed++) { const r = firstTimer(seed, starter); if (r.win) wins += 1; lv += r.lead; }
+    assert.ok(wins >= 8, `${wins}/12 wins`);
+    assert.ok(lv / 12 >= 9.5 && lv / 12 <= 12.5, `lead level ${lv / 12}`);
+  });
 }

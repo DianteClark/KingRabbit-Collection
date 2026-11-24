@@ -109,6 +109,8 @@ export function evolve(pet) {
 }
 
 /** The base XP the winner earns for beating this pet. */
-export function xpReward(foe, trainer = false) {
-  return Math.floor((SPECIES[foe.sp].xpYield * foe.lv) / 7 * (trainer ? 1.5 : 1));
+export function xpReward(foe, trainer = false, winnerLv = foe.lv) {
+  // Beating a higher-level pet is worth more (up to double), so a team that falls behind catches up.
+  const catchUp = Math.min(2, Math.max(1, 1 + 0.15 * (foe.lv - winnerLv)));
+  return Math.floor(((SPECIES[foe.sp].xpYield * foe.lv) / 6) * (trainer ? 1.5 : 1) * catchUp);
 }

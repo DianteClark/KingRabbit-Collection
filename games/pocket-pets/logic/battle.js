@@ -391,10 +391,10 @@ function resolveFaints(b, ev) {
 }
 
 function awardXp(b, foePet, ev) {
-  const base = xpReward(foePet, b.kind === 'trainer');
   const party = b.sides[0].party;
   for (const pet of party) {
     if (pet.hp <= 0) continue;
+    const base = xpReward(foePet, b.kind === 'trainer', pet.lv);
     const share = b.participants.has(pet.uid) ? base : Math.floor(base / 2);
     if (share <= 0) continue;
     ev.push({ t: 'xp', uid: pet.uid, amount: share, msg: `${petName(pet)} gained ${share} XP.`, quiet: !b.participants.has(pet.uid) });
