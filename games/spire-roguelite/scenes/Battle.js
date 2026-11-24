@@ -72,6 +72,9 @@ export class Battle extends Phaser.Scene {
     this.refresh();
     this.buildHand(true);
     if (this.c.s.turn === 1 && evs.some((e) => e.t === 'turn')) this.banner(this.c.s.kind === 'boss' ? 'Boss fight!' : this.c.s.kind === 'elite' ? 'Elite fight!' : 'Fight!');
+    if (run.floor === 1 && run.act === 1 && !run.loop && this.c.s.turn === 1 && !this.c.s.counters.cards) {
+      this.hint.setText('Tap a card, then tap it again or tap an enemy');
+    }
     saveRun(run);
     window.__battle = this; // for automated tests
   }

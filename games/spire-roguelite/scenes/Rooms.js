@@ -151,8 +151,9 @@ export class Event extends Phaser.Scene {
       const desc = blocked || eventChoiceDesc(run, i);
       const b = button(this, WIDTH / 2, y, WIDTH - 32, 58, '', () => this.choose(i), { fill: i === ev.choices.length - 1 && /Leave|Refuse/.test(ch.label) ? PALETTE.lavender : PALETTE.sand });
       b.face.add(text(this, -(WIDTH - 32) / 2 + 14, -12, ch.label, { origin: [0, 0.5], color: PALETTE.night }));
-      b.face.add(text(this, -(WIDTH - 32) / 2 + 14, 10, desc, { origin: [0, 0.5], color: blocked ? PALETTE.red : PALETTE.indigo }));
+      b.face.add(text(this, -(WIDTH - 32) / 2 + 14, 10, desc, { origin: [0, 0.5], color: blocked ? PALETTE.wine : PALETTE.indigo }));
       b.setEnabled(!blocked);
+      if (blocked) { b.setAlpha(0.75); b.body.setFillStyle(hex('#8a8070')); }
       this.body.add(b);
       y += 66;
     });
