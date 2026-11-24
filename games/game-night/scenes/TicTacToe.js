@@ -23,6 +23,7 @@ export class TicTacToe extends Phaser.Scene {
     this.cfg = tune(PRESETS, getSkill('ttt'));
     this.firstPlayer = 'X';
     this.tally = { X: 0, O: 0, draw: 0 };
+    this.busy = false;   // scene objects are reused: never carry a pending CPU turn into a new visit
   }
 
   create() {
@@ -112,12 +113,13 @@ export class TicTacToe extends Phaser.Scene {
       this.tally.draw++;
       title = 'Draw!';
       if (this.mode === 'cpu') record('ttt', 'd');
+      this.pieces.forEach((p) => p?.setAlpha(0.6));
     } else {
       this.tally[r.winner]++;
       r.line.forEach((i) => this.tweens.add({ targets: this.pieces[i], scale: PIECE_SCALE + 1, yoyo: true, repeat: 2, duration: 140 }));
       if (this.mode === 'cpu') {
         title = r.winner === 'X' ? 'You win!' : 'CPU wins';
-        record('ttt', r.winner === 'X' ? 'w' : 'l');
+        record('ttt', r.winner === 'X' ? 'w' : 'l', 0.3);
       } else title = `${r.winner} wins!`;
     }
     this.status.setText(title);

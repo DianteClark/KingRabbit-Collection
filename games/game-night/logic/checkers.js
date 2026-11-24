@@ -105,14 +105,17 @@ function evaluate(board, me) {
   return s;
 }
 
-function search(board, turn, me, depth, alpha, beta) {
+class Timeout extends Error {}
+
+function search(board, turn, me, depth, alpha, beta, clock) {
+  if (clock && (++clock.nodes & 1023) === 0 && Date.now() > clock.deadline) throw new Timeout();
   const moves = legalMoves(board, turn);
   if (!moves.length) return turn === me ? -10000 - depth : 10000 + depth;
   if (depth === 0) return evaluate(board, me);
   if (turn === me) {
     let v = -Infinity;
     for (const m of moves) {
-      v = Math.max(v, search(play(board, m), other(turn), me, depth - 1, alpha, beta));
+      v = Math.max(v, search(play(board, m), other(turn), me, depth - 1, alpha, beta, clock));
       alpha = Math.max(alpha, v);
       if (alpha >= beta) break;
     }
@@ -120,24 +123,45 @@ function search(board, turn, me, depth, alpha, beta) {
   }
   let v = Infinity;
   for (const m of moves) {
-    v = Math.min(v, search(play(board, m), other(turn), me, depth - 1, alpha, beta));
+    v = Math.min(v, search(play(board, m), other(turn), me, depth - 1, alpha, beta, clock));
     beta = Math.min(beta, v);
     if (alpha >= beta) break;
   }
   return v;
 }
 
-export const LEVELS = { easy: { depth: 2, noise: 70 }, normal: { depth: 4, noise: 10 }, hard: { depth: 7, noise: 0 } };
+// timeMs caps the thinking time: the search deepens one level at a time and keeps the result of
+// the deepest pass that finished, so Hard never freezes the screen in a king-heavy ending.
+export const LEVELS = {
+  easy: { depth: 2, noise: 70, timeMs: 400 },
+  normal: { depth: 4, noise: 10, timeMs: 900 },
+  hard: { depth: 8, noise: 0, timeMs: 1400 },
+};
 
-export function cpuMove(board, me, { depth, level = 'normal', cfg = LEVELS[level], rng = Math.random } = {}) {
-  depth ??= cfg.depth;
+export function cpuMove(board, me, { depth, level = 'normal', cfg = LEVELS[level], rng = Math.random, timeMs } = {}) {
+  const maxDepth = depth ?? cfg.depth;
   const noise = cfg.noise;
-  const moves = legalMoves(board, me);
-  let best = -Infinity;
-  let picks = [];
-  for (const m of moves) {
-    const v = search(play(board, m), other(me), me, depth - 1, -Infinity, Infinity) + rng() * noise;
-    if (v > best) { best = v; picks = [m]; } else if (v === best) picks.push(m);
+  let moves = legalMoves(board, me);
+  if (!moves.length) return null;
+  if (moves.length === 1) return moves[0];
+  const budget = timeMs ?? cfg.timeMs ?? Infinity;
+  const clock = { deadline: Date.now() + budget, nodes: 0 };
+  // One fixed wobble per move so every depth judges the same "mistakes".
+  const wobble = new Map(moves.map((m) => [m, rng() * noise]));
+  let pick = moves[0];
+  for (let d = 1; d <= maxDepth; d++) {
+    try {
+      const scored = moves.map((m) => ({ m, v: search(play(board, m), other(me), me, d - 1, -Infinity, Infinity, d > 1 ? clock : null) + wobble.get(m) }));
+      const best = Math.max(...scored.map((x) => x.v));
+      const picks = scored.filter((x) => x.v === best).map((x) => x.m);
+      pick = picks[Math.floor(rng() * picks.length)];
+      moves = scored.sort((a, b) => b.v - a.v).map((x) => x.m);   // best first: better pruning next pass
+      if (best >= 9000) break;                                     // found a forced win
+      if (Date.now() > clock.deadline) break;
+    } catch (e) {
+      if (!(e instanceof Timeout)) throw e;
+      break;
+    }
   }
-  return picks[Math.floor(rng() * picks.length)] ?? null;
+  return pick;
 }
