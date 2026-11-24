@@ -16,6 +16,7 @@ Aleksandr Makarov's (iknowkingrabbit) pixel-art packs.
 | Robbox: robot programming puzzles (see docs/games/robbox.md) | Playable | [/robbox/](https://dianteclark.github.io/KingRabbit-Collection/robbox/) |
 | Alchemist's Shop: cozy potion-shop sim (see docs/games/alchemist.md) | Playable | [/alchemist/](https://dianteclark.github.io/KingRabbit-Collection/alchemist/) |
 | Star Drifter: FTL-style space roguelite (see docs/games/star-drifter.md) | Playable | [/star-drifter/](https://dianteclark.github.io/KingRabbit-Collection/star-drifter/) |
+| Pangea: Civilization-lite 4X (see docs/games/pangea.md) | Playable | [/pangea/](https://dianteclark.github.io/KingRabbit-Collection/pangea/) |
 | City Chief: run the police force of Tiny Town (see docs/games/city-chief.md) | Playable | [/city-chief/](https://dianteclark.github.io/KingRabbit-Collection/city-chief/) |
 | Pocket Soccer: 5-a-side arcade football (see docs/games/soccer.md) | Playable | [/soccer/](https://dianteclark.github.io/KingRabbit-Collection/soccer/) |
 
