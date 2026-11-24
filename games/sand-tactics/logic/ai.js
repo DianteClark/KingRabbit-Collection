@@ -203,6 +203,18 @@ function goalField(ctx, u) {
     const src = [[foe.x + 1, foe.y], [foe.x - 1, foe.y], [foe.x, foe.y + 1], [foe.x, foe.y - 1], [foe.x, foe.y]];
     return { D: cachedField(ctx, `hunt${foe.id}`, u.type, src), w: 1.6 };
   }
+  const d = UNITS[u.type];
+  if (d.harvest) {
+    const dunes = [];
+    for (let i = 0; i < s.terrain.length; i++) if (s.terrain[i] === 'dunes') dunes.push([i % s.w, Math.floor(i / s.w)]);
+    if (dunes.length) return { D: cachedField(ctx, 'dunes', u.type, dunes), w: 1.5 };
+  }
+  if (d.supply) {
+    // Follow hurt friends, otherwise the army.
+    const hurt = ctx.own.filter((o) => o !== u && o.hp <= 70 && !UNITS[o.type].unarmed);
+    const src = (hurt.length ? hurt : ctx.own.filter((o) => o !== u && !UNITS[o.type].unarmed)).map((o) => [o.x, o.y]);
+    if (src.length) return { D: cachedField(ctx, `supply${hurt.length}`, u.type, src), w: 0.8 };
+  }
   const cap = ctx.capTargets.get(u.id);
   if (cap) return { D: propField(ctx, cap, u.type), w: 1.2 * ctx.P.capture };
   if (isRanged(u.type)) {
@@ -233,7 +245,7 @@ function positionScore(ctx, u, x, y, hp, skip, goal) {
   v += P.terrain * G.defStars(s, u.type, x, y) * cost * 0.025;
   // Risk of being shot next turn.
   const exp = exposure(ctx, u, x, y, hp, skip);
-  const riskW = P.risk * (1 - 0.55 * ctx.boldness) * (isRanged(u.type) ? 1.4 : 1);
+  const riskW = P.risk * (1 - 0.55 * ctx.boldness) * (isRanged(u.type) || UNITS[u.type].unarmed ? 1.5 : 1);
   v -= riskW * exp / 100 * UNITS[u.type].cost;
   if (exp >= hp) v -= P.suicide * cost * 0.6;
   // Progress toward the unit's goal.
@@ -254,6 +266,13 @@ function positionScore(ctx, u, x, y, hp, skip, goal) {
       if (r === u || !isRanged(r.type)) continue;
       if (G.dist(x, y, r.x, r.y) !== 1) continue;
       if (ctx.threat[G.idx(s, r.x, r.y)].length) v += P.guard * UNITS[r.type].cost * 0.12;
+    }
+  }
+  if (UNITS[u.type].harvest && G.terrainAt(s, x, y) === 'dunes') v += UNITS[u.type].harvest * 2.5;
+  if (UNITS[u.type].supply) {
+    for (const o of ctx.own) {
+      if (o === u || G.dist(x, y, o.x, o.y) !== 1 || o.hp >= 100) continue;
+      v += Math.min(10, 100 - o.hp) / 100 * UNITS[o.type].cost * 0.6;
     }
   }
   const p = G.propAt(s, x, y);
@@ -360,6 +379,11 @@ function buildChoice(ctx, x, y, budget) {
     if (far && options.includes('scout') && ctx.rng() < 0.3) return 'scout';
     return 'inf';
   }
+  // Support units now and then: a harvester early on dune maps, a supply truck for a big army.
+  const dunes = s.terrain.filter((t) => t === 'dunes').length;
+  const has = (t) => own.filter((u) => u.type === t).length;
+  if (options.includes('harv') && dunes >= 6 && has('harv') < (dunes >= 25 ? 2 : 1) && s.day <= 12 && budget < 9000 && ctx.rng() < 0.4) return 'harv';
+  if (options.includes('truck') && own.length >= 8 && !has('truck') && ctx.rng() < 0.3) return 'truck';
   // Otherwise: the unit that deals the most damage over its life per fund against the enemy army.
   // Plan against the enemy army as it is, plus a generic mix (they will adapt too).
   const generic = ['inf', 'inf', 'lancer', 'tank', 'arty', 'recon'].map((type) => ({ type, hp: 100 }));
@@ -367,6 +391,7 @@ function buildChoice(ctx, x, y, budget) {
   const total = foes.reduce((a, e) => a + e.hp * (e.side === undefined ? 0.25 : 1), 0) || 1;
   let best = null;
   for (const t of options) {
+    if (UNITS[t].unarmed) continue;
     const c = UNITS[t].cost;
     let offense = 0; let defense = 0;
     for (const e of foes) {
@@ -432,12 +457,16 @@ function frontDist(ctx, p) {
  *   { kind: 'act', cmd }  -> G.act(s, cmd)
  *   { kind: 'build', x, y, type } -> G.build(s, x, y, type)
  */
-export function aiStep(s, side, P) {
+export function aiStep(s, side, P, { quick = false } = {}) {
   if (s.over || s.turn !== side) return null;
   const ctx = makeCtx(s, side, P);
   let best = null;
-  for (const u of ctx.own) {
-    if (u.done) continue;
+  let ready = ctx.own.filter((u) => !u.done);
+  if (quick && ready.length > 1) {
+    // Out of thinking time (slow phone, huge army): decide unit by unit, guns and front line first.
+    ready = ready.sort((a, b) => (isRanged(b.type) - isRanged(a.type)) || (frontDist(ctx, a) - frontDist(ctx, b))).slice(0, 1);
+  }
+  for (const u of ready) {
     const b = bestFor(ctx, u);
     if (b && (!best || b.score > best.score)) best = b;
   }

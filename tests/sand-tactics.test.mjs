@@ -243,3 +243,45 @@ test('save: a game survives a JSON round trip mid-battle', () => {
   assert.equal(copy.turn, 1);
   assert.equal(s.turn, 0, 'the original is untouched');
 });
+
+test('fair start: in skirmish and 2-player games Blue skips day-1 income and Red gets a bonus', () => {
+  const def = M.SKIRMISH[0];
+  const fair = G.newGame(def, { mode: 'skirmish' });
+  assert.equal(fair.funds[0], def.funds[0], 'no day-1 income for the side that moves first');
+  G.endTurn(fair);
+  assert.equal(fair.funds[1], def.funds[1] + G.FAIR_BONUS + G.incomeOf(fair, 1));
+  G.endTurn(fair);
+  assert.equal(fair.funds[0], def.funds[0] + G.incomeOf(fair, 0), 'income from day 2 on');
+  const versus = G.newGame(def, { mode: 'versus' });
+  assert.ok(versus.fairStart);
+  const camp = G.newGame(M.CAMPAIGN[1], { mode: 'campaign' });
+  assert.ok(!camp.fairStart, 'campaign missions are balanced by hand');
+  assert.equal(camp.funds[0], M.CAMPAIGN[1].funds[0] + G.incomeOf(camp, 0));
+});
+
+test('support units: supply trucks repair neighbours, harvesters earn on dunes, neither can attack', () => {
+  const s = mk(['.....', '.:...', 'H...h'], ['.TU..', '.V...', 'i....']);
+  const tank = at(s, 1, 0); const truck = at(s, 2, 0); const harv = at(s, 1, 1);
+  assert.deepEqual(G.targetsFrom(s, truck, 1, 2, false).length, 0, 'the truck has no gun');
+  assert.ok(!G.canHit('harv', 'inf'));
+  assert.ok(G.canHit('tank', 'truck'));
+  tank.hp = 50;
+  const before = s.funds[0];
+  G.endTurn(s);
+  const report = G.endTurn(s);
+  assert.equal(tank.hp, 60, 'free +1 health next to the truck');
+  assert.ok(report.supplied.includes(tank.id));
+  assert.equal(report.harvest, 500);
+  assert.equal(s.funds[0], before + G.incomeOf(s, 0) + 500);
+  // Off the dunes: nothing.
+  harv.x = 3; harv.y = 1;
+  G.endTurn(s);
+  assert.equal(G.endTurn(s).harvest, 0);
+});
+
+test('campaign: the first missions keep the computer gentle', () => {
+  const caps = M.CAMPAIGN.map((m) => m.cpuCap ?? 1);
+  assert.ok(caps[0] <= caps[1] && caps[1] <= caps[2] && caps[2] < 1, `caps ${caps}`);
+  const s = G.newGame(M.CAMPAIGN[0], { mode: 'campaign' });
+  assert.equal(s.cpuCap, M.CAMPAIGN[0].cpuCap);
+});

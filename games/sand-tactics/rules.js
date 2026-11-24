@@ -46,7 +46,7 @@ export const RULES = {
       heading: 'Terrain',
       items: [
         terrainLine('sand', 'Wheels move slower.'),
-        terrainLine('dunes', 'Slows tanks and wheels.'),
+        terrainLine('dunes', 'Slows tanks and wheels. Harvesters earn funds here.'),
         terrainLine('oasis', 'Slows tanks and wheels.'),
         terrainLine('mesa', 'Only foot soldiers and drones. Lancers climb fast.'),
         terrainLine('water', 'Only drones fly over.'),
@@ -60,6 +60,7 @@ export const RULES = {
         'Campaign: 8 missions with rising difficulty. Win one to unlock the next.',
         'Skirmish: you (Blue) against the computer on a fair map.',
         '2 Players: pass the phone between turns. Blue moves first.',
+        'In Skirmish and 2 Players, moving first is an edge, so Blue gets no income on day 1 and Red starts with 1000 extra funds.',
       ],
     },
     { heading: 'Saving', text: 'The battle saves itself after every move. Close the page any time and tap Continue to pick up where you left off.' },
