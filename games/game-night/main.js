@@ -14,8 +14,16 @@ import { Solitaire } from './scenes/Solitaire.js';
 import { WildCards } from './scenes/WildCards.js';
 import { BoxBox } from './scenes/BoxBox.js';
 import { SixBall } from './scenes/SixBall.js';
+import { AirHockey } from './scenes/AirHockey.js';
+import { BlockBreaker } from './scenes/BlockBreaker.js';
+import { SpaceRocks } from './scenes/SpaceRocks.js';
+import { Bowling } from './scenes/Bowling.js';
+import { Pool } from './scenes/Pool.js';
+import { Tanks } from './scenes/Tanks.js';
+import { MoleRunner } from './scenes/MoleRunner.js';
 
 startGame({
   scenes: [Boot, Menu, TicTacToe, Reversi, Checkers, Chess, Go, Tables, Dominoes, SeaBattle, Yacht,
-    Solitaire, WildCards, BoxBox, SixBall],
+    Solitaire, WildCards, BoxBox, SixBall,
+    AirHockey, BlockBreaker, SpaceRocks, Bowling, Pool, Tanks, MoleRunner],
 });

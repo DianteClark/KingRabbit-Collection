@@ -87,3 +87,28 @@ export function swipeArea(scene, rect, { onSwipe, onTap, min = 24 }) {
     else onSwipe?.(dy > 0 ? 'down' : 'up');
   });
 }
+
+/**
+ * A button you hold down (for action games). Returns { isDown, wasPressed() }.
+ * Uses its own pointer tracking so several can be held at once (multi-touch).
+ */
+export function holdButton(scene, x, y, w, h, label, { fill = PALETTE.lavender, color = PALETTE.night, size = 16 } = {}) {
+  const c = scene.add.container(x, y).setDepth(60);
+  const shadow = scene.add.rectangle(0, 4, w, h, hex(PALETTE.ink));
+  const edge = scene.add.rectangle(0, 0, w, h, hex(PALETTE.night));
+  const body = scene.add.rectangle(0, 0, w - 6, h - 6, hex(fill), 0.9);
+  const lbl = text(scene, 0, 0, label, { size, color });
+  const face = scene.add.container(0, 0, [edge, body, lbl]);
+  c.add([shadow, face]);
+  const state = { isDown: false, pressed: false, pointers: new Set() };
+  const zone = scene.add.zone(x, y, w + 8, h + 12).setInteractive().setDepth(61);
+  const update = () => { state.isDown = state.pointers.size > 0; face.y = state.isDown ? 3 : 0; };
+  zone.on('pointerdown', (p) => { state.pointers.add(p.id); state.pressed = true; update(); });
+  zone.on('pointerup', (p) => { state.pointers.delete(p.id); update(); });
+  zone.on('pointerout', (p) => { state.pointers.delete(p.id); update(); });
+  return {
+    get isDown() { return state.isDown; },
+    wasPressed() { const v = state.pressed; state.pressed = false; return v; },
+    container: c,
+  };
+}

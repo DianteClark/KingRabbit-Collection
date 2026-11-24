@@ -28,7 +28,7 @@ export async function startGame({ scenes, background = PALETTE.night }) {
     pixelArt: true,
     roundPixels: true,
     scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
-    input: { activePointers: 2 },
+    input: { activePointers: 4 },
     scene: scenes,
   });
 
@@ -39,6 +39,7 @@ export async function startGame({ scenes, background = PALETTE.night }) {
   game.events.once('ready', sync);
 
   tryPortraitLock();
+  window.__game = game; // handy for debugging in the browser console
   return game;
 }
 
