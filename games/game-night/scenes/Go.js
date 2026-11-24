@@ -39,7 +39,7 @@ export class Go extends Phaser.Scene {
 
     const by = TOP + w + 44;
     this.passBtn = button(this, WIDTH / 2 - 76, by, 136, 44, 'Pass', () => this.humanPass());
-    button(this, WIDTH / 2 + 76, by, 136, 44, 'Resign', () => this.resign(), { fill: PALETTE.red, color: PALETTE.cream });
+    this.resignBtn = button(this, WIDTH / 2 + 76, by, 136, 44, 'Resign', () => this.resign(), { fill: PALETTE.red, color: PALETTE.cream });
     text(this, WIDTH / 2, by + 48, 'Surround stones to capture. 2 passes end it.', { color: PALETTE.lavender });
     this.restart();
   }
@@ -87,6 +87,14 @@ export class Go extends Phaser.Scene {
     }
     const c = this.st.captures;
     this.caps.setText(`Captured: ${this.name(1)} ${c[1]}   ${this.name(2)} ${c[2]}`);
+    this.syncButtons();
+  }
+
+  /** Pass/Score and Resign only look pressable when they would do something. */
+  syncButtons() {
+    const thinking = this.mode === 'cpu' && this.busy;
+    this.passBtn.setEnabled(this.counting || (!this.over && !thinking && !this.isCpu()));
+    this.resignBtn.setEnabled(!this.over && !this.counting && !thinking);
   }
 
   next() {
@@ -94,6 +102,7 @@ export class Go extends Phaser.Scene {
     if (this.isCpu()) {
       this.status.setText('CPU is thinking...');
       this.busy = true;
+      this.syncButtons();
       think(this, () => {
         if (this.over || !this.isCpu()) return;   // resigned while the CPU was thinking
         const m = cpuMove(this.st, { cfg: this.cfg });
@@ -113,8 +122,8 @@ export class Go extends Phaser.Scene {
       // Against the computer, it decides about its own stones, and you can't revive a group
       // it can see is dead. You can still give up your own groups.
       if (this.mode === 'cpu') {
-        if (this.st.board[i] === 2) { toast(this, 'The CPU decides about its own stones', 900); return; }
-        if (this.dead.has(i) && this.cpuDead.has(i)) { toast(this, 'That group has no way to live', 900); return; }
+        if (this.st.board[i] === 2) { toast(this, 'The CPU decides about its own stones', 600); return; }
+        if (this.dead.has(i) && this.cpuDead.has(i)) { toast(this, 'That group has no way to live', 600); return; }
       }
       this.dead = toggleDead(this.st.board, this.dead, i); this.drawCounting();
       return;
@@ -158,6 +167,7 @@ export class Go extends Phaser.Scene {
   doResign() {
     if (this.over || this.counting) return;
     this.over = true;
+    this.syncButtons();
     const loser = this.mode === 'cpu' ? 1 : this.st.turn;
     const winner = 3 - loser;
     endGame(this, {

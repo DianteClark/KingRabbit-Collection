@@ -55,11 +55,19 @@ export class Reversi extends Phaser.Scene {
 
   scoreBox(x, player) {
     const g = this.add.graphics();
-    g.fillStyle(hex(PALETTE.red)).fillRect(x - 60, 70, 120, 44);
-    g.fillStyle(hex(PALETTE.wine)).fillRect(x - 56, 74, 112, 36);
+    (this.boxes ??= {})[player] = { g, x };
+    this.paintBox(player, false);
     this.add.image(x - 30, 92, 'reversi', FRAME[player]).setScale(3);
     const t = text(this, x + 16, 92, '2', { size: 32 });
     (this.counts ??= {})[player] = t;
+  }
+
+  /** Score box frame: gold around the player whose turn it is. */
+  paintBox(player, active) {
+    const { g, x } = this.boxes[player];
+    g.clear();
+    g.fillStyle(hex(active ? PALETTE.gold : PALETTE.red)).fillRect(x - 60, 70, 120, 44);
+    g.fillStyle(hex(PALETTE.wine)).fillRect(x - 56, 74, 112, 36);
   }
 
   pos(i) {
@@ -89,6 +97,7 @@ export class Reversi extends Phaser.Scene {
     const c = count(this.board);
     this.counts[1].setText(String(c.dark));
     this.counts[2].setText(String(c.light));
+    for (const p of [1, 2]) this.paintBox(p, !this.over && this.turn === p);
     this.hints.clear();
     this.lastMark.clear();
     if (this.lastMove >= 0) {
@@ -113,7 +122,7 @@ export class Reversi extends Phaser.Scene {
 
   humanMove(i) {
     if (this.over || this.busy || this.isCpuTurn()) return;
-    if (!legalMoves(this.board, this.turn).includes(i)) return;
+    if (!legalMoves(this.board, this.turn).includes(i)) { if (!this.board[i]) sfx('error'); return; }
     this.apply(i);
   }
 
@@ -157,7 +166,7 @@ export class Reversi extends Phaser.Scene {
     if (legalMoves(this.board, next).length) {
       this.turn = next;
     } else {
-      toast(this, `${this.name(next)} has no moves - pass`, 622);
+      toast(this, next === 1 && this.mode === 'cpu' ? 'You have no moves - pass' : `${this.name(next)} has no moves - pass`, 622);
     }
     this.refresh();
   }

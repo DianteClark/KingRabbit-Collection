@@ -103,7 +103,9 @@ export class Solitaire extends Phaser.Scene {
   }
 
   undo() {
-    if (this.done || this.finishing || !this.history.length) return;
+    if (this.done || this.finishing) return;
+    if (!this.history.length) { sfx('error'); return; }
+    sfx('flip');
     this.sel = null;
     this.g = this.history.pop();
     this.draw();
@@ -231,7 +233,7 @@ export class Solitaire extends Phaser.Scene {
       }
     }
     // Select the tapped card (if it can be moved at all).
-    if (hit.src && hit.src.from !== 'stock') { this.sel = hit.src; this.draw(); return; }
+    if (hit.src && hit.src.from !== 'stock') { this.sel = hit.src; sfx('select'); this.draw(); return; }
     this.sel = null;
     this.draw();
   }

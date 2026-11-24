@@ -82,6 +82,7 @@ export class SeaBattle extends Phaser.Scene {
     this.myShots = new Map();     // my shots on the enemy
     this.cpuShots = new Map();    // CPU's shots on me
     this.cpuSunk = new Set();
+    this.lastShots = { me: -1, cpu: -1 };
     this.busy = false;
     this.over = false;
     this.redraw();
@@ -121,6 +122,15 @@ export class SeaBattle extends Phaser.Scene {
     this.layer.removeAll(true);
     this.drawGrid(BIG_LEFT, BIG_TOP, BIG, this.enemyFleet, this.myShots, false, 'red', true);
     this.drawGrid(SMALL_LEFT, SMALL_TOP, SMALL, this.myFleet, this.cpuShots, true, 'grey');
+    // Gold outline on the latest shot in each grid, so you can see where it landed.
+    const mark = this.add.graphics();
+    const ring = (left, top, cell, c) => {
+      if (c < 0) return;
+      mark.lineStyle(2, hex(PALETTE.gold)).strokeRect(left + (c % N) * cell + 1, top + Math.floor(c / N) * cell + 1, cell - 2, cell - 2);
+    };
+    ring(BIG_LEFT, BIG_TOP, BIG, this.lastShots.me);
+    ring(SMALL_LEFT, SMALL_TOP, SMALL, this.lastShots.cpu);
+    this.layer.add(mark);
     const left = (f) => f.filter((s) => s.hits < s.cells.length).length;
     this.layer.add(text(this, WIDTH / 2, BIG_TOP + BIG * N + 14, `Enemy ships left ${left(this.enemyFleet)}   Yours ${left(this.myFleet)}`, { color: PALETTE.lavender }));
   }
@@ -139,8 +149,9 @@ export class SeaBattle extends Phaser.Scene {
     const cell = r * N + c;
     if (this.phase === 'setup') { this.setupTap(cell); return; }
     if (this.phase !== 'battle' || this.busy || this.over) return;
-    if (this.myShots.has(cell)) return;
+    if (this.myShots.has(cell)) { sfx('error'); return; }
     const res = fire(this.enemyFleet, this.myShots, cell);
+    this.lastShots.me = cell;
     this.redraw();
     sfx(res.result === 'miss' ? 'thud' : 'boom');
     if (res.result !== 'miss') { this.boom(BIG_LEFT + c * BIG + BIG / 2, BIG_TOP + r * BIG + BIG / 2, 4); this.cameras.main.shake(90, 0.004); }
@@ -155,6 +166,7 @@ export class SeaBattle extends Phaser.Scene {
     const remaining = this.myFleet.filter((s) => s.hits < s.cells.length).map((s) => s.cells.length);
     const cell = cpuTarget(this.cpuShots, this.cpuSunk, remaining, Math.random, 'hard', this.cfg);
     const res = fire(this.myFleet, this.cpuShots, cell);
+    this.lastShots.cpu = cell;
     if (res.result === 'sunk') res.ship.cells.forEach((c) => this.cpuSunk.add(c));
     this.redraw();
     sfx(res.result === 'miss' ? 'thud' : 'smallBoom');

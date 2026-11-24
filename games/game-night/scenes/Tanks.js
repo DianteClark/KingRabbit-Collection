@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { PALETTE, hex } from '../../../shared/core/palette.js';
 import { text } from '../../../shared/core/ui.js';
 import { WIDTH } from '../../../shared/core/boot.js';
-import { header, go, setBackground, toast, modal, holdButton } from './common.js';
+import { header, go, setBackground, toast, modal, holdButton, fitLine } from './common.js';
 import { getBest, submitBest } from '../save.js';
 import { sfx } from '../../../shared/core/sfx.js';
 import { getSkill, tune, reportResult } from '../adaptive.js';
@@ -112,7 +112,7 @@ export class Tanks extends Phaser.Scene {
 
   updateHud() {
     const n = this.enemiesLeft + this.enemies.length;
-    this.hud.setText(`Stage ${this.stage + 1}  Lives ${this.lives}  Enemies ${n}  Score ${this.score}`);
+    fitLine(this.hud, [`Score ${this.score}`, `Stage ${this.stage + 1}`, `Lives ${this.lives}`, `Enemies ${n}`]);
   }
 
   // ---------- map helpers ----------

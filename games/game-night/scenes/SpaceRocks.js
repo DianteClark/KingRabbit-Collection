@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { PALETTE, hex } from '../../../shared/core/palette.js';
 import { text } from '../../../shared/core/ui.js';
 import { WIDTH } from '../../../shared/core/boot.js';
-import { header, go, setBackground, toast, modal, holdButton } from './common.js';
+import { header, go, setBackground, toast, modal, holdButton, fitLine } from './common.js';
 import { getBest, submitBest } from '../save.js';
 import { sfx } from '../../../shared/core/sfx.js';
 import { getSkill, tune, reportResult } from '../adaptive.js';
@@ -86,7 +86,7 @@ export class SpaceRocks extends Phaser.Scene {
   }
 
   updateHud() {
-    this.hud.setText(`Score ${this.score}   Ships ${this.lives}   Wave ${this.wave}   Best ${Math.max(getBest('spacerocks'), this.score)}`);
+    fitLine(this.hud, [`Score ${this.score}`, `Ships ${this.lives}`, `Wave ${this.wave}`, `Best ${Math.max(getBest('spacerocks'), this.score)}`]);
   }
 
   addScore(n) {

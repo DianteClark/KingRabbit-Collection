@@ -32,7 +32,7 @@ export class Bowling extends Phaser.Scene {
     this.meter = this.add.graphics().setDepth(7);
     this.prompt = text(this, WIDTH / 2, 622, '', { color: PALETTE.gold });
     // Taps on the header (back / How to Play) shouldn't count as a throw step.
-    this.input.on('pointerup', (p) => { if (p.y > 60) this.tap(); });
+    this.input.on('pointerup', (p, over) => { if (p.y > 60 && !over.length) this.tap(); });
     this.rolls = [];
     this.over = false;
     this.rack(true);
@@ -76,11 +76,12 @@ export class Bowling extends Phaser.Scene {
   drawCard() {
     this.card.removeAll(true);
     const fs = frames(this.rolls);
-    const x0 = 12; const y0 = 64; const w = 32;
+    // 9 frames of 33px + a 51px 10th: room for three-digit totals inside the boxes.
+    const x0 = 4; const y0 = 64; const w = 33;
     const g = this.add.graphics();
     this.card.add(g);
     fs.forEach((f, i) => {
-      const bw = i === 9 ? 48 : w;
+      const bw = i === 9 ? 51 : w;
       const x = x0 + i * w;
       g.fillStyle(hex(PALETTE.ink)).fillRect(x, y0, bw, 52);
       g.fillStyle(hex(PALETTE.cream)).fillRect(x + 2, y0 + 2, bw - 4, 48);

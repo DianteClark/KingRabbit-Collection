@@ -120,7 +120,11 @@ export class Chess extends Phaser.Scene {
     if (i < 0 || this.over || this.busy || this.isCpu()) return;
     const p = this.s.board[i];
     const mine = p && (p === p.toUpperCase() ? 'w' : 'b') === this.s.turn;
-    if (mine) { this.selected = this.moves.some((m) => m.from === i) ? i : -1; this.draw(); return; }
+    if (mine) {
+      this.selected = this.moves.some((m) => m.from === i) ? i : -1;
+      sfx(this.selected >= 0 ? 'select' : 'error');
+      this.draw(); return;
+    }
     if (this.selected >= 0) {
       const m = this.moves.find((x) => x.from === this.selected && x.to === i);
       if (m && m.promo) { this.askPromotion(m); return; }
@@ -185,6 +189,7 @@ export class Chess extends Phaser.Scene {
       checkmate: 'Checkmate', stalemate: 'Stalemate - no legal moves', material: 'Not enough pieces to mate',
       fifty: '50 moves without a capture or pawn move', repetition: 'Same position three times',
     }[st.result];
-    endGame(this, { id: 'chess', mode: this.mode, title: st.result === 'checkmate' ? 'Checkmate!' : 'Draw', lines: [why, title.replace('Checkmate! ', '').replace('Checkmate. ', '')], outcome, onAgain: () => this.restart() });
+    const result = st.result !== 'checkmate' ? 'Draw' : this.mode === 'cpu' ? (st.winner === 'w' ? 'You win!' : 'CPU wins') : `${this.name(st.winner)} wins!`;
+    endGame(this, { id: 'chess', mode: this.mode, title: st.result === 'checkmate' ? 'Checkmate!' : 'Draw', lines: st.result === 'checkmate' ? [result] : [why], outcome, onAgain: () => this.restart() });
   }
 }

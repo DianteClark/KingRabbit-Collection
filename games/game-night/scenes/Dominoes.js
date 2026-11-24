@@ -133,7 +133,7 @@ export class Dominoes extends Phaser.Scene {
       domino(this.handG, x, y - (sel ? 14 : ok ? 6 : 0), a, b, HAND_H, true, {
         face: ok ? PALETTE.cream : PALETTE.lavender, glow: sel ? PALETTE.red : ok ? PALETTE.gold : undefined,
       });
-      const z = this.add.zone(x, y, HAND_H + 4, HAND_H * 2 + 8).setInteractive({ useHandCursor: true });
+      const z = this.add.zone(x, y, HAND_H + 6, HAND_H * 2 + 16).setInteractive({ useHandCursor: true });
       z.on('pointerup', () => this.pick(i));
       this.handZones.add(z);
     });
@@ -194,7 +194,7 @@ export class Dominoes extends Phaser.Scene {
       this.refresh();
       this.time.delayedCall(350, () => this.cpuStep());
     } else {
-      toast(this, 'CPU passes', 560);
+      toast(this, 'CPU passes', 416);
       this.r = passTurn(this.r);
       this.busy = false;
       this.next();
@@ -205,11 +205,12 @@ export class Dominoes extends Phaser.Scene {
     if (this.over || this.busy || this.r.turn !== 0) return;
     const opt = playable(this.r, 0).find((o) => o.i === i);
     if (!opt) {
-      toast(this, this.r.center ? "That tile doesn't match an open end" : 'Lead with the glowing tile', 560);
+      toast(this, this.r.center ? "That tile doesn't match an open end" : 'Lead with the glowing tile', 416);
       return;
     }
     if (opt.sides[0] === 'center') { this.commit(i, 'center'); return; }
     this.selected = this.selected === i ? -1 : i;
+    sfx('select');
     this.refresh();
   }
 
@@ -224,8 +225,8 @@ export class Dominoes extends Phaser.Scene {
   humanDraw() {
     if (this.over || this.busy || this.r.turn !== 0) return;
     ends(this.r).forEach((e) => this.voids.add(e.value));
-    if (this.r.boneyard.length) { this.r = draw(this.r, 0); sfx('card'); toast(this, 'You draw a tile', 560); }
-    else { this.r = passTurn(this.r); toast(this, 'You pass', 560); }
+    if (this.r.boneyard.length) { this.r = draw(this.r, 0); sfx('card'); toast(this, 'You draw a tile', 416); }
+    else { this.r = passTurn(this.r); toast(this, 'You pass', 416); }
     this.next();
   }
 
