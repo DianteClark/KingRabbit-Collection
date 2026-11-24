@@ -158,9 +158,13 @@ export class World extends Phaser.Scene {
     const fix = (o) => pin(o).setDepth(D + 1);
     this.add.rectangle(0, VIEW_BOTTOM, WIDTH, HEIGHT - VIEW_BOTTOM, hex(PALETTE.night)).setOrigin(0).setScrollFactor(0).setDepth(D);
     this.add.rectangle(0, VIEW_BOTTOM, WIDTH, 2, hex(PALETTE.ink)).setOrigin(0).setScrollFactor(0).setDepth(D);
-    // D-pad (hold to keep walking)
-    const pad = [['up', 72, 530, '^'], ['left', 26, 574, '<'], ['right', 118, 574, '>'], ['down', 72, 618, 'v']];
-    this.add.rectangle(72, 574, 40, 40, hex(PALETTE.indigo)).setScrollFactor(0).setDepth(D);
+    // D-pad: one big thumb zone. The direction comes from where the thumb is relative to the
+    // pad's centre, so you can slide between directions without lifting, and drifting a little
+    // off the arrows doesn't stop you. Lifting that finger (anywhere) stops walking.
+    const PX = 72; const PY = 574;
+    const pad = [['up', PX, PY - 44, '^'], ['left', PX - 46, PY, '<'], ['right', PX + 46, PY, '>'], ['down', PX, PY + 44, 'v']];
+    this.add.rectangle(PX, PY, 40, 40, hex(PALETTE.indigo)).setScrollFactor(0).setDepth(D);
+    const faces = {};
     for (const [dir, x, y, label] of pad) {
       const c = this.add.container(x, y).setScrollFactor(0).setDepth(D + 1);
       const sh = this.add.rectangle(0, 3, 44, 40, hex(PALETTE.ink));
@@ -168,12 +172,29 @@ export class World extends Phaser.Scene {
       const t = text(this, 0, -2, label, { size: 32, color: PALETTE.night });
       c.add([sh, face, t]);
       pin(c);
-      c.setSize(46, 44).setInteractive({ useHandCursor: true });
-      c.on('pointerdown', (p) => { if (this.dialog || blocking() || modalOpen(this)) return; face.y = 2; t.y = 0; this.held = dir; this.heldId = p.id; this.path = null; this.pending = null; });
-      const up = () => { face.y = 0; t.y = -2; if (this.held === dir) this.held = null; };
-      c.on('pointerup', up); c.on('pointerout', up);
-      this.padFaces = [...(this.padFaces || []), () => { face.y = 0; t.y = -2; }];
+      faces[dir] = (on) => { face.y = on ? 2 : 0; t.y = on ? 0 : -2; face.setFillStyle(hex(on ? PALETTE.gold : PALETTE.lavender)); };
     }
+    const showDir = (dir) => Object.entries(faces).forEach(([d, f]) => f(d === dir));
+    this.padFaces = [() => showDir(null)];
+    const dirFrom = (p) => {
+      const dx = p.x - PX; const dy = p.y - PY;
+      if (Math.hypot(dx, dy) < 10) return this.held; // thumb resting on the centre: keep going
+      return Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up');
+    };
+    const zone = this.add.zone(PX, PY, 148, 140).setScrollFactor(0).setDepth(D + 2).setInteractive();
+    zone.on('pointerdown', (p) => {
+      if (this.dialog || blocking() || modalOpen(this)) return;
+      const dir = dirFrom(p) || 'down';
+      this.held = dir; this.heldId = p.id; this.path = null; this.pending = null;
+      showDir(dir);
+      // A quick tap still moves one tile, even if the finger lifts before the next frame.
+      if (!this.moving && !this.busy) this.tryStep(dir, true);
+    });
+    this.input.on('pointermove', (p) => {
+      if (!this.held || p.id !== this.heldId || !p.isDown) return;
+      const dir = dirFrom(p);
+      if (dir && dir !== this.held) { this.held = dir; showDir(dir); }
+    });
     this.aBtn = fix(button(this, 178, 574, 56, 52, 'A', () => this.pressA(), { size: 32, fill: PALETTE.gold }));
     fix(button(this, 296, 530, 116, 38, 'Pets', () => this.openParty(), { fill: PALETTE.cream }));
     fix(button(this, 296, 576, 116, 38, 'Bag', () => this.openBag(), { fill: PALETTE.cream }));
