@@ -41,7 +41,9 @@ export async function startGame({ scenes, background = PALETTE.night, orientatio
   const wrong = window.matchMedia(land ? '(orientation: portrait) and (max-width: 540px)' : '(orientation: landscape) and (max-height: 540px)');
   const sync = () => (wrong.matches ? game.loop.sleep() : game.loop.wake());
   wrong.addEventListener?.('change', sync);
+  // Phaser may already be booted by now, so check straight away as well as on 'ready'.
   game.events.once('ready', sync);
+  sync();
 
   tryOrientationLock(land ? 'landscape' : 'portrait');
   window.__game = game; // handy for debugging in the browser console
