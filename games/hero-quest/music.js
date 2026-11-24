@@ -1,7 +1,7 @@
 // Tiny chiptune background music and jingles for Hollow Crown (Web Audio, no files).
 // Quiet by default, silent whenever the shared mute is on, and switchable off in the pause menu.
 // All tunes are original.
-import { isMuted } from '../../shared/core/sfx.js';
+import { isMuted, audioContext, onAudioReset } from '../../shared/core/sfx.js';
 import { save } from './save.js';
 
 const VOLUME = 0.045;
@@ -50,22 +50,24 @@ const JINGLES = {
 let ctx = null; let master = null;
 let current = null; let timer = null; let step = 0; let nextT = 0;
 
-function audio() {
-  try {
-    if (!ctx) {
-      ctx = new (window.AudioContext || window.webkitAudioContext)();
-      master = ctx.createGain();
-      master.gain.value = 0;
-      master.connect(ctx.destination);
-      // browsers start audio only after a tap
-      const resume = () => ctx.state === 'suspended' && ctx.resume();
-      window.addEventListener('pointerdown', resume);
-      window.addEventListener('keydown', resume);
-    }
-    if (ctx.state === 'suspended') ctx.resume();
-    return ctx;
-  } catch { return null; }
+// Uses the shared audio context (shared/core/sfx.js), which wakes up again after the phone
+// sleeps or the app is backgrounded. If the context gets replaced, rebuild the master gain.
+function attach(c) {
+  ctx = c;
+  master = ctx.createGain();
+  master.gain.value = 0;
+  master.connect(ctx.destination);
+  syncVolume();
+  if (current) { nextT = ctx.currentTime + 0.1; }
 }
+
+function audio() {
+  const c = audioContext();
+  if (!c) return null;
+  if (c !== ctx) attach(c);
+  return ctx;
+}
+onAudioReset((c) => { if (ctx) attach(c); });
 
 export const musicOn = () => save.get('music') !== false;
 export function setMusicOn(on) { save.set('music', on); syncVolume(); }
