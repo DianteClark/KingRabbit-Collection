@@ -279,7 +279,7 @@ export class Play extends Phaser.Scene {
     this.goldText = text(this, 208, 40, '', { origin: [0, 0.5], color: PALETTE.gold }).setDepth(D);
     this.ammoText = text(this, 312, 40, '', { origin: [1, 0.5], color: PALETTE.lavender }).setDepth(D);
     helpButton(this, WIDTH - 22, 26);
-    this.statusText = outlined(this, 8, TOP + 12, '', { origin: [0, 0.5], color: PALETTE.orange }).setDepth(D);
+    this.statusText = outlined(this, 8, TOP + 4, '', { origin: [0, 0], color: PALETTE.orange, wrap: WIDTH - 20, align: 'left' }).setDepth(D);
 
     // Message band (tap for the log).
     this.add.rectangle(0, MSG_TOP, WIDTH, BOT - MSG_TOP, hex(DARK.void), 0.82).setOrigin(0).setDepth(D - 1)
@@ -311,6 +311,7 @@ export class Play extends Phaser.Scene {
     if (p.fx.blaze > 0) tags.push('Blazing');
     if (p.fuel <= 0) tags.push('No light!');
     this.statusText.setText(tags.join('  '));
+    if (this.statusText.width > WIDTH - 20) this.statusText.setText(tags.join(' '));
     // Messages: the newest one (colour by kind), and the one before if there's room.
     const log = st.log;
     const color = { good: '#9be36b', bad: PALETTE.orange, info: PALETTE.cream }[log[log.length - 1]?.c] || PALETTE.cream;

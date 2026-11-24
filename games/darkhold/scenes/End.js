@@ -51,8 +51,9 @@ export class End extends Phaser.Scene {
     // The last few things that happened.
     const last = st.log.slice(-3).map((l) => l.text).join('\n');
     const lt = text(this, WIDTH / 2, 452, last, { color: DARK.purple, wrap: WIDTH - 30 }).setOrigin(0.5, 0);
-    if (lt.height > 70) lt.setText(st.log.slice(-2).map((l) => l.text).join('\n'));
-    if (lt.height > 70) lt.setText(st.log[st.log.length - 1]?.text || '');
+    const lineCount = () => lt.getWrappedText().length;
+    if (lineCount() > 3) lt.setText(st.log.slice(-2).map((l) => l.text).join('\n'));
+    if (lineCount() > 3) lt.setText(st.log[st.log.length - 1]?.text || '');
 
     button(this, WIDTH / 2, 556, 280, 46, st.daily ? 'Try the daily again' : 'New run', () => go(this, 'ClassSelect', { daily: st.daily ? todayStr() : null }), { fill: PALETTE.gold });
     button(this, WIDTH / 2, 610, 280, 42, 'Title screen', () => go(this, 'Title'), { fill: PALETTE.lavender });
