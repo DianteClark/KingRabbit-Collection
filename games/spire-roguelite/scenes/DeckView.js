@@ -19,7 +19,7 @@ export class DeckView extends Phaser.Scene {
 
   create() {
     const o = this.opts;
-    this.add.rectangle(0, 0, WIDTH, HEIGHT, hex(PALETTE.night), 0.97).setOrigin(0).setInteractive();
+    this.add.rectangle(0, 0, WIDTH, HEIGHT, hex(PALETTE.night)).setOrigin(0).setInteractive();
     text(this, WIDTH / 2, 22, o.title || 'Cards', { color: PALETTE.gold });
     if (o.subtitle) text(this, WIDTH / 2, 42, o.subtitle, { color: PALETTE.lavender });
 

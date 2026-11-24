@@ -75,7 +75,7 @@ export const EVENTS = {
     title: 'Wise Hermit', art: 'cr:rampart:96', acts: [1, 2, 3],
     text: 'An old hermit looks up from his fire. "Every lesson has a price."',
     choices: [
-      { label: 'Learn', desc: 'Lose 5 Max HP. Upgrade 2 random cards.', go: (run, api) => { api.gainMaxHp(-5); const n = api.upgradeRandom(2); return { text: n ? `${n} card(s) upgraded.` : 'You already know it all.' }; } },
+      { label: 'Learn', desc: 'Lose 5 Max HP. Upgrade 2 random cards.', go: (run, api) => { api.gainMaxHp(-5); const n = api.upgradeRandom(2); return { text: n ? `${n} card${n === 1 ? "" : "s"} upgraded.` : 'You already know it all.' }; } },
       { label: 'Pay 50 gold', desc: 'Remove a card from your deck.', need: (run) => (run.gold >= 50 ? '' : 'Needs 50 gold'), go: (run, api) => { api.gainGold(-50); return { text: 'He helps you forget a bad habit.', pick: { mode: 'remove' } }; } },
       { label: 'Leave', desc: 'Nothing happens.', go: () => ({ text: 'You nod and move on.' }) },
     ],
