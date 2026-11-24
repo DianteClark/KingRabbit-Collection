@@ -223,7 +223,7 @@ export class Play extends Phaser.Scene {
   placeActors(instant) {
     const st = this.st;
     const p = st.p;
-    this.player.setPosition(p.x * T + 16, p.y * T + 16);
+    if (instant) this.player.setPosition(p.x * T + 16, p.y * T + 16);
     const alive = new Set();
     for (const m of st.mons) {
       alive.add(m.id);
@@ -402,12 +402,13 @@ export class Play extends Phaser.Scene {
   }
 
   startHold(dx, dy) {
+    if (this.walk) { this.stopWalk(); return; }
     if (!this.canAct()) return;
-    this.stopWalk();
     this.cancelAim();
     this.held = { dx, dy };
     const go1 = () => {
       if (!this.held || this.held.dx !== dx || this.held.dy !== dy) return;
+      if (this.busy) { this.time.delayedCall(30, go1); return; }
       const before = this.snapshot();
       const ok = this.doAct({ type: 'move', dx, dy });
       // Keep walking while held, unless something needs attention.
@@ -464,6 +465,7 @@ export class Play extends Phaser.Scene {
     for (const [x, y] of path) this.pathLayer.add(this.add.image(x * T + 16, y * T + 16, 'dot').setScale(2).setAlpha(0.7));
     const stepOnce = () => {
       if (!this.walk || this.ended) return;
+      if (this.busy) { this.walkTimer = this.time.delayedCall(30, stepOnce); return; }
       const next = this.walk.path.shift();
       if (!next) { this.stopWalk(); return; }
       const st = this.st;
@@ -488,6 +490,7 @@ export class Play extends Phaser.Scene {
   }
 
   rest() {
+    if (this.walk) { this.stopWalk(); return; } // a second tap stops resting
     if (!this.canAct()) return;
     const st = this.st;
     if (G.danger(st)) { toast(this, 'Not with monsters about!', VIEW_CY - 60, PALETTE.orange); return; }
@@ -497,16 +500,23 @@ export class Play extends Phaser.Scene {
     this.walk = { path: [] }; // reuse the walk lock so a tap stops resting
     const tick = () => {
       if (!this.walk || this.ended) return;
+      if (this.busy) { this.walkTimer = this.time.delayedCall(30, tick); return; }
       const before = this.snapshot();
       const ok = this.doAct({ type: 'wait' }, { quiet: true });
       n++;
-      if (!ok || this.alarming(before) || full() || n >= 40 || G.danger(st)) { this.stopWalk(); if (full()) toast(this, 'You feel rested.', VIEW_CY - 60, '#9be36b'); return; }
+      if (!ok || this.alarming(before) || full() || n >= 40 || G.danger(st)) {
+        this.stopWalk();
+        if (full()) toast(this, 'You feel rested.', VIEW_CY - 60, '#9be36b');
+        else if (n >= 40) toast(this, 'You rest a while.', VIEW_CY - 60, PALETTE.lavender);
+        return;
+      }
       this.walkTimer = this.time.delayedCall(60, tick);
     };
     tick();
   }
 
   pressContext() {
+    if (this.walk) { this.stopWalk(); return; }
     if (!this.canAct()) return;
     this.cancelAim();
     if (this.ctxMode === 'descend') this.confirmDescend();
@@ -550,6 +560,7 @@ export class Play extends Phaser.Scene {
   }
 
   pressFire() {
+    if (this.walk) { this.stopWalk(); return; }
     if (!this.canAct()) return;
     const st = this.st;
     if (this.aim) { this.cancelAim(); return; }
@@ -633,6 +644,7 @@ export class Play extends Phaser.Scene {
           break;
         }
         case 'teleport': case 'blink':
+          if (e.t === 'teleport') { this.tweens.killTweensOf(this.player); this.player.setPosition(e.x * T + 16, e.y * T + 16).setAlpha(0); this.tweens.add({ targets: this.player, alpha: 1, duration: 250 }); }
           if (spr) { spr.setPosition(e.x * T + 16, e.y * T + 16); spr.setAlpha(0); this.tweens.add({ targets: spr, alpha: 1, duration: 250 }); }
           if (e.id === 'p' || e.t === 'teleport') fx('secret');
           break;
@@ -715,7 +727,7 @@ export class Play extends Phaser.Scene {
     this.redraw();
     this.refreshHud();
     this.centerCamera(false);
-    this.time.delayedCall(longest, () => { this.busy = false; });
+    this.time.delayedCall(quiet && longest === STEP_MS ? 50 : longest, () => { this.busy = false; });
   }
 
   bakeAround(x, y) {

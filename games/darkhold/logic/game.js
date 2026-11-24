@@ -53,8 +53,8 @@ export function newRun({ cls = 'knight', mode = 'normal', seed, daily = null, sk
   const usedLabels = new Set();
   for (const id of Object.keys(SCROLLS)) {
     let a; let b;
-    do { a = int(lookRng, 0, 15); b = int(lookRng, 0, 15); } while (a === b || usedLabels.has(`${a},${b}`));
-    usedLabels.add(`${a},${b}`);
+    do { a = int(lookRng, 0, 15); b = int(lookRng, 0, 15); } while (a === b || usedLabels.has(a) || usedLabels.has(b));
+    usedLabels.add(a); usedLabels.add(b);
     scrollLook[id] = [a, b];
   }
   const st = {
