@@ -118,23 +118,33 @@ export class Town extends Phaser.Scene {
   tab_recruit() {
     const t = this.town;
     const vh = G.visitingHero(this.s, t);
-    this.put(text(this, WIDTH / 2, CONTENT_TOP + 6, vh ? `Recruits join ${vh.name} (or the garrison)` : 'Recruits join the garrison', { color: PALETTE.lavender }));
+    this.put(text(this, 12, CONTENT_TOP + 14, vh ? `Recruits join ${vh.name}` : 'Recruits join the garrison', { origin: [0, 0.5], color: PALETTE.lavender }));
+    const any = [0, 1, 2, 3, 4, 5].some((i) => t.built[`dw${i}`] && t.stock[i] > 0);
+    this.put(button(this, 296, CONTENT_TOP + 14, 112, 30, 'Buy all', () => this.recruitAll(), { fill: PALETTE.gold })).setEnabled(any);
     const f = FACTIONS[t.faction];
     for (let i = 0; i < 6; i++) {
       const type = f.creatures[i]; const c = CREATURES[type];
-      const y = CONTENT_TOP + 22 + i * 60;
+      const y = CONTENT_TOP + 36 + i * 57;
       const built = t.built[`dw${i}`];
-      this.put(panel(this, 8, y, WIDTH - 16, 56, { fill: built ? PALETTE.indigo : PALETTE.night, inner: built ? PALETTE.lavender : PALETTE.indigo }));
+      this.put(panel(this, 8, y, WIDTH - 16, 54, { fill: built ? PALETTE.indigo : PALETTE.night, inner: built ? PALETTE.lavender : PALETTE.indigo }));
       const img = this.put(sprite(this, 36, y + 26, unitFrame(c.sprite), 3));
       if (!built) img.setAlpha(0.4);
       img.setInteractive({ useHandCursor: true }).on('pointerup', () => creatureInfo(this, type));
-      this.put(text(this, 64, y + 17, c.name, { origin: [0, 0.5], color: built ? PALETTE.cream : PALETTE.lavender }));
-      this.put(text(this, 64, y + 39, built ? `${t.stock[i]} ready, ${shortCost(c.cost)} each` : `Build ${f.dwellings[i]}`, { origin: [0, 0.5], color: built ? PALETTE.sand : PALETTE.lavender }));
+      this.put(text(this, 64, y + 16, c.name, { origin: [0, 0.5], color: built ? PALETTE.cream : PALETTE.lavender }));
+      this.put(text(this, 64, y + 38, built ? `${t.stock[i]} ready, ${shortCost(c.cost)} each` : `Build ${f.dwellings[i]}`, { origin: [0, 0.5], color: built ? PALETTE.sand : PALETTE.lavender }));
       if (built) {
-        const btn = this.put(button(this, 304, y + 28, 76, 38, 'Buy', () => this.recruitModal(i)));
+        const btn = this.put(button(this, 304, y + 27, 76, 36, 'Buy', () => this.recruitModal(i)));
         btn.setEnabled(t.stock[i] > 0);
       }
     }
+  }
+
+  recruitAll() {
+    let got = 0;
+    for (let i = 5; i >= 0; i--) if (this.town.built[`dw${i}`] && this.town.stock[i] > 0) got += G.recruit(this.s, this.town, i, this.town.stock[i]);
+    if (got) { sfx('coin'); toast(this, `${got} creatures recruited`, 600); } else { sfx('error'); toast(this, 'Not enough gold or no free slot', 600); }
+    saveGame(this.s);
+    this.refresh();
   }
 
   recruitModal(tier) {

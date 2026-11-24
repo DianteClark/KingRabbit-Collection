@@ -804,6 +804,7 @@ export function captureTown(state, hero, town) {
 /** Start a new day: income, movement, mana, weekly growth, waves, elimination checks. */
 export function newDay(state) {
   state.day += 1;
+  state.news = [];
   const week = state.day % 7 === 1;
   const rng = rngOf(state);
   for (const p of state.players) {
@@ -829,7 +830,6 @@ export function newDay(state) {
     if (week && o.kind === 'monster') o.count = Math.ceil(o.count * 1.1);
   }
   if (state.endless && state.day >= state.endless.nextWave) spawnWave(state, rng);
-  state.news = [];
   checkOver(state);
 }
 
@@ -857,6 +857,8 @@ export function spawnWave(state, rng = rngOf(state)) {
   if (!army.some(Boolean)) army[0] = { type: cr[0], count: 5 };
   const h = createHero(state, pid, sp.x, sp.y, rng, { army, level: Math.min(12, 1 + Math.floor(e.wave / 2)) });
   h.wave = e.wave;
+  // Scouts spot where the wave comes in.
+  for (const pl of state.players) if (pl.human) reveal(state, pl.id, h.x, h.y, 2);
   state.news.push(`Wave ${e.wave}: ${h.name} approaches!`);
   return h;
 }

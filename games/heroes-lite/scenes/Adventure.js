@@ -63,7 +63,7 @@ export class Adventure extends Phaser.Scene {
       const scn = this.s;
       modal(this, scn.name, [
         scn.mode === 'endless' ? 'Enemy waves arrive every week from the map edges. Hold on to your town!' : 'Capture every enemy town to win.',
-        'Tap a tile to plan a route, tap it again to march. Tap End Day when your heroes are done.',
+        'Tap a tile to plan a route, tap it again to march. Open your town to build and recruit, then tap End Day.',
       ], [['Begin', () => this.showNews()]]);
     } else this.checkOver();
   }
@@ -786,7 +786,7 @@ export class Adventure extends Phaser.Scene {
     let lines;
     if (s.mode === 'endless') {
       const best = submitEndless(s.day);
-      lines = [`You held out for ${s.day} days and ${s.endless.wave} waves.`, best ? { text: 'New best!', color: PALETTE.gold } : over.reason];
+      lines = [`You held out for ${s.day} days and ${s.endless.wave} wave${s.endless.wave === 1 ? '' : 's'}.`, best ? { text: 'New best!', color: PALETTE.gold } : over.reason];
     } else {
       recordResult(s.scenario, won, s.day);
       reportResult(SKILL_ID, won ? 1 : 0, 0.6, 1);

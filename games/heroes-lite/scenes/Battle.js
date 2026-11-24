@@ -74,8 +74,9 @@ export class Battle extends Phaser.Scene {
     const c = this.add.container(cx(s.x), cy(s.y));
     const img = sprite(this, 0, -6, unitFrame(def.sprite, 'idle', 0), 3);
     if (s.side === 1) img.setFlipX(true);
-    const badge = this.add.rectangle(s.side === 0 ? 14 : -14, 16, 30, 16, hex(SIDE_COLORS[s.side])).setStrokeStyle(2, hex(PALETTE.ink));
-    const n = text(this, s.side === 0 ? 14 : -14, 16, `${s.count}`, { color: s.side === 0 ? PALETTE.night : PALETTE.cream });
+    const mine = s.side === this.human;
+    const badge = this.add.rectangle(s.side === 0 ? 14 : -14, 16, 30, 16, hex(SIDE_COLORS[mine ? 0 : 1])).setStrokeStyle(2, hex(PALETTE.ink));
+    const n = text(this, s.side === 0 ? 14 : -14, 16, `${s.count}`, { color: mine ? PALETTE.night : PALETTE.cream });
     c.add([img, badge, n]);
     c.img = img; c.badge = badge; c.n = n;
     c.setDepth(10 + s.y * 3 + 1);
@@ -175,7 +176,7 @@ export class Battle extends Phaser.Scene {
       const s = C.getStack(b, id);
       const x = 64 + i * 38; const y = 550;
       const g = this.add.graphics();
-      g.fillStyle(hex(i === 0 ? PALETTE.gold : SIDE_COLORS[s.side])).fillRect(x - 17, y - 17, 34, 34);
+      g.fillStyle(hex(i === 0 ? PALETTE.gold : SIDE_COLORS[s.side === this.human ? 0 : 1])).fillRect(x - 17, y - 17, 34, 34);
       g.fillStyle(hex(PALETTE.night)).fillRect(x - 15, y - 15, 30, 30);
       const img = sprite(this, x, y - 1, unitFrame(CREATURES[s.type].sprite, 'idle', 0), 2);
       if (s.side === 1) img.setFlipX(true);
@@ -208,7 +209,7 @@ export class Battle extends Phaser.Scene {
       for (const t of C.spellTargets(b, this.human, sp)) {
         g.fillStyle(hex(SPELLS[sp].target === 'ally' ? PALETTE.leaf : PALETTE.plum), 0.35).fillRect(OX + t.x * CELL + 2, OY + t.y * CELL + 2, CELL - 4, CELL - 4);
       }
-      this.infoText.setText(`${SPELLS[sp].name}: tap a target`);
+      this.infoText.setText(`${SPELLS[sp].name}: tap a ${SPELLS[sp].target === 'area' ? 'square' : 'target'}`);
       return;
     }
     if (s.side !== this.human || this.auto) {
@@ -281,7 +282,7 @@ export class Battle extends Phaser.Scene {
     if (target && target.side !== s.side) {
       if (C.canShoot(b, s)) { this.humanAct({ type: 'shoot', target: target.id }); return; }
       const opts = C.meleeOptions(b, s).filter((o) => o.target === target.id);
-      if (!opts.length) { toast(this, 'Out of reach', 530); sfx('error'); return; }
+      if (!opts.length) { toast(this, 'Out of reach', 466); sfx('error'); return; }
       // Attack from the side of the enemy you tapped, if possible.
       const fx = (p.x - OX) / CELL - x - 0.5; const fy = (p.y - OY) / CELL - y - 0.5;
       const want = { x: x + (fx < -0.17 ? -1 : fx > 0.17 ? 1 : 0), y: y + (fy < -0.17 ? -1 : fy > 0.17 ? 1 : 0) };
@@ -320,7 +321,6 @@ export class Battle extends Phaser.Scene {
 
   startSpell(sp) {
     this.spellMode = sp;
-    toast(this, SPELLS[sp].desc, 530);
     this.highlight();
   }
 
@@ -396,7 +396,7 @@ export class Battle extends Phaser.Scene {
         this.tweens.add({ targets: ring, radius: sp.target === 'area' ? 72 : 30, alpha: 0, duration: 450, onComplete: () => ring.destroy() });
         await new Promise((r) => this.tweens.add({ targets: icon, alpha: 1, scale: 3, duration: 250, yoyo: true, onComplete: () => { icon.destroy(); r(); } }));
         const side = b.sides[ev.side];
-        this.float(WIDTH / 2, 494, `${side.name} casts ${sp.name}`, PALETTE.gold);
+        this.float(WIDTH / 2, OY + 14, `${side.name} casts ${sp.name}`, PALETTE.gold);
         for (const h of ev.hits) {
           const tc = this.sprites.get(h.target);
           if (h.dmg !== undefined) await this.hit({ ...h, target: h.target }, true);

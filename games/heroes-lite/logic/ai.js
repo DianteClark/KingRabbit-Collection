@@ -135,7 +135,7 @@ function chooseTarget(state, hero, paths, p, rng, pid, main) {
         } else {
           const dv = townDefense(state, o);
           // Early on, only an overwhelming army goes for a town.
-          const early = state.day < 10 ? 1.6 : 1;
+          const early = state.day < 8 ? 2.5 : state.day < 15 ? 1.4 : 1;
           if (hv >= dv * p.attackRatio * early) consider(o.x, o.y, (o.owner === null ? 9000 : 16000) * p.aggression, 'town');
         }
         break;
@@ -161,6 +161,8 @@ function chooseTarget(state, hero, paths, p, rng, pid, main) {
   }
   for (const e of state.heroes) {
     if (e.owner === pid) continue;
+    // A hero standing in its town is attacked as part of the town (handled above).
+    if (state.objects.some((o) => o.kind === 'town' && o.x === e.x && o.y === e.y)) continue;
     const ev = heroArmyValue(e);
     if (hv >= ev * p.attackRatio) consider(e.x, e.y, (5000 + ev * 10) * p.aggression, 'hero');
   }
