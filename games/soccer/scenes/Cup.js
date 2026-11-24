@@ -69,7 +69,7 @@ export class Cup extends Phaser.Scene {
         for (let i = 0; i < n; i++) {
           const y = top + 30 + (rowsH / n) * (i + 0.5);
           this.add.rectangle(colX[r], y, 108, 24, hex(PALETTE.ink)).setAlpha(0.6);
-          text(this, colX[r], y, '?', { color: PALETTE.indigo });
+          text(this, colX[r], y, '?', { color: PALETTE.lavender });
         }
         continue;
       }

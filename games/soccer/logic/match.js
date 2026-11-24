@@ -476,7 +476,8 @@ export class Match {
     // Pointing back toward your own goal makes it a big clearance in that direction.
     const back = s && s.y * attackDir(p.side) < -0.5;
     if (back) passIntoSpace(this, p, s, 90 + power * 80, { lofted: true });
-    else shoot(this, p, { power, aimX: s ? s.x : null, human: true });
+    // Stick roughly straight (or idle): aim away from the keeper; pushed sideways: aim that way.
+    else shoot(this, p, { power, aimX: s && Math.abs(s.x) > 0.3 ? s.x : null, human: true });
     this.charging = false; this.charge = 0;
   }
 
@@ -842,6 +843,16 @@ function tickTimers(p, dt) {
 /** Set a player's desired velocity toward (tx, ty) at up to `speed`, slowing on arrival. */
 export function steer(p, tx, ty, speed, dt) {
   void dt;
+  // Behind a goal with somewhere to be on the pitch: go round the net, not into it.
+  const span = GOAL_W / 2 + PLAYER_R + 2;
+  for (const gy of [0, L]) {
+    const behind = gy === 0 ? p.y < gy - 1 : p.y > gy + 1;
+    const wantsIn = gy === 0 ? ty > gy : ty < gy;
+    if (behind && wantsIn && Math.abs(p.x - W / 2) < span + 2) {
+      tx = W / 2 + (Math.sign(p.x - W / 2) || 1) * (span + 6);
+      ty = p.y;
+    }
+  }
   const d = norm(tx - p.x, ty - p.y);
   const s = d.d < 1 ? 0 : speed * Math.min(1, d.d / 10);
   p.tvx = d.x * s; p.tvy = d.y * s;

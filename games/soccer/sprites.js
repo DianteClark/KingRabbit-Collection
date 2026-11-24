@@ -40,7 +40,16 @@ function sheetPixels(scene) {
   return sheetCanvas;
 }
 
+const emptyCache = new Map();
 function cellEmpty(px, x0, y0) {
+  const key = x0 * 10000 + y0;
+  if (emptyCache.has(key)) return emptyCache.get(key);
+  const v = scanEmpty(px, x0, y0);
+  emptyCache.set(key, v);
+  return v;
+}
+
+function scanEmpty(px, x0, y0) {
   const { data } = px;
   for (let y = y0; y < y0 + CELL; y++) {
     for (let x = x0; x < x0 + CELL; x++) if (data.data[(y * data.width + x) * 4 + 3] > 0) return false;

@@ -50,7 +50,6 @@ export class Hud extends Phaser.Scene {
     this.hintBg = null;
 
     this.setupInput();
-    this.events.on('update', () => this.refresh());
     this.refresh();
     if (!save.get('seenHelp')) {
       save.set('seenHelp', true);
@@ -120,6 +119,8 @@ export class Hud extends Phaser.Scene {
   }
 
   // ------------------------------------------------------------------ drawing
+
+  update() { this.refresh(); }
 
   refresh() {
     const m = this.m;

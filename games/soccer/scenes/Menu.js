@@ -68,15 +68,18 @@ export class Menu extends Phaser.Scene {
     const p1 = this.add.image(0, y + 6, blue, '2_8').setScale(3);
     const p2 = this.add.image(0, y + 6, red, '2_8').setScale(3);
     const ball = this.add.image(0, y + 22, 'ball').setScale(3);
-    let t = 0;
-    this.events.on('update', (_, dt) => {
-      t += dt / 1000;
-      const x = ((t * 70) % (WIDTH + 160)) - 80;
-      const f = 8 + (Math.floor(t * 10) % 4);
-      p1.setPosition(x, y + 6).setFrame(`2_${f}`);
-      p2.setPosition(x - 46, y + 6).setFrame(`2_${f}`);
-      ball.setPosition(x + 22, y + 20 - Math.abs(Math.sin(t * 7)) * 6);
-    });
+    this.stripT = 0;
+    this.strip = { p1, p2, ball, y };
+  }
+
+  update(_, dt) {
+    const { p1, p2, ball, y } = this.strip;
+    const t = (this.stripT += dt / 1000);
+    const x = ((t * 70) % (WIDTH + 160)) - 80;
+    const f = 8 + (Math.floor(t * 10) % 4);
+    p1.setPosition(Math.round(x), y + 6).setFrame(`2_${f}`);
+    p2.setPosition(Math.round(x - 46), y + 6).setFrame(`2_${f}`);
+    ball.setPosition(Math.round(x + 22), Math.round(y + 20 - Math.abs(Math.sin(t * 7)) * 6));
   }
 
   modeButton(y, label, sub, fn) {

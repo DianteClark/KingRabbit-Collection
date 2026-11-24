@@ -143,6 +143,21 @@ test('soccer: a loose ball in a corner or against a post gets played, not stuck'
   }
 });
 
+test('soccer: a player left behind a goal finds his way back round the net', () => {
+  for (const [x, y] of [[C.W / 2, -16], [C.W / 2 + 10, C.L + 16], [C.W / 2 - C.GOAL_W / 2, -8]]) {
+    const m = new Match({ skills: [0.5, 0.5], seed: 2, halfSeconds: 60 });
+    while (m.phase !== PHASE.PLAY) m.step(DT);
+    const p = m.teams[0].players[2];
+    p.x = x; p.y = y;
+    let back = false;
+    for (let i = 0; i < 60 * 4 && !back; i++) {
+      m.step(DT); m.events.length = 0;
+      if (p.y > 2 && p.y < C.L - 2) back = true;
+    }
+    assert.ok(back, `stuck behind the net from ${x},${y} (now ${p.x.toFixed(0)},${p.y.toFixed(0)})`);
+  }
+});
+
 test('soccer: ball crossing the goal line between the posts under the bar is a goal; over it is not', () => {
   const m = new Match({ skills: [0.5, 0.5], seed: 4, halfSeconds: 60 });
   while (m.phase !== PHASE.PLAY) m.step(DT);
