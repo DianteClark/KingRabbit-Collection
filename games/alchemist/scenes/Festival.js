@@ -108,15 +108,15 @@ export class Festival extends Phaser.Scene {
     this.shows.removeAll(true);
     // your potion and Vex's go up on the stage
     if (res.potion) {
-      const img = this.add.image(76, 196, `potion_${res.potion}`).setScale(4).setAlpha(0);
+      const img = this.add.image(76, 176, `potion_${res.potion}`).setScale(4).setAlpha(0);
       this.shows.add(img);
-      this.tweens.add({ targets: img, alpha: 1, y: 176, duration: 400 });
-      this.shows.add(starRow(this, 60, 212, res.stars, 2));
+      this.tweens.add({ targets: img, alpha: 1, y: 154, duration: 400 });
+      this.shows.add(starRow(this, 60, 194, res.stars, 2));
     }
     const vp = VEX_POTIONS[round];
-    const vimg = this.add.image(WIDTH - 76, 196, `potion_${vp}`).setScale(4).setAlpha(0);
+    const vimg = this.add.image(WIDTH - 76, 176, `potion_${vp}`).setScale(4).setAlpha(0);
     this.shows.add(vimg);
-    this.tweens.add({ targets: vimg, alpha: 1, y: 176, duration: 400, delay: 500 });
+    this.tweens.add({ targets: vimg, alpha: 1, y: 154, duration: 400, delay: 500 });
     sfx('select');
     const you = text(this, 90, PANEL_Y + 60, '0', { size: 32, color: PALETTE.gold });
     const vex = text(this, WIDTH - 90, PANEL_Y + 60, '0', { size: 32, color: '#e0a0f0' });

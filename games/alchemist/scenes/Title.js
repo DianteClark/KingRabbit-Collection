@@ -45,6 +45,15 @@ export class Title extends Phaser.Scene {
         showConfirm('New shop?', 'This replaces your saved shop, coins and recipes.', 'Start over', () => this.start());
       });
       y += 56;
+    } else if (run?.result && run.result.kind !== 'broke') {
+      // the festival is over but they haven't chosen endless yet
+      button(this, WIDTH / 2, y, 280, 52, 'Festival results', () => this.resume(run), { fill: PALETTE.gold });
+      y += 62;
+      button(this, WIDTH / 2, y, 280, 46, 'New shop', () => {
+        if (anyOpen()) return;
+        showConfirm('New shop?', 'This replaces your saved shop, coins and recipes.', 'Start over', () => this.start());
+      });
+      y += 56;
     } else {
       button(this, WIDTH / 2, y, 280, 52, run ? 'Open a new shop' : 'Open the shop', () => this.start(), { fill: PALETTE.gold });
       y += 62;
@@ -91,7 +100,8 @@ export class Title extends Phaser.Scene {
     if (anyOpen() || !once(this, 600)) return;
     store.s = run;
     run.skill = getSkill();
-    if (run.phase === 'festival') go(this, 'Festival');
+    if (run.phase === 'over') go(this, 'Ending');
+    else if (run.phase === 'festival') go(this, 'Festival');
     else go(this, 'Shop');
   }
 }

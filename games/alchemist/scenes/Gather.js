@@ -162,12 +162,12 @@ export class Gather extends Phaser.Scene {
     this.bar.update(s, `Basket ${G.staminaMax(s) - s.stamina}/${G.staminaMax(s)}`);
     this.pips.removeAll(true);
     const max = G.staminaMax(s);
-    for (let i = 0; i < max; i++) this.pips.add(this.add.image(110 + i * 16, 594, i < s.stamina ? 'pip' : 'pipOff').setScale(4));
+    for (let i = 0; i < max; i++) this.pips.add(this.add.image(108 + i * 15, 594, i < s.stamina ? 'pip' : 'pipOff').setScale(3));
     for (const v of Object.values(this.spotViews)) {
       const left = s.spots[v.sp.id] || 0;
       const guarded = s.guards[v.sp.id] > 0;
       v.pips.removeAll(true);
-      for (let i = 0; i < v.sp.picks; i++) v.pips.add(this.add.image((i - (v.sp.picks - 1) / 2) * 12, 0, i < left ? 'pip' : 'pipOff').setScale(3));
+      for (let i = 0; i < v.sp.picks; i++) v.pips.add(this.add.image((i - (v.sp.picks - 1) / 2) * 13, 0, i < left ? 'pip' : 'pipOff').setScale(3));
       v.art.setFrame(left > 0 ? v.frames[1] : v.frames[2]);
       v.icon.setAlpha(left > 0 ? 1 : 0.3);
       v.iconBg.setAlpha(left > 0 ? 0.85 : 0.3);

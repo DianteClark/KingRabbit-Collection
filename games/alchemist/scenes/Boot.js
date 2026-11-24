@@ -109,7 +109,7 @@ function makeBits(scene) {
   px('lock', ['.kkk.', 'k...k', 'k...k', 'kkkkk', 'kgggk', 'kgkgk', 'kgggk', 'kkkkk'], { k: PALETTE.ink, g: PALETTE.gold });
   px('coin', ['.kkk.', 'kyywk', 'kyyyk', 'kyyyk', '.kkk.'], { k: PALETTE.ink, y: PALETTE.gold, w: '#fff6b0' });
   px('rep', ['.k.k.', 'krkrk', 'krrrk', '.krk.', '..k..'], { k: PALETTE.ink, r: '#d84868' });
-  px('pip', ['kkk', 'kgk', 'kkk'], { k: PALETTE.ink, g: '#9fe070' });
-  px('pipOff', ['kkk', 'k.k', 'kkk'], { k: PALETTE.ink });
+  px('pip', ['kkkk', 'kgwk', 'kggk', 'kkkk'], { k: PALETTE.ink, g: '#9fe070', w: '#e0ffc0' });
+  px('pipOff', ['kkkk', 'kddk', 'kddk', 'kkkk'], { k: PALETTE.ink, d: '#4a3850' });
   px('white', ['w'], { w: '#ffffff' });
 }

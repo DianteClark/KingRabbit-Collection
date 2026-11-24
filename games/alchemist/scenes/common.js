@@ -1,5 +1,5 @@
 import { PALETTE, hex } from '../../../shared/core/palette.js';
-import { text, button, panel, fadeTo } from '../../../shared/core/ui.js';
+import { text, button, fadeTo } from '../../../shared/core/ui.js';
 import { WIDTH, HEIGHT } from '../../../shared/core/boot.js';
 import { showHowTo } from '../../../shared/core/howto.js';
 import { RULES } from '../rules.js';
@@ -65,43 +65,6 @@ export function toast(scene, msg, y = 470, color = PALETTE.gold) {
   scene.__toast = [t, bg];
   scene.tweens.add({ targets: [t, bg], alpha: 0, delay: 1700, duration: 300, onComplete: () => { t.destroy(); bg.destroy(); } });
   return t;
-}
-
-/**
- * In-canvas modal with a title, lines and buttons [[label, fn, fill?]]. The dim layer swallows taps.
- */
-export function modal(scene, title, lines, buttons, { width = 320, wrap = 284 } = {}) {
-  scene.__modal?.close();
-  const c = scene.add.container(0, 0).setDepth(8000);
-  const dim = scene.add.rectangle(0, 0, WIDTH, HEIGHT, hex(PALETTE.ink), 0.65).setOrigin(0).setInteractive();
-  c.add(dim);
-  const texts = lines.map((l) => {
-    const o = typeof l === 'string' ? { text: l } : l;
-    return text(scene, WIDTH / 2, 0, o.text, { color: o.color || PALETTE.cream, wrap, align: 'center' }).setOrigin(0.5, 0);
-  });
-  const textH = texts.reduce((a, t) => a + t.height + 8, 0);
-  const btnH = buttons.length * 58;
-  const h = Math.min(HEIGHT - 20, 72 + textH + btnH + 10);
-  const top = Math.round((HEIGHT - h) / 2);
-  const left = Math.round((WIDTH - width) / 2);
-  c.add(panel(scene, left, top, width, h));
-  c.add(text(scene, WIDTH / 2, top + 30, title, { size: title.length > 16 ? 16 : 32, color: PALETTE.gold }));
-  let y = top + 58;
-  for (const t of texts) { t.setY(y); c.add(t); y += t.height + 8; }
-  let done = false;
-  buttons.forEach(([label, fn, fill], i) => {
-    c.add(button(scene, WIDTH / 2, y + 26 + i * 58, Math.min(260, width - 40), 46, label, () => {
-      if (done) return;
-      done = true;
-      c.close();
-      fn?.();
-    }, { fill: fill ?? (i === 0 ? PALETTE.gold : PALETTE.lavender) }));
-  });
-  c.close = () => { if (c.active) c.destroy(); if (scene.__modal === c) scene.__modal = null; };
-  scene.__modal = c;
-  c.setAlpha(0);
-  scene.tweens.add({ targets: c, alpha: 1, duration: 120 });
-  return c;
 }
 
 /** A row of 1-3 stars (images) starting at x. */

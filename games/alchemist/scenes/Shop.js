@@ -3,9 +3,9 @@ import { PALETTE, hex } from '../../../shared/core/palette.js';
 import { text, button } from '../../../shared/core/ui.js';
 import { sfx } from '../../../shared/core/sfx.js';
 import { WIDTH, HEIGHT, go, setBackground, store, persist, header, statBar, toast, once, hint } from './common.js';
-import { showMarket, showBook, showShelf, showPrice, showUpgrades, showNight, showTip, anyOpen, closeAll, reqLabel } from './panels.js';
+import { showMarket, showBook, showShelf, showPrice, showUpgrades, showNight, showTip, anyOpen, closeAll } from './panels.js';
 import * as G from '../logic/game.js';
-import { POTIONS, NAMED, INGREDIENTS, STORY_DAYS } from '../logic/data.js';
+import { POTIONS, INGREDIENTS, STORY_DAYS } from '../logic/data.js';
 import { reportDay, getSkill } from '../adaptive.js';
 import { noteBest } from '../save.js';
 import { playMusic, jingle } from '../music.js';
@@ -71,7 +71,7 @@ export class Shop extends Phaser.Scene {
     this.add.image(74, 300, 'lab', 'cauldron').setOrigin(0.5, 1).setScale(3);
     this.add.sprite(74, 196, 'smoke').play('smoke').setScale(2).setAlpha(0.55).setTint(0xd8a0f0);
     const zone = this.add.zone(74, 250, 110, 110).setInteractive({ useHandCursor: true });
-    zone.on('pointerup', () => { if (this.s.phase === 'prep' && !anyOpen() && !this.__modal && once(this, 400)) this.toBrew(); });
+    zone.on('pointerup', () => { if (this.s.phase === 'prep' && !anyOpen() && once(this, 400)) this.toBrew(); });
     // apprentice
     this.appr = this.add.sprite(140, 312, 'apprentice', '0_0').setOrigin(0.5, 1).setScale(3).setVisible(false);
     // the alchemist (you) behind the counter
@@ -114,7 +114,7 @@ export class Shop extends Phaser.Scene {
   }
 
   btn(x, y, w, h, label, fn, opts = {}) {
-    const b = button(this, x, y, w, h, label, () => { if (anyOpen() || this.__modal || !once(this, 250)) return; fn(); }, opts);
+    const b = button(this, x, y, w, h, label, () => { if (anyOpen() || !once(this, 250)) return; fn(); }, opts);
     this.ui.add(b);
     return b;
   }

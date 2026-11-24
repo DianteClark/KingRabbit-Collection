@@ -6,7 +6,7 @@ import { WIDTH, HEIGHT, go, setBackground, store, persist, header, statBar, toas
 import { showTip, showBook, anyOpen, closeAll } from './panels.js';
 import * as G from '../logic/game.js';
 import { INGREDIENTS, ING_ORDER, POTIONS, ELEMENTS, EL_INFO } from '../logic/data.js';
-import { stirZone, needleAt, stirHit, STIR, POTENT_AT } from '../logic/brew.js';
+import { stirZone, needleAt, stirHit, STIR } from '../logic/brew.js';
 import { playMusic, bubble, jingle } from '../music.js';
 
 const GRID_TOP = 366;
@@ -282,4 +282,3 @@ export class Brew extends Phaser.Scene {
   }
 }
 
-export { POTENT_AT };

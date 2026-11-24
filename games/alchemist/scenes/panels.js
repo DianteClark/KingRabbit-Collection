@@ -31,7 +31,11 @@ export function sheet({ title, sub = '', html = '', foot = '', cls = '', wrap = 
       <div class="al-scroll">${html}</div>
       <div class="al-foot">${foot}</div>
     </div>`;
+  // A click only counts if the finger also went down on this panel: the tap that opened it
+  // (which went down on the canvas) can't press anything inside it, without any delay for real taps.
+  // A press in the first 200 ms is the second half of a double tap on the opening button: ignored too.
   const opened = Date.now();
+  let pressed = false;
   const p = {
     el,
     close(silent) {
@@ -48,8 +52,8 @@ export function sheet({ title, sub = '', html = '', foot = '', cls = '', wrap = 
   let lastAct = 0;
   el.addEventListener('click', (e) => {
     if (!el.isConnected) return;
-    // the tap that opened this panel can't also press something inside it
-    if (Date.now() - opened < 350) return;
+    if (!pressed) return;
+    pressed = false;
     const b = e.target.closest('[data-act]');
     if (b && !b.disabled) {
       // no double-fire from a quick double tap
@@ -63,6 +67,7 @@ export function sheet({ title, sub = '', html = '', foot = '', cls = '', wrap = 
     }
     if (e.target === el && !noX) p.close();
   });
+  for (const t of ['pointerdown', 'mousedown', 'touchstart']) el.addEventListener(t, () => { pressed = Date.now() - opened >= 200; });
   for (const t of ['pointerdown', 'pointerup', 'mousedown', 'mouseup', 'touchstart', 'touchend', 'wheel']) el.addEventListener(t, (e) => e.stopPropagation());
   document.body.appendChild(el);
   open.push(p);
@@ -218,7 +223,17 @@ export function showShelf(s, { mode = 'view', customer, round, onPick, onChange,
     title, sub: sub(), html: render(), onClose,
     handlers: {
       pick: ({ key }) => { p.close(true); onPick?.(key); },
-      pour: ({ key }) => { if (G.pourOut(s, key)) { sfx('place'); onChange?.(); } p.set('sub', sub()); p.set('scroll', render()); },
+      pour: ({ key }) => {
+        // two taps: the first asks, the second pours
+        const b = p.el.querySelector(`[data-act="pour"][data-key="${key}"]`);
+        if (b && !b.dataset.armed) {
+          p.el.querySelectorAll('[data-armed]').forEach((x) => { delete x.dataset.armed; x.innerHTML = 'Pour<small>out</small>'; });
+          b.dataset.armed = '1'; b.innerHTML = 'Sure?<small>tap</small>';
+          return;
+        }
+        if (G.pourOut(s, key)) { sfx('place'); onChange?.(); }
+        p.set('sub', sub()); p.set('scroll', render());
+      },
     },
   });
   return p;
