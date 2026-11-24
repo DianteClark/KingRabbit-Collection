@@ -916,9 +916,9 @@ export class Play extends Phaser.Scene {
       return { msg: 'Tap a command in MAIN to remove it. You need Move, Move, Move, Action.', at: cellAt('main', p.main.length - 1) };
     }
     if (id === '2-1') {
-      if (!p.f1.length && this.sel !== 'f1') return { msg: 'Tap F1 to pick that slot. New commands then go into F1.', at: this.slotGeo.f1.label.c };
+      if (!p.f1.length && this.sel !== 'f1') return { msg: 'Tap F1 to pick that slot. New commands then go into F1.', at: this.slotGeo.f1.label.c, side: true };
       if (!p.f1.length) return { msg: 'Now add Move, Move, Action to F1.', at: pal('F') };
-      if (!p.main.some((c) => c.op === '1') && this.sel !== 'main') return { msg: 'Tap MAIN, then add the F1 command to run F1.', at: this.slotGeo.main.label.c };
+      if (!p.main.some((c) => c.op === '1') && this.sel !== 'main') return { msg: 'Tap MAIN, then add the F1 command to run F1.', at: this.slotGeo.main.label.c, side: true };
       if (!p.main.some((c) => c.op === '1')) return { msg: 'Add the F1 command: each one runs all of F1.', at: pal('1') };
       return null;
     }
@@ -938,13 +938,19 @@ export class Play extends Phaser.Scene {
     if (!tip) { if (!this.banner.length || this.mode === 'edit') this.hideBanner(); return; }
     this.showBanner(tip.msg, null, PALETTE.gold);
     if (tip.at) {
-      const ax = tip.at.x; const ay = tip.at.y - (tip.at.height ? 0 : 0) - 34;
+      // An arrow above the target pointing down, or (side) just right of it pointing left.
       const g = this.add.graphics();
-      g.fillStyle(hex(PALETTE.ink)).fillTriangle(-11, -9, 11, -9, 0, 9);
-      g.fillStyle(hex(PALETTE.gold)).fillTriangle(-8, -7, 8, -7, 0, 6);
+      if (tip.side) {
+        g.fillStyle(hex(PALETTE.ink)).fillTriangle(9, -11, 9, 11, -9, 0);
+        g.fillStyle(hex(PALETTE.gold)).fillTriangle(7, -8, 7, 8, -6, 0);
+      } else {
+        g.fillStyle(hex(PALETTE.ink)).fillTriangle(-11, -9, 11, -9, 0, 9);
+        g.fillStyle(hex(PALETTE.gold)).fillTriangle(-8, -7, 8, -7, 0, 6);
+      }
+      const ax = tip.at.x + (tip.side ? 38 : 0); const ay = tip.at.y - (tip.side ? 0 : 34);
       g.setPosition(ax, ay);
       this.coach.add(g);
-      this.coachTween = this.tweens.add({ targets: g, y: ay + 6, yoyo: true, repeat: -1, duration: 350 });
+      this.coachTween = this.tweens.add({ targets: g, [tip.side ? 'x' : 'y']: (tip.side ? ax : ay) + 6, yoyo: true, repeat: -1, duration: 350 });
     }
   }
 }
