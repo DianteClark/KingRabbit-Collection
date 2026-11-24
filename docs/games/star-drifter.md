@@ -46,7 +46,7 @@ An FTL-style space roguelite for portrait phones. Jump from beacon to beacon acr
 - Cruise clearly easier: 8/16 on the cruise seeds (test: at least 7 and 3+ more than Normal on the same seeds). Across other seeds Cruise wins 55-65%.
 - Corvid, Normal: 3/20 on the test seeds, 10/40 (25%) on others, about the same as the Wayfarer.
 - A won run visits every sector: 10+ fights and 30+ jumps (a typical win is ~45-55 jumps and 15-20 ships beaten).
-- The enemy skill drifts toward fights that cost 8-22% of your hull; with a fixed skill the bot's win rate moves from ~23% (easiest) to ~7% (hardest), so adaptation is felt but never decides a run on its own.
+- The enemy skill drifts toward fights that cost 8-22% of your hull. With the skill pinned at easiest, middle or hardest the bot still wins about a third of Normal runs (10, 11 and 10 of 30): adaptation changes how sharp enemy aim and volleys feel, not whether a run can be won.
 
 ## Testing
 
