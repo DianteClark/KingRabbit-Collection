@@ -1,6 +1,6 @@
 # City Chief
 
-**Status:** Playable (v1.0)
+**Status:** Playable (v1.1): crime map, weather, night lights, helicopter, first-day guide
 **Art:** BAS Town by Aleksandr Makarov (`shared/assets/modern-city/BAS-Town-v.1.0/`)
 **Rules text:** `games/city-chief/rules.js`
 
@@ -21,5 +21,5 @@ You are the new police chief of Tiny Town. The city runs live; you make the call
 `tests/city-chief.test.mjs`: road reachability, save round trip, a careful bot keeps its job for 12 days, a passive bot gets fired, endless never ends, units never get stuck.
 
 ## Next ideas
-- More districts as the city grows; police helicopter (art is in the pack)
+- More districts as the city grows
 - Officer shifts and overtime

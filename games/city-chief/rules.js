@@ -10,6 +10,8 @@ export const RULES = {
         'Too few cars and the suspects get away or officers get hurt. Sending a whole fleet to something small annoys residents and leaves the rest of the city empty.',
         'If you don\'t decide, the dispatcher sends one car. Time stops while you read a call that is still waiting.',
         'Tap Watch to follow a call or a car chase. Drag to look around, pinch (or scroll) to zoom.',
+        'Crime map (bottom left) shows how bad each district is, where your patrols are, and the mayor\'s current goal.',
+        'Some days it rains: more crashes, a little less crime. The morning paper has the forecast.',
       ],
     },
     {
@@ -40,7 +42,7 @@ export const RULES = {
         'Force: see every officer and car. Tap a car\'s area button to keep it patrolling one district; patrols lower crime there.',
         'Officers earn promotions. Detectives work cases against gangs; sergeants make their car stronger.',
         'Cases: put detectives on gangs, drug rings, the mob and the mafia. A rookie can ride along to learn fast, but it\'s risky. When a case is full, raid them.',
-        'Budget: hire rookies, buy cars and better gear, train, give raises, help the fire department, or fund community outreach.',
+        'Budget: hire rookies, buy cars and better gear, train, give raises, help the fire department, fund community outreach, or buy a police helicopter that helps chases and raids.',
       ],
     },
     {

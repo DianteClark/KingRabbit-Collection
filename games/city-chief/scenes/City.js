@@ -14,7 +14,7 @@ import * as P from './panels.js';
 const VIEW = { y: 78, h: 456 };
 const MW = W * TILE; const MH = H * TILE;
 const MS_PER_MIN = 350;
-const SPEEDS = [[0, '||'], [1, '>'], [3, '>>'], [8, '>>>']];
+const SPEEDS = [[0, '||'], [1, '1x'], [3, '3x'], [8, '8x']];
 const ICON = { noise: 35, shoplift: 28, vandal: 54, breakin: 31, accident: 58, burglary: 12, assault: 40, domestic: 12, cartheft: 31, drugdeal: 7, robbery: 44, gangfight: 40, shooting: 49 };
 const CIV_SMALL = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13];
 const CIV_BIG = [1, 2, 4, 5, 8, 9, 10, 11, 12, 13, 14, 15];
@@ -42,10 +42,25 @@ export class City extends Phaser.Scene {
     // Night falls over the buildings (cars, lights and markers stay bright on top).
     this.night = this.add.rectangle(0, 0, MW, MH, 0x0b0a24, 0).setOrigin(0);
     this.world.add(this.night);
+    this.windows = this.add.graphics().setAlpha(0);
+    this.world.add(this.windows);
+    for (const lot of S.city().lots) {
+      const [pw, ph] = BUILDINGS[lot.key];
+      const x0 = lot.x * TILE; const y0 = (lot.y + lot.h) * TILE - ph;
+      const n = Math.max(1, Math.round((pw * ph) / 140));
+      for (let k = 0; k < n; k++) {
+        this.windows.fillStyle(Math.random() < 0.7 ? 0xf0d472 : 0xf9f5ef, 0.9).fillRect(x0 + 2 + Math.floor(Math.random() * (pw - 4)), y0 + 2 + Math.floor(Math.random() * (ph * 0.6)), 1, 1);
+      }
+    }
     this.vehLayer = this.add.container(0, 0);
     this.fxLayer = this.add.container(0, 0);
+    this.lights = this.add.graphics();
+    this.heliG = this.add.graphics();
+    this.crimeLayer = this.add.container(0, 0).setVisible(false);
     this.markLayer = this.add.container(0, 0);
-    this.world.add([this.vehLayer, this.fxLayer, this.markLayer]);
+    this.world.add([this.lights, this.vehLayer, this.fxLayer, this.heliG, this.crimeLayer, this.markLayer]);
+    this.heli = { x: 0, y: 0, a: 0 };
+    this.rain = this.add.graphics().setDepth(49);
     this.unitSprites = new Map();
     this.markers = new Map();
     this.fireFx = new Map();
@@ -68,7 +83,8 @@ export class City extends Phaser.Scene {
     window.__city = { S, P, scene: this }; // for browser tests
     if (this.s.pendingMajor) this.time.delayedCall(300, () => P.showMajor(this));
     else if (this.s.dayOver) this.time.delayedCall(300, () => this.endDay());
-    else this.toast(`Day ${this.s.day}  ${S.clock(this.s.minute)}`);
+    else if (!this.s.welcomed) this.time.delayedCall(400, () => P.showWelcome(this));
+    else this.toast(`Day ${this.s.day}  ${S.clock(this.s.minute)}${this.s.weather === 'rain' ? '  Rain today' : ''}`);
   }
 
   // ------------------------------------------------------------ map drawing
@@ -234,7 +250,7 @@ export class City extends Phaser.Scene {
     const d = (o) => o.setDepth(51);
     d(button(this, 28, 22, 44, 34, '<', () => this.toTitle(), { size: 32, fill: PALETTE.cream }));
     this.clockText = d(text(this, 150, 22, '', { size: 16, color: PALETTE.cream }));
-    this.speedBtn = d(button(this, WIDTH - 82, 22, 54, 34, '>', () => this.cycleSpeed(), { fill: PALETTE.gold }));
+    this.speedBtn = d(button(this, WIDTH - 82, 22, 54, 34, '1x', () => this.cycleSpeed(), { fill: PALETTE.gold }));
     d(button(this, WIDTH - 28, 22, 40, 34, '?', () => this.howTo(), { size: 32, fill: PALETTE.gold }));
     this.stats = ['Safety', 'Mayor', 'Morale'].map((l, i) => {
       const x = 8 + i * 92;
@@ -256,7 +272,10 @@ export class City extends Phaser.Scene {
     // Calls waiting for the chief's decision: tap to jump to the oldest one.
     this.waitBtn = d(button(this, WIDTH - 66, VIEW.y + VIEW.h - 24, 116, 32, '', () => this.nextWaiting(), { fill: PALETTE.orange }));
     this.waitBtn.setVisible(false);
-    this.pauseTag = d(text(this, 66, VIEW.y + VIEW.h - 24, 'PAUSED', { color: PALETTE.gold }));
+    this.pauseTag = d(text(this, WIDTH / 2, VIEW.y + 14, 'PAUSED', { color: PALETTE.gold }));
+    this.crimeBtn = d(button(this, 54, VIEW.y + VIEW.h - 24, 96, 32, 'Crime map', () => this.toggleCrimeMap(), { fill: PALETTE.cream }));
+    this.goalText = d(text(this, WIDTH / 2, VIEW.y + 14, '', { color: PALETTE.gold, wrap: 340 }));
+    this.goalBg = this.add.rectangle(WIDTH / 2, VIEW.y + 14, WIDTH, 24, hex(PALETTE.ink), 0.75).setDepth(50).setVisible(false);
   }
 
   refreshHud() {
@@ -274,7 +293,9 @@ export class City extends Phaser.Scene {
     const waiting = this.waitingCalls().length;
     this.waitBtn.setVisible(waiting > 0);
     if (waiting) this.waitBtn.setLabel(`${waiting} big call${waiting > 1 ? 's' : ''}`);
-    this.pauseTag.setVisible(this.speed === 0 && Math.floor(this.time.now / 500) % 2 === 0);
+    const goal = this.crimeLayer.visible && s.demand ? `Mayor's goal: ${S.districtName(s.demand.district)} crime ${s.demand.target} or less (now ${Math.round(s.districts[s.demand.district].crime)})` : '';
+    this.goalText.setText(goal); this.goalBg.setVisible(!!goal);
+    this.pauseTag.setVisible(!goal && this.speed === 0 && Math.floor(this.time.now / 500) % 2 === 0);
     this.clockText.setText(`Day ${s.day}  ${S.clock(s.minute)}${s.mode === 'endless' ? '  Endless' : ''}`);
     const last = s.log.at(-1);
     const tickerStr = last ? `${S.clock(last.t)} ${last.text}` : 'All quiet. Tap a marker to see a call.';
@@ -296,6 +317,95 @@ export class City extends Phaser.Scene {
     P.showIncident(this, inc.id);
   }
 
+  // ------------------------------------------------------------ overlays
+
+  headlight(p, dir) {
+    if (this.dark < 0.3) return;
+    const v = { R: [6, 0], L: [-6, 0], D: [0, 6], U: [0, -6] }[dir];
+    this.lights.fillStyle(0xf9f5ef, 0.22 * this.dark).fillCircle(p.x + v[0], p.y + v[1], 3);
+  }
+
+  drawRain(on) {
+    this.rain.clear();
+    if (!on) return;
+    const t = this.time.now;
+    this.rain.lineStyle(1, 0xb9c4e8, 0.45);
+    for (let k = 0; k < 70; k++) {
+      const x = (k * 53 + t * 0.25) % (WIDTH + 40) - 20;
+      const y = VIEW.y + ((k * 97 + t * 0.6) % VIEW.h);
+      this.rain.lineBetween(x, y, x - 3, Math.min(VIEW.y + VIEW.h, y + 8));
+    }
+  }
+
+  /** The helicopter hovers over a chase or a big event, otherwise it circles HQ. */
+  drawHeli(ms) {
+    const g = this.heliG;
+    g.clear();
+    if (!this.s.heli) return;
+    const s = this.s;
+    const chase = s.incidents.find((i) => i.status === 'chase' && i.suspect);
+    const ev = s.units.find((u) => u.task.type === 'event');
+    let target;
+    if (chase) target = toPx(chase.suspect.x, chase.suspect.y);
+    else if (ev) target = toPx(ev.x, ev.y);
+    else {
+      const hq = S.city().landmark('hq');
+      this.heli.a += ms / 2500;
+      target = { x: (hq.x + hq.w / 2) * TILE + Math.cos(this.heli.a) * 40, y: (hq.y + hq.h / 2) * TILE + Math.sin(this.heli.a) * 30 };
+    }
+    const h = this.heli;
+    if (!h.init) { Object.assign(h, target, { init: true }); }
+    const dx = target.x - h.x; const dy = target.y - h.y;
+    const d = Math.hypot(dx, dy);
+    const sp = Math.min(d, (ms / 1000) * 70);
+    if (d > 0.5) { h.x += (dx / d) * sp; h.y += (dy / d) * sp; h.face = Math.atan2(dy, dx); }
+    const x = h.x; const y = h.y - 10; const f = h.face || 0;
+    g.fillStyle(0x040303, 0.3).fillEllipse(h.x + 3, h.y + 3, 10, 5);
+    const tx = x - Math.cos(f) * 9; const ty = y - Math.sin(f) * 9;
+    g.lineStyle(3, 0x040303).lineBetween(x, y, tx, ty);
+    g.lineStyle(1, 0xdfe3f0).lineBetween(x, y, tx, ty);
+    g.fillStyle(0x040303).fillCircle(x, y, 5).fillStyle(0xdfe3f0).fillCircle(x, y, 4).fillStyle(0x3060ff).fillCircle(x + Math.cos(f) * 2, y + Math.sin(f) * 2, 1.8);
+    const r = this.time.now / 40;
+    g.lineStyle(1, 0xf9f5ef, 0.95).lineBetween(x - Math.cos(r) * 8, y - Math.sin(r) * 8, x + Math.cos(r) * 8, y + Math.sin(r) * 8);
+    g.lineBetween(x - Math.cos(r + 1.57) * 8, y - Math.sin(r + 1.57) * 8, x + Math.cos(r + 1.57) * 8, y + Math.sin(r + 1.57) * 8);
+    if (chase || ev) {
+      const b = Math.floor(this.time.now / 150) % 2;
+      g.fillStyle(b ? 0xff3030 : 0x3060ff).fillRect(x - 1, y - 5, 2, 1);
+      g.fillStyle(0xf9f5ef, 0.12).fillCircle(h.x, h.y, 10); // searchlight
+    }
+  }
+
+  toggleCrimeMap() {
+    const on = !this.crimeLayer.visible;
+    this.crimeLayer.setVisible(on);
+    this.crimeBtn.setLabel(on ? 'Hide map' : 'Crime map');
+    if (on) { this.zoomAt(0.1, WIDTH / 2, VIEW.y + VIEW.h / 2); this.followTarget = null; }
+  }
+
+  drawCrimeMap() {
+    const s = this.s;
+    if (!this.crimeParts) {
+      this.crimeParts = DISTRICTS.map((d) => {
+        const r0 = d.rows[0];
+        const top = ROAD_Y[r0] * TILE; const bot = ROAD_Y[r0 + 1] * TILE;
+        const rect = this.add.rectangle(ROAD_X[0] * TILE, top, (ROAD_X.at(-1) - ROAD_X[0]) * TILE, bot - top, 0xa13d3b, 0).setOrigin(0);
+        const label = text(this, (ROAD_X[0] + ROAD_X.at(-1)) / 2 * TILE, (top + bot) / 2, '', { color: PALETTE.cream, size: 16 });
+        const bg = this.add.rectangle(label.x, label.y, 10, 10, 0x040303, 0.75);
+        this.crimeLayer.add([rect, bg, label]);
+        return { d, rect, label, bg };
+      });
+    }
+    for (const p of this.crimeParts) {
+      const c = Math.round(s.districts[p.d.id].crime);
+      const g = s.groups.filter((x) => x.district === p.d.id).length;
+      const patrol = s.units.filter((u) => u.zone === p.d.id).length;
+      p.rect.fillAlpha = 0.1 + (c / 100) * 0.55;
+      p.label.setText(`${p.d.name}: crime ${c}${g ? `, ${g} gang${g > 1 ? 's' : ''}` : ''}${patrol ? `\n${patrol} car${patrol > 1 ? 's' : ''} assigned` : ''}`).setScale(1 / this.zoom);
+      p.bg.setSize(p.label.width / this.zoom + 10, p.label.height / this.zoom + 6).setPosition(p.label.x, p.label.y);
+      p.bg.setOrigin(0.5);
+    }
+  }
+
   cycleSpeed() {
     this.speed = (this.speed + 1) % SPEEDS.length;
     this.speedBtn.setLabel(SPEEDS[this.speed][1]);
@@ -307,8 +417,8 @@ export class City extends Phaser.Scene {
   }
 
   toast(msg) {
-    const t = text(this, WIDTH / 2, VIEW.y + 26, msg, { color: PALETTE.gold, wrap: 330 }).setDepth(60);
-    const bg = this.add.rectangle(WIDTH / 2, VIEW.y + 26, Math.min(350, t.width + 16), t.height + 8, hex(PALETTE.ink), 0.8).setDepth(59);
+    const t = text(this, WIDTH / 2, VIEW.y + 46, msg, { color: PALETTE.gold, wrap: 330 }).setDepth(60);
+    const bg = this.add.rectangle(WIDTH / 2, VIEW.y + 46, Math.min(350, t.width + 16), t.height + 8, hex(PALETTE.ink), 0.8).setDepth(59);
     this.tweens.add({ targets: [t, bg], alpha: 0, delay: 1500, duration: 300, onComplete: () => { t.destroy(); bg.destroy(); } });
   }
 
@@ -328,7 +438,14 @@ export class City extends Phaser.Scene {
     }
     const h = (s.minute % 1440) / 60;
     const dark = h >= 20 || h < 5 ? 1 : h >= 18 ? (h - 18) / 2 : h < 7 ? (7 - h) / 2 : 0;
-    this.night.fillAlpha = dark * 0.42;
+    const rain = s.weather === 'rain';
+    this.night.fillAlpha = dark * 0.42 + (rain ? 0.12 : 0);
+    this.windows.setAlpha(dark);
+    this.dark = dark;
+    this.drawRain(rain);
+    this.drawHeli(ms);
+    if (this.crimeLayer.visible) this.drawCrimeMap();
+    this.lights.clear();
     this.stepCivilians(gm);
     this.stepWalkers(gm);
     this.stepAmbulances(gm);
@@ -360,6 +477,14 @@ export class City extends Phaser.Scene {
     else if (e.kind === 'fire') sfx('smallBoom');
     else if (e.kind === 'ambulance') this.sendAmbulance(e.door);
     else if (e.kind === 'dayOver') this.endDay();
+    else if (e.kind === 'solved' || e.kind === 'failed') {
+      // Let the chief know how the calls they handled turned out.
+      const inc = this.s.incidents.find((i) => i.id === e.inc);
+      if (inc && (inc.chief || inc.d >= 3) && !inc.special) {
+        this.toast(`${inc.name}, ${S.districtName(inc.district)}: ${e.kind === 'solved' ? 'solved!' : 'they got away'}`);
+        sfx(e.kind === 'solved' ? 'coin' : 'error');
+      }
+    }
   }
 
   afterMajor() {
@@ -399,6 +524,7 @@ export class City extends Phaser.Scene {
       }
       const p = toPx(u.x, u.y, u.dir);
       spr.setPosition(p.x, p.y);
+      this.headlight(p, u.dir);
       spr.car.setTexture(`car:SmallCar1-${u.dir}`);
       const lights = ['respond', 'chase', 'event'].includes(u.task.type);
       spr.l1.setVisible(lights).setFillStyle(blink ? 0xff3030 : 0x3060ff);
@@ -549,6 +675,7 @@ export class City extends Phaser.Scene {
       this.move(c, c.speed * gm);
       const p = toPx(c.x, c.y, c.dir);
       c.spr.setPosition(p.x, p.y).setTexture(`car:${c.key}-${c.dir}`);
+      this.headlight(p, c.dir);
     }
   }
 

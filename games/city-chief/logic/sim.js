@@ -164,6 +164,7 @@ function pickCallType(s, rng, district) {
     if ((k === 'shooting' || k === 'robbery') && groups.some((g) => g.type === 'mob' || g.type === 'mafia')) x *= 2;
     if (k === 'gangfight' && groups.some((g) => g.type === 'gang')) x *= 2.5;
     if (s.day <= 1 && (k === 'shooting' || k === 'gangfight')) x *= 0.2;
+    if (s.weather === 'rain') x *= k === 'accident' ? 3 : 0.8;
     return [k, x];
   });
   let r = rng() * weights.reduce((a, [, w]) => a + w, 0);
@@ -320,7 +321,7 @@ function startScene(s, rng, inc) {
 function startChase(s, rng, inc) {
   inc.status = 'chase';
   const units = s.units.filter((u) => u.task.inc === inc.id);
-  const p = clamp(0.3 + 0.13 * units.length + 0.12 * s.carLevel - 0.06 * inc.d, 0.1, 0.92);
+  const p = clamp(0.3 + 0.13 * units.length + 0.12 * s.carLevel + (s.heli ? 0.18 : 0) - 0.06 * inc.d, 0.1, 0.95);
   inc.chase = { caught: chance(rng, p), end: s.minute + between(rng, 14, 30), p };
   const start = inc.door;
   inc.suspect = { x: start.x, y: start.y, dir: 'R', path: [], car: between(rng, 2, 13) };
@@ -501,6 +502,7 @@ export function resolveMajor(s, choice) {
     inc.status = 'chase';
     inc.chase = { caught: res.chase.caught, end: s.minute + between(rng, 15, 30) };
     inc.suspect = { x: pm.door.x, y: pm.door.y, dir: 'R', path: [], car: 7 };
+    res.chaseInc = inc.id;
   }
   s.pendingMajor = null;
   s.rng = rng.state();
@@ -540,7 +542,7 @@ function minute(s, rng, dt, before) {
   // New calls
   for (const d of DISTRICTS) {
     const g = groupIn(s, d.id).reduce((a, x) => a + x.strength / 90, 0);
-    const perHour = 0.33 * (0.6 + s.districts[d.id].crime / 60) * hourFactor(s.minute) * (1 + g) * m.crime * (1 + Math.min(0.6, (s.day - 1) * 0.03));
+    const perHour = 0.33 * (0.6 + s.districts[d.id].crime / 60) * hourFactor(s.minute) * (1 + g) * m.crime * (1 + Math.min(0.6, (s.day - 1) * 0.03)) * (s.weather === 'rain' ? 0.95 : 1);
     if (chance(rng, (perHour / 60) * dt)) {
       const inc = spawnIncident(s, rng, pickCallType(s, rng, d.id), d.id);
       events.push({ kind: 'call', inc: inc.id, big: inc.d >= 2 });
@@ -624,6 +626,8 @@ function startDay(s, rng) {
   s.dayOver = false;
   crewCars(s);
   scheduleMajors(s, rng);
+  // Weather: rainy days mean more crashes and fewer people out committing crimes.
+  s.weather = s.day > 1 && chance(rng, 0.25) ? 'rain' : 'clear';
 }
 
 export const salaryOf = (s, o) => Math.round(RANKS[o.rank].pay * (1 + 0.15 * s.payLevel));
@@ -706,6 +710,7 @@ export function endDay(s) {
   s.day++;
   if (s.mode === 'career' && s.day > CAREER_DAYS && !s.won) { s.won = true; }
   startDay(s, rng);
+  paper.forecast = s.weather;
   s.rng = rng.state();
   checkOver(s);
   return { paper, briefing, meeting };
@@ -776,6 +781,7 @@ export const SHOP = [
   { id: 'train', label: 'Training program', detail: 'Everyone gains skill', cost: (s) => (s.trainLevel < 3 ? [1000, 2000, 3000][s.trainLevel] : null), level: 'trainLevel' },
   { id: 'pay', label: 'Pay raise', detail: 'Morale up, salaries +15%', cost: (s) => (s.payLevel < 3 ? 300 : null), level: 'payLevel' },
   { id: 'fire', label: 'Fire dept. equipment', detail: 'Fires put out faster', cost: (s) => (s.fireLevel < 3 ? [1000, 2000, 3000][s.fireLevel] : null), level: 'fireLevel' },
+  { id: 'heli', label: 'Police helicopter', detail: 'Eye in the sky: chases and raids go better', cost: (s) => (s.heli ? null : 4000) },
   { id: 'outreach', label: 'Community outreach', detail: 'Safety and trust up (daily)', cost: (s) => (s.outreachDay === s.day ? null : 600) },
 ];
 
@@ -792,6 +798,7 @@ export function buy(s, id) {
   if (id === 'train') { s.trainLevel++; for (const o of s.officers) o.skill = +Math.min(1.6, o.skill + 0.1).toFixed(3); }
   if (id === 'pay') { s.payLevel++; for (const o of s.officers) o.morale = clamp(o.morale + 10, 0, 100); }
   if (id === 'fire') s.fireLevel++;
+  if (id === 'heli') { s.heli = true; say(s, 'The new police helicopter is in the air.', { tone: 'good' }); }
   if (id === 'outreach') { s.outreachDay = s.day; s.safety = clamp(s.safety + 4, 0, 100); s.trust = clamp(s.trust + 2, 0, 100); }
   s.rng = rng.state();
   crewCars(s);

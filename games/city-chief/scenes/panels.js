@@ -112,6 +112,28 @@ export function showIncident(g, incId) {
   p.timer = setInterval(refresh, 400);
 }
 
+// ---------------------------------------------------------------- first day
+
+export function showWelcome(g) {
+  closeAll();
+  g.hold('welcome');
+  const s = g.s;
+  const p = sheet({
+    title: 'Welcome, Chief', wrap: 'center', noX: true,
+    sub: s.mode === 'endless' ? 'Endless mode: take it easy' : 'Career: keep your job',
+    html: `<p class="cc-p">Tiny Town is yours to protect. The city runs on its own; you make the calls that matter.</p>
+      <ul class="cc-log">
+        <li><b>1</b>Markers show calls. A bouncing one is a big call you haven't looked at. Tap it, read the clues and send backup.</li>
+        <li><b>2</b>The dispatcher sends one car to everything. Small calls usually need just that.</li>
+        <li><b>3</b>Big events stop the clock and wait for your decision.</li>
+        <li><b>4</b>Watch Safety, the Mayor's trust and Morale at the top.${s.mode === 'career' ? ' If Safety or the Mayor\'s trust hits zero, you\'re fired.' : ''}</li>
+        <li><b>5</b>Drag to look around, pinch to zoom. Speed up time with the 1x button.</li>
+      </ul>`,
+    foot: '<button class="cc-btn gold" data-act="go">Start the shift</button>',
+    handlers: { go: () => { s.welcomed = true; g.save(); p.close(true); g.release('welcome'); g.toast('Day 1. Good luck, Chief.'); } },
+  });
+}
+
 // ---------------------------------------------------------------- big events
 
 export function showMajor(g) {
@@ -131,6 +153,7 @@ export function showMajor(g) {
       pick: ({ i }) => {
         g.follow({ door: m.door });
         const res = S.resolveMajor(s, +i);
+        if (res.chaseInc) g.follow({ inc: res.chaseInc });
         sfx(res.chase ? 'power' : res.ok ? 'win' : 'lose');
         g.save();
         p.set('sub', res.chase ? '<span class="cc-tag alert">Pursuit!</span>' : res.ok ? '<span class="cc-tag good">It worked</span>' : '<span class="cc-tag bad">It went wrong</span>');
@@ -273,6 +296,7 @@ function paperHtml(s, paper) {
   return `<div class="headline">${esc(paper.headline)}</div><div class="lede">${esc(paper.sub)}</div>
     ${paper.stories.map((x) => `<div class="story"><b>${esc(x.headline)}</b>${esc(x.sub)}</div>`).join('')}
     <div class="story"><b>City Hall</b>${esc(paper.mood)}</div>
+    ${paper.forecast ? `<div class="story"><b>Weather</b>${paper.forecast === 'rain' ? 'Rain all day. Drivers, slow down: expect crashes.' : 'Clear skies today.'}</div>` : ''}
     <div class="box"><div class="cc-stats">
       <div><span>Calls</span> ${st.calls}</div><div><span>Solved</span> ${st.solved}</div>
       <div><span>Failed</span> ${st.failed}</div><div><span>Avg. response</span> ${st.resp ?? '-'} min</div>

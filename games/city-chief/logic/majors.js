@@ -49,7 +49,7 @@ export const MAJORS = {
         h.notable(14, 'Shootout at First City Bank', 'Customers were hurt when police stormed the bank. The council wants answers.');
         return { ok: false, text: 'Shots ring out inside. Customers are hurt and two robbers escape in the chaos. Expect hard questions.', hurt: true };
       }
-      const p = Math.min(0.9, 0.35 + 0.15 * h.units.length + 0.12 * s.carLevel);
+      const p = Math.min(0.93, 0.35 + 0.15 * h.units.length + 0.12 * s.carLevel + (s.heli ? 0.15 : 0));
       const caught = h.chance(rng, p);
       if (caught) { s.trust = cl(s.trust + 4); s.safety = cl(s.safety + 4); h.notable(12, 'Bank robbers caught after high-speed chase', 'The getaway van was boxed in after a chase across town.'); }
       else { s.trust = cl(s.trust - 7); s.safety = cl(s.safety - 5); h.notable(12, 'Bank robbers escape after chase', 'The getaway van lost police in traffic.'); }
@@ -179,7 +179,7 @@ export const MAJORS = {
       const g = s.groups.find((x) => x.id === pm.group);
       if (!g || opt.style === 'wait') return { ok: true, text: 'The raid can wait. The case stays open.', keep: true };
       const need = g.strength / 20 + 1;
-      if (h.chance(rng, odds(h.power + s.gearLevel * 0.4, need))) {
+      if (h.chance(rng, odds(h.power + s.gearLevel * 0.4 + (s.heli ? 0.6 : 0), need))) {
         s.groups = s.groups.filter((x) => x.id !== g.id);
         s.officers.forEach((o) => { if (o.caseId === g.id) o.caseId = null; });
         s.districts[g.district].crime = Math.max(0, s.districts[g.district].crime - 15);
