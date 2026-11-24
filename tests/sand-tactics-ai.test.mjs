@@ -144,3 +144,19 @@ test('ai: skill presets blend smoothly', () => {
   assert.ok(Math.abs(q.noise - (n.noise + h.noise) / 2) < 1e-9);
   assert.deepEqual(AI.aiParams(2), h, 'clamped');
 });
+
+test('adaptive: wins raise the CPU level, losses lower it, always within 0..1', async () => {
+  const A = await import(new URL(`${base}adaptive.js`, import.meta.url).href);
+  A.resetSkill();
+  const start = A.getSkill();
+  A.reportResult(A.SKILL_ID, 1, 0.5);
+  const up = A.getSkill();
+  assert.ok(up > start);
+  A.reportResult(undefined, 0, 1);
+  assert.ok(A.getSkill() < up, 'the default id is the CPU skill');
+  for (let i = 0; i < 40; i++) A.reportResult(A.SKILL_ID, 1, 1);
+  assert.equal(A.getSkill(), 1);
+  assert.equal(A.skillLabel(), 10);
+  for (let i = 0; i < 40; i++) A.reportResult(A.SKILL_ID, 0, 1);
+  assert.equal(A.getSkill(), 0);
+});

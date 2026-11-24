@@ -13,7 +13,7 @@ import {
   frame, sprite, setRef, unitRef, isFoot, buildingRef, BOOM, SHOT, DEATH, CURSOR, TILE,
 } from '../frames.js';
 import { save, saveBattle, loadBattle, clearBattle, missionWon, recordSkirmish } from '../save.js';
-import { getSkill, reportResult } from '../adaptive.js';
+import { getSkill, reportResult, SKILL_ID } from '../adaptive.js';
 
 const T = 32; // one map cell on screen (16px art at 2x)
 const TOP = 48;
@@ -1014,7 +1014,7 @@ export class Battle extends Phaser.Scene {
       // The adaptive level moves by how decisive the result was.
       const mine = G.armyValue(s, human) + 1; const theirs = G.armyValue(s, 1 - human) + 1;
       const margin = Math.min(1, Math.abs(Math.log(mine / theirs)) / 2);
-      reportResult(undefined, won ? 1 : 0, s.reason === 'resign' ? 1 : margin);
+      reportResult(SKILL_ID, won ? 1 : 0, s.reason === 'resign' ? 1 : margin);
     }
     let title;
     const buttons = [];

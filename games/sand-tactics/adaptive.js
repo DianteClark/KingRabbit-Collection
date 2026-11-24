@@ -22,7 +22,7 @@ export function resetSkill(id = SKILL_ID) { setSkill(id, START, 0); }
 export const skillLabel = (id = SKILL_ID) => Math.round(getSkill(id) * 9) + 1;
 
 /** After a battle against the computer. result: 1 win, 0 loss (your side). margin 0..1: how decisive. */
-export function reportResult(id, result, margin = 0.5) {
+export function reportResult(id = SKILL_ID, result = 0, margin = 0.5) {
   const games = ((save.get('skillGames') || {})[id] || 0) + 1;
   const k = games <= 4 ? 0.14 : 0.08;
   const delta = k * (result - 0.5) * 2 * (0.6 + 0.8 * margin);
