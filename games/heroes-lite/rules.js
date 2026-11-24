@@ -50,9 +50,11 @@ export const RULES = {
         'Wait to act later this round. Defend for +30% Defense until your next turn.',
         'Your hero may cast one spell per round: tap Spell, pick one, then tap the target.',
         'Auto lets the computer fight for you. Weak monster packs can be beaten instantly with Quick battle.',
+        'Flee (top left): Retreat saves your hero but loses the whole army. Against an enemy hero you can instead Surrender: pay half the price of your remaining troops and keep them. Either way the hero waits at your Taverns to be hired again.',
+        'The computer flees too when a fight is hopeless, so expect to meet its heroes again.',
       ],
     },
-    { heading: 'Saving', text: 'The game saves itself after every move. Close the tab whenever you like and tap Continue to pick up where you left off.' },
+    { heading: 'Saving and settings', text: 'The game saves itself after every move. Close the tab whenever you like and tap Continue to pick up where you left off. The < button on the map opens a menu where you can turn sound off or skip watching enemy moves.' },
     { heading: 'Credits', text: 'Art: HAS Heroic Fantasy by Aleksandr Makarov (iknowkingrabbit). Font: BoldPixels.' },
   ],
 };

@@ -1,6 +1,6 @@
 # Heroes Lite
 
-**Status:** Playable (v1.0): 3 scenarios + endless mode, Castle and Necropolis, adaptive computer opponent
+**Status:** Playable (v1.1): 3 scenarios + endless mode, Castle and Necropolis, adaptive computer opponent
 **Art:** HAS Heroic Fantasy by Aleksandr Makarov (`shared/assets/has-heroic-fantasy/`, mostly the HAS2020 compilation and the Battlegrounds sheet)
 **Rules text:** `games/heroes-lite/rules.js` (shown by the gold ? button on every screen)
 
@@ -16,7 +16,13 @@ and win tactical battles on a 7x8 grid.
 | Town | Build (one structure a day), Recruit (weekly stock), Army (garrison <-> hero, hire heroes, guild spells), Trade |
 | Battle | 7x8 grid, speed order strip, Spell / Wait / Defend / Auto, damage numbers and unit animations |
 
-The hero sheet and level-up choice are overlays (`scenes/heroPanel.js`).
+The hero sheet, level-up choice and hero meeting are overlays (`scenes/heroPanel.js`).
+
+New players get one-time tips (stored in the save): plan a route, march, open the town, End Day, the town screen
+and the first battle. Enemy turns only animate moves inside your current sight (or none, with the "Enemy moves: skip"
+setting in the map menu), so a turn usually takes well under two seconds.
+Fog of war is a one-texel-per-tile canvas drawn with linear filtering for soft edges; ground variety comes from the
+tilesets' rough-ground 3x3 patches.
 
 ## Rules in brief
 
@@ -33,6 +39,10 @@ The hero sheet and level-up choice are overlays (`scenes/heroPanel.js`).
   round (Griffins two, Vampires ignore it), shooters blocked when an enemy is adjacent and halved in melee, wait,
   defend (+30% Defense), 9 spells (one hero cast per round), abilities: fly, regen, drain, joust, death blow, splash,
   resist. Auto-combat for any battle; Quick battle when you're 2.5x stronger than a monster pack.
+- **Fleeing:** Retreat (any battle with a hero) loses the army but the hero joins the owner's tavern pool;
+  Surrender (only against an enemy hero) costs half the troops' price, paid to the winner, and keeps the army.
+  Fled heroes are rehired at any Tavern (the computer rehires its best one first). Computer heroes flee when their side
+  is worth less than 22-30% of the enemy's (none on easy); your side never flees on Auto.
 - **Win / lose:** capture every enemy town; lose with no towns and no heroes, or after 7 days without a town.
   Towns are attacked hero-first, then the garrison.
 
@@ -40,7 +50,7 @@ The hero sheet and level-up choice are overlays (`scenes/heroPanel.js`).
 
 | Id | Name | Size | Notes |
 |---|---|---|---|
-| valley | Green Valley | 24x30 grass | 1 enemy town across a river with two guarded fords |
+| valley | Green Valley | 24x30 grass | 1 enemy town across a river with two guarded fords; tutorial map: 14-day truce (the enemy won't attack you), stronger start army, weaker enemy garrison |
 | desert | Desert Crossing | 26x34 sand | 2 enemy towns behind a dune ridge, a neutral town by the oasis |
 | frontier | Frozen Frontier | 28x32 ice | enemy starts with 2 heroes, a Citadel and a bigger garrison; neutral fort |
 | endless | Last Stand | 26x26 dirt | no enemy towns; a wave hero spawns at the edges every 7 days, its army grows ~wave^1.55; score = days survived |

@@ -318,7 +318,7 @@ test('combat: auto-resolve always finishes and maps survivors back to army slots
     assert.ok(b.over && (r.winner === 0 || r.winner === 1));
     assert.deepEqual(r.sides[0].survivors.map((s) => s.slot), [0, 2]);
     const loser = r.sides[1 - r.winner];
-    assert.ok(loser.survivors.every((s) => s.count === 0) || b.round > 40);
+    assert.ok(loser.survivors.every((s) => s.count === 0) || b.round > 40 || r.fled);
   }
 });
 
@@ -347,7 +347,8 @@ test('map battles: beaten heroes vanish and hand over artifacts; necromancy rais
   hero.army = [{ type: 'vampire', count: 20 }, null, null, null, null];
   const setup = G.battleSetup(st, hero, { type: 'hero', heroId: foe.id, cost: 10 });
   const b = G.makeBattle(st, setup);
-  const res = C.autoResolve(b);
+  const fight = { ...C.TACTIC_PRESETS.normal, flee: 0 };
+  const res = C.autoResolve(b, fight, fight);
   assert.equal(res.winner, 0);
   const out = G.applyBattle(st, setup, res);
   assert.ok(out.won);
@@ -426,4 +427,73 @@ test('heroes next to each other can swap stacks', () => {
   assert.equal(G.exchange(st, hero, other, 0), false, 'keeps its last stack');
   other.x = 5;
   assert.equal(G.exchange(st, other, hero, 0), false, 'too far apart');
+});
+
+test('fleeing: retreat loses the army but the hero can be hired again; surrender pays gold and keeps it', () => {
+  const st = G.newGame(scenarioById('valley'), { seed: 21 });
+  const mine = G.heroesOf(st, 0)[0];
+  const foe = G.heroesOf(st, 1)[0];
+  foe.x = mine.x + 1; foe.y = mine.y + 1;
+  mine.level = 4; mine.artifacts = ['helm'];
+  // Retreat.
+  let setup = G.battleSetup(st, mine, { type: 'hero', heroId: foe.id, cost: 0 });
+  let b = G.makeBattle(st, setup);
+  assert.equal(C.fleeOptions(b, 0).retreat, true);
+  b.activeId = b.stacks.find((s) => s.side === 0).id;
+  C.act(b, { type: 'retreat' });
+  assert.ok(b.over && b.winner === 1 && b.fled.how === 'retreat');
+  let out = G.applyBattle(st, setup, C.result(b));
+  assert.equal(out.won, false);
+  assert.equal(G.getHero(st, mine.id), undefined);
+  assert.equal(G.retiredHeroes(st, 0)[0].id, mine.id);
+  assert.deepEqual(foe.artifacts, [], 'a retreating hero keeps its artifacts');
+  // Rehire in town: same hero, same level, a small new army.
+  const town = G.townsOf(st, 0)[0];
+  st.players[0].res.gold = 9000;
+  const back = G.hireHero(st, town, mine.id);
+  assert.equal(back.id, mine.id);
+  assert.equal(back.level, 4);
+  assert.deepEqual(back.artifacts, ['helm']);
+  assert.ok(back.army.some(Boolean));
+  assert.equal(G.retiredHeroes(st, 0).length, 0);
+  // Surrender: needs an enemy hero and enough gold; keeps the army.
+  back.x = foe.x - 1; back.y = foe.y;
+  back.army = [{ type: 'swordsman', count: 10 }, null, null, null, null];
+  setup = G.battleSetup(st, back, { type: 'hero', heroId: foe.id, cost: 0 });
+  b = G.makeBattle(st, setup);
+  const cost = C.fleeOptions(b, 0).surrender;
+  assert.equal(cost, 1500);
+  b.activeId = b.stacks.find((s) => s.side === 0).id;
+  C.act(b, { type: 'surrender' });
+  const g0 = st.players[0].res.gold; const g1 = st.players[1].res.gold;
+  out = G.applyBattle(st, setup, C.result(b));
+  assert.equal(out.fled, 'surrender');
+  assert.equal(st.players[0].res.gold, g0 - cost);
+  assert.equal(st.players[1].res.gold, g1 + cost);
+  assert.equal(G.retiredHeroes(st, 0)[0].army[0].count, 10);
+  // No surrendering to monsters.
+  const b2 = C.createBattle({ hero: { ...hero0 }, army: [{ type: 'pikeman', count: 5 }], gold: 9999 }, { hero: null, army: [{ type: 'goblin', count: 5 }] }, { seed: 1 });
+  assert.equal(C.fleeOptions(b2, 0).surrender, null);
+});
+
+test('fleeing: a smart computer hero runs from a hopeless fight, an easy one fights on', () => {
+  const mk = () => C.createBattle(
+    { hero: { ...hero0, level: 5 }, army: [{ type: 'pikeman', count: 60 }], gold: 0 },
+    { hero: { ...hero0 }, army: [{ type: 'cavalier', count: 9 }] }, { seed: 3, obstacles: false },
+  );
+  const hard = mk(); C.autoResolve(hard, C.TACTIC_PRESETS.hard, C.TACTIC_PRESETS.hard);
+  assert.equal(hard.fled?.how, 'retreat');
+  const easy = mk(); C.autoResolve(easy, C.TACTIC_PRESETS.easy, C.TACTIC_PRESETS.hard);
+  assert.equal(easy.fled, null);
+});
+
+test('fleeing: the computer hires its retired heroes back first', () => {
+  const st = G.newGame(scenarioById('desert'), { seed: 8 });
+  const t = G.townsOf(st, 1)[0];
+  const h = G.visitingHero(st, t);
+  h.level = 6;
+  G.retireHero(st, h);
+  st.players[1].res.gold = 9000;
+  const back = G.hireHero(st, t);
+  assert.equal(back.id, h.id);
 });

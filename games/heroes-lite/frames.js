@@ -70,6 +70,8 @@ export const BIOMES = {
 export const groundFrame = (biome) => [BIOMES[biome].tiles, 16, 0, 16, 16];
 export const groundFrame2 = (biome) => [BIOMES[biome].tiles, 16, 16, 16, 16];
 export const DECOR = [[32, 0], [48, 0], [64, 0], [80, 0], [96, 0], [112, 0], [128, 0], [160, 0], [176, 0], [64, 16], [80, 16], [96, 16], [112, 16], [160, 16]];
+/** Rougher-ground patch piece (transparent outside) from the 3x3 block, laid over plain ground. */
+export const patchFrame = (biome, dx, dy) => [BIOMES[biome].tiles, 176 + dx * 16, 240 + dy * 16, 16, 16];
 /** Water edge piece from the 3x3 lake block (dx, dy in -1..1). */
 export const waterFrame = (biome, dx, dy) => [BIOMES[biome].tiles, 112 + dx * 16, 144 + dy * 16, 16, 16];
 // A single tree / mountain inside each 16x16 forest block.
