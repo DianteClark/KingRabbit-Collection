@@ -155,3 +155,76 @@ function tilesShowing(r, p) {
   for (const side of SIDES) out.push(...r.arms[side]);
   return out;
 }
+
+// ---------- table layout ----------
+// Each arm runs out from the centre tile and turns clockwise near the edge, so the arms make a
+// pinwheel. If a long round would make arms cross or run off the table, the whole layout is
+// drawn with smaller tiles (like zooming out), so every tile and every open end stays visible.
+const DIR = { left: [-1, 0], right: [1, 0], up: [0, -1], down: [0, 1] };
+const TURNS = { left: ['left', 'up', 'right'], up: ['up', 'right', 'down'], right: ['right', 'down', 'left'], down: ['down', 'left', 'up'] };
+export const TILE_SIZES = [15, 13, 11, 10, 9, 8];
+
+/** Centres + orientation for n tiles on an arm plus the next free slot. h = half tile size. */
+export function armSlots(side, n, centerVertical, h, area, center) {
+  const L = h * 2; const GAP = 2;
+  const slots = [];
+  const dirs = TURNS[side];
+  let di = 0;
+  let d = DIR[dirs[0]];
+  const centerHalf = (d[0] !== 0) === centerVertical ? h / 2 : L / 2;
+  let c = { x: center.x + d[0] * (centerHalf + GAP + L / 2), y: center.y + d[1] * (centerHalf + GAP + L / 2) };
+  for (let k = 0; k <= n; k++) {
+    const out = (p) => {
+      const hx = d[0] !== 0 ? L / 2 : h / 2; const hy = d[0] !== 0 ? h / 2 : L / 2;
+      return p.x - hx < area.x0 || p.x + hx > area.x1 || p.y - hy < area.y0 || p.y + hy > area.y1;
+    };
+    if (out(c) && di < dirs.length - 1 && k > 0) {
+      // Turn the corner: tuck the next tile against the side of the last one.
+      const prev = slots[k - 1];
+      const nd = DIR[dirs[++di]];
+      c = {
+        x: prev.x + d[0] * (L / 2 - h / 2) + nd[0] * (h / 2 + GAP + L / 2),
+        y: prev.y + d[1] * (L / 2 - h / 2) + nd[1] * (h / 2 + GAP + L / 2),
+      };
+      d = nd;
+    }
+    slots.push({ x: c.x, y: c.y, dir: d, vertical: d[1] !== 0 });
+    c = { x: c.x + d[0] * (L + GAP), y: c.y + d[1] * (L + GAP) };
+  }
+  return slots;
+}
+
+const boxOf = (s, h) => {
+  const w = s.vertical ? h : h * 2; const ht = s.vertical ? h * 2 : h;
+  return { x0: s.x - w / 2, x1: s.x + w / 2, y0: s.y - ht / 2, y1: s.y + ht / 2 };
+};
+const overlaps = (a, b) => a.x0 < b.x1 - 0.5 && b.x0 < a.x1 - 0.5 && a.y0 < b.y1 - 0.5 && b.y0 < a.y1 - 0.5;
+
+/**
+ * Lay out the whole table: { h, arms: { side: slots (one per tile, plus the next free slot) } }.
+ * Picks the biggest tile size where nothing overlaps or leaves `area`.
+ */
+export function layoutTable(r, area, center) {
+  let fallback = null;
+  for (const h of TILE_SIZES) {
+    const cv = r.spinner;
+    const boxes = [boxOf({ x: center.x, y: center.y, vertical: cv }, h)];
+    const arms = {};
+    let ok = true;
+    const open = new Set(ends(r).map((e) => e.side));
+    for (const side of SIDES) {
+      const n = r.arms[side].length;
+      arms[side] = armSlots(side, n, cv, h, area, center);
+      const used = arms[side].slice(0, open.has(side) ? n + 1 : n);
+      for (const s of used) {
+        const b = boxOf(s, h);
+        if (b.x0 < area.x0 - 0.5 || b.x1 > area.x1 + 0.5 || b.y0 < area.y0 - 0.5 || b.y1 > area.y1 + 0.5) ok = false;
+        if (boxes.some((o) => overlaps(o, b))) ok = false;
+        boxes.push(b);
+      }
+    }
+    fallback = { h, arms };
+    if (ok) return fallback;
+  }
+  return fallback;
+}

@@ -68,6 +68,9 @@ export class Tables extends Phaser.Scene {
   }
 
   restart() {
+    this.endTimer?.remove();
+    this.endTimer = null;
+    this.lastMoves = [];
     this.s = newGame();
     this.over = false;
     this.dice = [];
@@ -108,6 +111,7 @@ export class Tables extends Phaser.Scene {
       this.status.setText(preset ? 'CPU won the opening roll' : 'CPU is rolling...');
       this.time.delayedCall(preset ? 1400 : 600, () => this.cpuPlay(preset));
     } else if (preset) {
+      this.status.setText(`${this.name(this.s.turn)} won the opening roll`);
       this.time.delayedCall(900, () => this.humanRoll(preset));
     } else {
       this.status.setText(`${this.name(this.s.turn)}: tap Roll`);
@@ -118,7 +122,7 @@ export class Tables extends Phaser.Scene {
     if (this.over || this.dice.length || this.isCpu()) return;
     this.dice = Array.isArray(preset) ? preset.slice() : rollDice();
     sfx('roll');
-    this.used = [];
+    this.lastMoves = [];
     this.turnStart = { s: this.s, dice: this.dice.slice() };
     this.rollBtn.setEnabled(false);
     this.undoBtn.setVisible(true);
@@ -131,7 +135,9 @@ export class Tables extends Phaser.Scene {
     if (!this.seqs.length || !this.seqs[0].moves.length) {
       const msg = this.turnStart && this.turnStart.dice.length === this.dice.length ? 'No legal moves' : 'Turn complete';
       if (msg === 'No legal moves') toast(this, msg, 600);
-      this.time.delayedCall(msg === 'No legal moves' ? 900 : 400, () => this.endTurn());
+      this.status.setText(msg === 'No legal moves' ? msg : 'Turn complete (Undo to change it)');
+      // Ending the turn waits a moment so Undo still works; Undo cancels this timer.
+      this.endTimer = this.time.delayedCall(msg === 'No legal moves' ? 900 : 1100, () => { this.endTimer = null; this.endTurn(); });
       return;
     }
     this.status.setText(`${this.name(this.s.turn)}: move ${this.dice.join(' ')}`);
@@ -176,7 +182,9 @@ export class Tables extends Phaser.Scene {
   }
 
   undo() {
-    if (!this.turnStart || this.isCpu()) return;
+    if (!this.turnStart || this.isCpu() || this.over) return;
+    this.endTimer?.remove();
+    this.endTimer = null;
     this.s = this.turnStart.s;
     this.dice = this.turnStart.dice.slice();
     this.selected = null;
@@ -190,6 +198,8 @@ export class Tables extends Phaser.Scene {
   }
 
   cpuPlay(preset) {
+    if (this.over) return;
+    this.lastMoves = [];
     this.dice = preset ? preset.slice() : rollDice();
     sfx('roll');
     this.status.setText(`CPU rolled ${this.dice.slice(0, 2).join(' ')}${this.dice.length === 4 ? ' (double)' : ''}`);
@@ -208,7 +218,7 @@ export class Tables extends Phaser.Scene {
       this.s = apply(this.s, m);
       sfx(m.hit ? 'capture' : 'move');
       this.dice.splice(this.dice.indexOf(m.die), 1);
-      this.lastCpu = m;
+      this.lastMoves.push(m);
       this.draw();
       if (winner(this.s) !== null) { this.finish(); return; }
       this.time.delayedCall(450, stepOnce);
@@ -240,11 +250,24 @@ export class Tables extends Phaser.Scene {
         this.checkers.add(text(this, x, y, String(pt.n), { color: pt.owner === 0 ? PALETTE.night : PALETTE.cream }));
       }
     }
-    // Bar
+    // Bar (at most 4 drawn, then a count)
     for (const p of [0, 1]) {
-      for (let k = 0; k < this.s.bar[p]; k++) {
+      const n = this.s.bar[p];
+      for (let k = 0; k < Math.min(n, 4); k++) {
         const y = p === 0 ? MID + 20 + k * 20 : MID - 40 - k * 20;
         this.checkers.add(this.add.image(BX + PW * 6 + BAR / 2, y, 'tables', frame(p)).setScale(3));
+      }
+      if (n > 4) {
+        const y = p === 0 ? MID + 20 + 3 * 20 : MID - 40 - 3 * 20;
+        this.checkers.add(text(this, BX + PW * 6 + BAR / 2, y, String(n), { color: p === 0 ? PALETTE.night : PALETTE.cream }));
+      }
+    }
+    // The CPU's (or last player's) moves this turn: outline where checkers came from and went.
+    for (const m of this.lastMoves || []) {
+      for (const pt of [m.from, m.to]) {
+        if (pt === 'off') continue;
+        if (pt === 'bar') { this.hl.lineStyle(2, hex(PALETTE.gold)).strokeRect(BX + PW * 6 + 1, MID - 10, BAR - 2, 40); continue; }
+        this.hl.lineStyle(2, hex(PALETTE.gold)).strokeRect(pointX(pt) - PW / 2 + 1, isTop(pt) ? TOP + 1 : MID + 1, PW - 2, HALF - 2);
       }
     }
     // Highlights for the human

@@ -26,7 +26,7 @@ export class SeaBattle extends Phaser.Scene {
     header(this, 'Sea Battle', () => go(this, 'Menu'));
     this.status = text(this, WIDTH / 2, 88, '', { color: PALETTE.cream });
     this.layer = this.add.container(0, 0);
-    this.input.on('pointerup', (p) => this.tap(p.x, p.y));
+    this.input.on('pointerup', (p, over) => { if (!over.length) this.tap(p.x, p.y); });
     this.setup();
   }
 

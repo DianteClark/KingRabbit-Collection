@@ -5,7 +5,7 @@ import { WIDTH } from '../../../shared/core/boot.js';
 import { header, go, setBackground, toast, modal } from './common.js';
 import { record } from '../save.js';
 import { sfx } from '../../../shared/core/sfx.js';
-import { TARGET, SIDES, newRound, ends, playable, playTile, draw, passTurn, roundResult, cpuChoice, pips, LEVELS } from '../logic/dominoes.js';
+import { TARGET, SIDES, newRound, ends, playable, playTile, draw, passTurn, roundResult, cpuChoice, pips, layoutTable, LEVELS } from '../logic/dominoes.js';
 import { getSkill, tune } from '../adaptive.js';
 
 
@@ -41,45 +41,10 @@ function back(g, x, y, h) {
   g.fillStyle(hex(PALETTE.lavender)).fillRect(x + h / 2 - 2, y + h - 2, 4, 4);
 }
 
-// Board layout: each arm runs out from the centre, then turns clockwise when it nears the edge,
-// so the four arms make a pinwheel and never cross.
-const H = 15;                 // half-tile size on the board (tile = 30 x 15)
-const L = H * 2; const GAP = 2;
-const BOARD = { x0: 10, x1: WIDTH - 10, y0: 128, y1: 398 };
+// Board area. Tiles are laid out by layoutTable() (logic/dominoes.js), which shrinks them when a
+// long round would otherwise run off the table.
+const AREA = { x0: 10, x1: WIDTH - 10, y0: 128, y1: 398 };
 const CENTER = { x: WIDTH / 2, y: 262 };
-const DIR = { left: [-1, 0], right: [1, 0], up: [0, -1], down: [0, 1] };
-const TURNS = { left: ['left', 'up', 'right'], up: ['up', 'right', 'down'], right: ['right', 'down', 'left'], down: ['down', 'left', 'up'] };
-
-/** Centres + orientation for n tiles on an arm (plus the next free slot). */
-function armSlots(side, n, centerVertical) {
-  const slots = [];
-  const dirs = TURNS[side];
-  let di = 0;
-  let d = DIR[dirs[0]];
-  // Distance from the centre tile's middle to its edge along this direction.
-  const centerHalf = (d[0] !== 0) === centerVertical ? H / 2 : L / 2;
-  let c = { x: CENTER.x + d[0] * (centerHalf + GAP + L / 2), y: CENTER.y + d[1] * (centerHalf + GAP + L / 2) };
-  for (let k = 0; k <= n; k++) {
-    // Half extents depend on which way the tile lies.
-    const out = (p) => {
-      const hx = d[0] !== 0 ? L / 2 : H / 2; const hy = d[0] !== 0 ? H / 2 : L / 2;
-      return p.x - hx < BOARD.x0 || p.x + hx > BOARD.x1 || p.y - hy < BOARD.y0 || p.y + hy > BOARD.y1;
-    };
-    if (out(c) && di < dirs.length - 1 && k > 0) {
-      // Turn the corner: tuck the next tile against the side of the last one.
-      const prev = slots[k - 1];
-      const nd = DIR[dirs[++di]];
-      c = {
-        x: prev.x + d[0] * (L / 2 - H / 2) + nd[0] * (H / 2 + GAP + L / 2),
-        y: prev.y + d[1] * (L / 2 - H / 2) + nd[1] * (H / 2 + GAP + L / 2),
-      };
-      d = nd;
-    }
-    slots.push({ x: c.x, y: c.y, dir: d, vertical: d[1] !== 0 });
-    c = { x: c.x + d[0] * (L + GAP), y: c.y + d[1] * (L + GAP) };
-  }
-  return slots;
-}
 
 const HAND_H = 26;
 
@@ -110,6 +75,7 @@ export class Dominoes extends Phaser.Scene {
     this.over = false;
     this.busy = false;
     this.selected = -1;
+    this.lastPlay = null;
     this.refresh();
     this.next();
   }
@@ -125,17 +91,21 @@ export class Dominoes extends Phaser.Scene {
 
     this.table.clear();
     this.targets.removeAll(true);
+    this.layout = r.center ? layoutTable(r, AREA, CENTER) : null;
     if (r.center) {
       const cv = r.spinner; // a double is laid crosswise
-      domino(this.table, CENTER.x, CENTER.y, r.center[0], r.center[1], H, cv, { glow: r.spinner ? PALETTE.gold : undefined });
+      const H = this.layout.h;
+      const lastIsCenter = this.lastPlay?.side === 'center';
+      domino(this.table, CENTER.x, CENTER.y, r.center[0], r.center[1], H, cv, { glow: lastIsCenter ? PALETTE.red : r.spinner ? PALETTE.gold : undefined });
       for (const side of SIDES) {
         const arm = r.arms[side];
-        const slots = armSlots(side, arm.length, cv);
+        const slots = this.layout.arms[side];
         arm.forEach(([inner, outer], k) => {
           const s = slots[k];
           // Draw so the inner value faces back toward the centre.
           const [a, b] = (s.dir[0] < 0 || s.dir[1] < 0) ? [outer, inner] : [inner, outer];
-          domino(this.table, s.x, s.y, a, b, H, s.vertical);
+          const last = this.lastPlay?.side === side && k === arm.length - 1;
+          domino(this.table, s.x, s.y, a, b, H, s.vertical, { glow: last ? PALETTE.red : undefined });
         });
       }
     }
@@ -150,7 +120,7 @@ export class Dominoes extends Phaser.Scene {
     const hand = r.hands[0];
     const myTurn = r.turn === 0 && !this.over && !this.busy;
     const can = new Map(myTurn ? playable(r, 0).map((o) => [o.i, o.sides]) : []);
-    const perRow = 10; const hw = HAND_H + 6;
+    const perRow = hand.length > 20 ? 11 : 10; const hw = HAND_H + 6;
     hand.forEach(([a, b], i) => {
       const row = Math.floor(i / perRow); const col = i % perRow;
       const inRow = Math.min(perRow, hand.length - row * perRow);
@@ -174,12 +144,16 @@ export class Dominoes extends Phaser.Scene {
 
   showTargets(sides) {
     const r = this.r;
+    const H = this.layout.h;
     for (const side of sides) {
       if (side === 'center') continue;
-      const slot = armSlots(side, r.arms[side].length, r.spinner)[r.arms[side].length];
-      const w = slot.vertical ? H : L; const h = slot.vertical ? L : H;
-      const zone = this.add.rectangle(slot.x, slot.y, w + 10, h + 10, hex(PALETTE.gold), 0.55).setStrokeStyle(3, hex(PALETTE.red));
-      zone.setInteractive({ useHandCursor: true }).on('pointerup', () => this.commit(this.selected, side));
+      const slot = this.layout.arms[side][r.arms[side].length];
+      const w = slot.vertical ? H : H * 2; const h = slot.vertical ? H * 2 : H;
+      // Drawn at the tile's size, but the tap area is at least 44px so it's easy to hit.
+      const zone = this.add.rectangle(slot.x, slot.y, w + 6, h + 6, hex(PALETTE.gold), 0.55).setStrokeStyle(3, hex(PALETTE.red));
+      const hit = this.add.zone(slot.x, slot.y, Math.max(44, w + 10), Math.max(44, h + 10)).setInteractive({ useHandCursor: true });
+      hit.on('pointerup', () => this.commit(this.selected, side));
+      this.targets.add(hit);
       this.tweens.add({ targets: zone, alpha: 0.35, yoyo: true, repeat: -1, duration: 400 });
       this.targets.add(zone);
     }
@@ -190,13 +164,15 @@ export class Dominoes extends Phaser.Scene {
     const res = roundResult(this.r);
     if (res) { this.endRound(res); return; }
     if (this.r.turn === 1) {
-      this.status.setText(this.r.center ? 'CPU is playing...' : 'CPU leads with the highest double');
+      const lead = this.r.hands[1][this.r.lead.i];
+      this.status.setText(this.r.center ? 'CPU is playing...' : lead && lead[0] === lead[1] ? 'CPU leads with the highest double' : 'CPU leads its heaviest tile');
       this.busy = true;
       this.refresh();
       this.time.delayedCall(800, () => this.cpuStep());
     } else {
       const opts = playable(this.r, 0);
-      if (!this.r.center) this.status.setText('You lead: tap your highest double');
+      const lead = this.r.hands[0][this.r.lead.i];
+      if (!this.r.center) this.status.setText(lead && lead[0] === lead[1] ? 'You lead: tap your highest double' : 'No doubles out: lead your heaviest tile');
       else this.status.setText(opts.length ? 'Tap a glowing tile, then where to play it' : 'No match: draw from the boneyard');
       this.refresh();
     }
@@ -206,11 +182,13 @@ export class Dominoes extends Phaser.Scene {
     const c = cpuChoice(this.r, 1, { cfg: this.cfg, voids: this.voids });
     if (c) {
       this.r = playTile(this.r, 1, c.i, c.side);
+      this.lastPlay = { side: c.side };
       sfx('place');
       this.busy = false;
       this.next();
     } else if (this.r.boneyard.length) {
       this.r = draw(this.r, 1);
+      sfx('card');
       this.refresh();
       this.time.delayedCall(350, () => this.cpuStep());
     } else {
@@ -225,7 +203,7 @@ export class Dominoes extends Phaser.Scene {
     if (this.over || this.busy || this.r.turn !== 0) return;
     const opt = playable(this.r, 0).find((o) => o.i === i);
     if (!opt) {
-      toast(this, this.r.center ? "That tile doesn't match an open end" : 'You must lead with your highest double', 560);
+      toast(this, this.r.center ? "That tile doesn't match an open end" : 'Lead with the glowing tile', 560);
       return;
     }
     if (opt.sides[0] === 'center') { this.commit(i, 'center'); return; }
@@ -236,6 +214,7 @@ export class Dominoes extends Phaser.Scene {
   commit(i, side) {
     this.selected = -1;
     this.r = playTile(this.r, 0, i, side);
+    this.lastPlay = { side };
     sfx('place');
     this.next();
   }
