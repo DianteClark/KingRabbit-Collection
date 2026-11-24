@@ -7,7 +7,7 @@ import { sfx, isMuted, setMuted } from '../../../shared/core/sfx.js';
 import * as S from '../logic/sim.js';
 import { TILE, MAP_W, MAP_H, T, PLACE, TRAYS, TOOL_INFO, ZONE_INFO, MILESTONES } from '../logic/defs.js';
 import { lPath, rectTiles, idx, inMap, N4, bfs } from '../logic/map.js';
-import { tutStep, tutCheck, tutText, STEPS } from '../logic/tutorial.js';
+import { tutStep, tutCheck, tutText, tutTool, STEPS } from '../logic/tutorial.js';
 import { RULES } from '../rules.js';
 import { store } from '../store.js';
 import { CARS } from './Boot.js';
@@ -706,6 +706,7 @@ export class Game extends Phaser.Scene {
   setSpeed(k) {
     this.speed = k;
     this.refreshHud();
+    this.updateTutorial();
   }
 
   howTo() {
@@ -806,8 +807,9 @@ export class Game extends Phaser.Scene {
     if (moved && !first) sfx('goal');
     // Point at the next thing to tap.
     let target = null;
-    if (step.tray && this.tool !== step.tool && !(step.id === 'jobs' && (this.tool === 'zone:C' || this.tool === 'zone:I'))) {
-      if (this.trayOpen && this.trayCat === step.tray) target = this.tray.list.find((c) => c.item === step.tool);
+    const tool = tutTool(s, step);
+    if (step.tray && this.tool !== tool) {
+      if (this.trayOpen && this.trayCat === step.tray) target = this.tray.list.find((c) => c.item === tool);
       else target = this.catBtns.find((b) => b.cat === step.tray);
     } else if (step.id === 'grow' && this.speed !== 2) target = this.speedBtns[2];
     this.hiTarget = target;

@@ -24,14 +24,19 @@ export const STEPS = [
     done: (s) => s.blds.some((b) => PLACE[b.k]?.power) && s.zone.some((z, i) => z && rt(s).lotPower[i]),
   },
   {
-    id: 'jobs', tray: 'zone', tool: 'zone:C',
-    text: 'People need jobs. Zone some Commercial (blue) and Industrial (yellow) land by a road.',
+    id: 'jobs', tray: 'zone',
+    tool: (s) => (count(s, (i) => s.zone[i] === 'C') >= 3 ? 'zone:I' : 'zone:C'),
+    text: (s) => (count(s, (i) => s.zone[i] === 'C') >= 3
+      ? 'Shops done! Now pick Industrial (yellow I) and zone some land by a road, a little away from homes.'
+      : 'People need jobs. Zone some Commercial (blue C) land by a road, then some Industrial (yellow I).'),
     done: (s) => count(s, (i) => s.zone[i] === 'C') >= 3 && count(s, (i) => s.zone[i] === 'I') >= 3,
   },
   {
     id: 'water', tray: 'util', tool: 'wtower',
-    text: 'Tap Power again and add a Water Tower by your zones, so houses can grow bigger later.',
-    done: (s) => s.blds.some((b) => PLACE[b.k]?.svc === 'water'),
+    text: (s) => (s.blds.some((b) => PLACE[b.k]?.svc === 'water')
+      ? 'Water towers need power too. Undo and place it touching your road or zones.'
+      : 'Tap Power again and add a Water Tower by your zones, so houses can grow bigger later.'),
+    done: (s) => s.zone.some((z, i) => z && rt(s).water[i] > 0),
   },
   {
     id: 'grow', tray: null, tool: null,
@@ -42,6 +47,7 @@ export const STEPS = [
 
 export const tutStep = (s) => (s.tut != null && s.tut < STEPS.length ? STEPS[s.tut] : null);
 export const tutText = (s, step) => (typeof step.text === 'function' ? step.text(s) : step.text);
+export const tutTool = (s, step) => (typeof step.tool === 'function' ? step.tool(s) : step.tool);
 
 /** Move on past every step already done. Returns true when the step changed. */
 export function tutCheck(s) {

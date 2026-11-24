@@ -65,12 +65,20 @@ test('town builder: every tool can be undone exactly, with a full refund', () =>
   assert.equal(snap(s), before);
 });
 
+test('town builder: only recent builds can be undone', () => {
+  const s = starter();
+  assert.ok(S.canUndo(s));
+  S.advance(s, 3.5);
+  assert.equal(S.canUndo(s), false);
+  assert.equal(S.undo(s), null);
+});
+
 test('town builder: undo removes what grew on the land it gives back', () => {
   const s = S.newGame('sandbox');
   const { x, y } = s.start;
   S.place(s, 'wind', x + 1, y - 4);
   S.zoneArea(s, 'R', rectTiles({ x: x + 1, y: y - 2 }, { x: x + 6, y: y - 1 }));
-  for (let k = 0; k < 6; k++) S.advance(s, 1);
+  for (let k = 0; k < 10; k++) S.advance(s, 0.25);
   assert.ok(s.pop > 0, 'houses grew');
   S.undo(s);
   assert.equal(s.blds.filter((b) => b.k === 'grow').length, 0);
@@ -260,7 +268,11 @@ test('town builder: the first-minutes guide follows what the player does', () =>
   S.zoneArea(s, 'C', rectTiles({ x: x + 5, y: y - 2 }, { x: x + 7, y: y - 1 }));
   S.zoneArea(s, 'I', rectTiles({ x: x + 5, y: y + 1 }, { x: x + 7, y: y + 2 }));
   tutCheck(s); assert.equal(STEPS[s.tut].id, 'water');
-  S.place(s, 'wtower', x + 3, y - 5);
+  S.place(s, 'wtower', x + 3, y - 8); // out in a field: no power, so no water yet
+  tutCheck(s); assert.equal(STEPS[s.tut].id, 'water');
+  assert.match(tutText(s, STEPS[s.tut]), /need power/);
+  S.undo(s);
+  S.place(s, 'wtower', x + 3, y - 4);
   tutCheck(s); assert.equal(STEPS[s.tut].id, 'grow');
   for (let k = 0; k < 12 && s.tut != null; k++) { S.advance(s, 1); tutCheck(s); }
   assert.equal(s.tut, null, `finished (pop ${s.pop})`);

@@ -548,12 +548,15 @@ export function batch(s, fn) {
   try { return fn(); } finally { r.batch = false; refresh(s); }
 }
 
-export const canUndo = (s) => rt(s).undo.length > 0;
-export const undoLabel = (s) => rt(s).undo.at(-1)?.label || '';
+export const UNDO_MONTHS = 3; // builds older than this can no longer be taken back
+function pruneUndo(s) { const r = rt(s); r.undo = r.undo.filter((a) => s.t - a.t <= UNDO_MONTHS); return r.undo; }
+export const canUndo = (s) => pruneUndo(s).length > 0;
+export const undoLabel = (s) => pruneUndo(s).at(-1)?.label || '';
 
 /** Put things back exactly as they were before the last action, and refund what it cost. */
 export function undo(s) {
   const r = rt(s);
+  pruneUndo(s);
   const act = r.undo.pop();
   if (!act) return null;
   for (const [i] of act.tiles) { const b = r.byId.get(r.tileB[i]); if (b) removeBuilding(s, b); }
