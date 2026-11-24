@@ -8,9 +8,10 @@ Aleksandr Makarov's (iknowkingrabbit) pixel-art packs.
 | Game | Status | Link |
 |---|---|---|
 | Game Night: 20 board, card, arcade and puzzle games (see docs/games/game-night.md) | Playable | [/game-night/](https://dianteclark.github.io/KingRabbit-Collection/game-night/) |
-| Spire Roguelite | Planned | |
-| Heroes Lite | Planned | |
-| Tiny City | Planned | |
+| Spire Roguelite | In progress | |
+| Heroes Lite | In progress | |
+| City Chief: run the police force of Tiny Town (see docs/games/city-chief.md) | Playable | [/city-chief/](https://dianteclark.github.io/KingRabbit-Collection/city-chief/) |
+| Soccer | In progress | |
 
 Progress on each game is tracked on the GitHub Project board, with one label per game.
 

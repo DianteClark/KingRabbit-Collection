@@ -11,5 +11,5 @@ export const GAMES = [
   },
   { id: 'spire-roguelite', title: 'Spire Roguelite', tagline: 'Spells, relics and an overworld', art: 'has', status: 'soon' },
   { id: 'heroes-lite', title: 'Heroes Lite', tagline: 'Pocket Heroes of Might & Magic', art: 'has', status: 'soon' },
-  { id: 'tiny-city', title: 'Tiny City', tagline: 'Build a town, survive disasters', art: 'city', status: 'soon' },
+  { id: 'city-chief', title: 'City Chief', tagline: 'Run the police force of Tiny Town', art: 'city', status: 'playable' },
 ];
