@@ -19,9 +19,9 @@ export const ENEMY = {
   redSlime: { hp: 4, w: 10, h: 8, dmg: 1 },
   gremlin: { hp: 3, w: 10, h: 10, dmg: 1 },
   golem: { hp: 6, w: 14, h: 14, dmg: 2, heavy: true },
-  slimeKing: { hp: 10, w: 28, h: 18, dmg: 1, boss: true },
+  slimeKing: { hp: 10, w: 32, h: 20, dmg: 1, boss: true },
   golemKing: { hp: 10, w: 26, h: 24, dmg: 2, boss: true, heavy: true },
-  hollowKing: { hp: 12, w: 18, h: 20, dmg: 2, boss: true },
+  hollowKing: { hp: 12, w: 20, h: 22, dmg: 2, boss: true },
 };
 
 const DIRS4 = ['down', 'left', 'right', 'up'];

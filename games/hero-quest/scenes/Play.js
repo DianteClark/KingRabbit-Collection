@@ -179,13 +179,13 @@ export class Play extends Phaser.Scene {
     if (SLIME_COLOR[e.kind]) {
       s = this.add.sprite(0, 0, `${SLIME_COLOR[e.kind]}Slime-Idle`).setOrigin(0.5, 13 / 16);
       if (e.kind === 'slimelet') s.setScale(0.7);
-      if (e.kind === 'slimeKing') s.setScale(2.6);
+      if (e.kind === 'slimeKing') s.setScale(3);
     } else if (e.kind === 'gremlin' || e.kind === 'hollowKing') {
       s = this.add.sprite(0, 0, 'gremlin', '0_0').setOrigin(0.5, 23 / 32);
       if (e.kind === 'hollowKing') {
-        s.setScale(2);
+        s.setScale(2.4);
         s.baseTint = 0xc79bff;
-        s.ring = this.add.circle(0, 0, 20, 0x8a8fc4, 0.25).setStrokeStyle(1, 0xc6b8ff, 0.9);
+        s.ring = this.add.circle(0, 0, 23, 0x8a8fc4, 0.25).setStrokeStyle(1, 0xc6b8ff, 0.9);
         this.layer.add(s.ring);
       }
     } else {
@@ -211,7 +211,7 @@ export class Play extends Phaser.Scene {
       const d = DIR_NAME[e.dir];
       key = e.anim === 'walk' ? `${c}-Walk${d}` : e.anim === 'attack' ? `${c}-Attack${d}` : e.anim === 'hit' ? `${c}-Hit` : `${c}-Idle`;
       // the Slime King squashes on landing
-      if (e.kind === 'slimeKing') s.setScale(2.6 + (e.state === 'hop' ? -0.15 : 0.1), 2.6 + (e.state === 'hop' ? 0.25 : -0.1));
+      if (e.kind === 'slimeKing') s.setScale(3 + (e.state === 'hop' ? -0.15 : 0.1), 3 + (e.state === 'hop' ? 0.25 : -0.1));
     } else {
       const sheet = e.kind === 'gremlin' || e.kind === 'hollowKing' ? 'gremlin' : 'golem';
       key = `${sheet}-${e.anim === 'hit' ? 'hit' : e.anim === 'attack' ? 'attack' : e.anim === 'walk' ? 'walk' : 'idle'}-${e.dir}`;
@@ -224,7 +224,7 @@ export class Play extends Phaser.Scene {
     else if (e.stun > 0 || e.state === 'dazed') s.setTint(Math.floor(this.time.now / 120) % 2 ? 0x8a8fc4 : (s.baseTint || 0xffffff));
     else if (s.baseTint) s.setTint(s.baseTint); else s.clearTint();
     if (e.kind === 'hollowKing') {
-      s.ring.setPosition(s.x, e.y - 6).setVisible(e.shield && e.state !== 'vanish');
+      s.ring.setPosition(s.x, e.y - 8).setVisible(e.shield && e.state !== 'vanish');
       s.ring.setScale(1 + 0.06 * Math.sin(this.time.now / 140));
       s.setDepth(e.y);
       s.setAlpha(e.state === 'vanish' ? Math.max(0, e.t / 0.45) : e.state === 'appear' ? 1 - e.t / 0.45 : 1);
