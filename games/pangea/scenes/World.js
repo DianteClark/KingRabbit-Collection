@@ -18,6 +18,7 @@ import {
   save, saveGame, loadGame, clearGame, recordResult,
 } from '../save.js';
 import { reportResult } from '../adaptive.js';
+import { earn, stat } from '../trophies.js';
 import { Coach } from './coach.js';
 
 const T = 16; // world pixels per tile
@@ -540,6 +541,8 @@ export class World extends Phaser.Scene {
     const ct = G.foundCity(this.s, u);
     if (!ct) { sfx('error'); return; }
     sfx('power');
+    stat('cities founded');
+    this.empireTrophies();
     this.sel = null;
     this.changed();
     this.puff(ct.x, ct.y);
@@ -874,6 +877,7 @@ export class World extends Phaser.Scene {
     const s = this.s; const cv = s.civs[this.me];
     const fresh = s.events.filter((e) => e.id > (cv.seenEv || 0) && (e.civ === this.me || (e.civ === -1 && this.cares(e))));
     cv.seenEv = s.evId || 0;
+    this.eventTrophies(fresh);
     const major = fresh.filter((e) => MAJOR.has(e.kind));
     const minor = fresh.filter((e) => !MAJOR.has(e.kind) && !e.quiet && e.kind !== 'idle');
     if (fresh.some((e) => e.kind === 'tech' || e.kind === 'wonder')) sfx('power');
@@ -886,6 +890,32 @@ export class World extends Phaser.Scene {
       return;
     }
     then?.();
+  }
+
+  /** Trophies from this human player's new events, then from the state of their empire. */
+  eventTrophies(fresh) {
+    const s = this.s; const me = this.me; const cv = s.civs[me];
+    if (!cv?.human) return;
+    for (const e of fresh) {
+      if (e.kind === 'tech' && e.civ === me) { earn('tech'); stat('techs discovered'); }
+      else if (e.kind === 'wonder' && e.civ === me) earn('wonder');
+      else if (e.kind === 'cityWon' && e.civ === me) { earn('captured'); stat('cities captured'); }
+      else if (e.kind === 'held' && e.civ === me) earn('held');
+      else if (e.kind === 'pact' && (e.a === me || e.b === me)) earn('pact');
+      else if (e.kind === 'cityLost' && e.civ === me) cv.lostCity = true;
+    }
+    this.empireTrophies();
+  }
+
+  empireTrophies() {
+    const s = this.s; const cv = s.civs[this.me];
+    if (!cv?.human) return;
+    const cities = G.citiesOf(s, this.me);
+    if (cities.length) earn('first-city');
+    if (cities.length >= 6) earn('cities-6');
+    if (cities.some((c) => c.pop >= 10)) earn('pop-10');
+    if (cv.techs.length >= Object.keys(TECHS).length) earn('techs-all');
+    if (cv.gold >= 1000) earn('rich');
   }
 
   cares(e) {
@@ -953,6 +983,12 @@ export class World extends Phaser.Scene {
         if (s.tutorial) save.set('tutorialDone', true);
       }
       save.set('last', { won, kind: o.kind, turn: o.turn, civ: human?.name });
+      stat('games played');
+      if (won) {
+        earn({ conquest: 'win-conquest', science: 'win-science', score: 'win-score' }[o.kind] || 'win-score');
+        if (winner.lostCity) earn('comeback');
+      }
+      if (s.tutorial) earn('tutorial');
       clearGame();
     }
     this.refreshHud();
