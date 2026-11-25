@@ -3,7 +3,8 @@ import { isMuted, setMuted } from '../../../shared/core/sfx.js';
 import { loadRun, saveRun, getRecords, recordRun, isUnlocked, getSkill } from '../save.js';
 import { newRun, SHIPS } from '../logic/run.js';
 import { makeShip } from '../logic/ship.js';
-import { skillLabel } from '../logic/adaptive.js';
+import { skillLabel, START } from '../logic/adaptive.js';
+import { todaySeed, today } from '../trophies.js';
 import { drawHull, drawRooms, HULL_COLORS } from './shipview.js';
 import * as P from './panels.js';
 
@@ -42,11 +43,13 @@ export class Menu extends Phaser.Scene {
     let y = 300;
     if (run) {
       button(this, WIDTH / 2, y, 300, 50, 'Continue', () => route(this, run), { fill: PALETTE.gold });
-      text(this, WIDTH / 2, y + 38, `${run.ship.name} (${run.mode === 'cruise' ? 'Cruise' : 'Normal'}), sector ${run.sector}${run.screen === 'combat' ? ', mid-fight' : ''}`, { color: PALETTE.lavender });
+      text(this, WIDTH / 2, y + 38, `${run.ship.name} (${run.daily ? 'Daily' : run.mode === 'cruise' ? 'Cruise' : 'Normal'}), sector ${run.sector}${run.screen === 'combat' ? ', mid-fight' : ''}`, { color: PALETTE.lavender });
       y += 76;
     }
     button(this, WIDTH / 2, y, 300, 50, 'New run', () => this.newRun(), { fill: run ? PALETTE.lavender : PALETTE.gold });
     y += 62;
+    button(this, WIDTH / 2, y, 300, 46, 'Daily Run', () => this.dailyRun(), { fill: PALETTE.lavender });
+    y += 58;
     button(this, WIDTH / 2, y, 300, 46, 'Records', () => this.records(), { fill: PALETTE.indigo, color: PALETTE.cream });
 
     text(this, WIDTH / 2, 560, 'Art: MAS Space Roguelike by Aleksandr Makarov', { color: PALETTE.lavender, wrap: 340 });
@@ -84,6 +87,24 @@ export class Menu extends Phaser.Scene {
         route(this, run);
       },
     });
+  }
+
+  /** Daily Run: today's seed, the Wayfarer, Normal mode and a fixed enemy skill, the same for everyone. */
+  dailyRun() {
+    if (P.anyOpen() || this._leaving) return;
+    sfx('select');
+    const m = modal(this, 'Daily Run', `Everyone flies the same galaxy in the Wayfarer today.${this.run ? '\nThis ends your current run (it counts as a loss).' : ''}`, [
+      ['Launch', () => {
+        m.destroy();
+        if (this.run) recordRun(this.run);
+        sfx('power');
+        const run = newRun({ ship: 'wayfarer', mode: 'normal', seed: todaySeed() % 2147483647, skill: START });
+        run.daily = today();
+        saveRun(run);
+        route(this, run);
+      }, PALETTE.gold],
+      ['Cancel', () => m.destroy()],
+    ]);
   }
 
   records() {
