@@ -13,6 +13,7 @@ import { MOVES, SPECIES, STATUS_INFO } from '../logic/data.js';
 import { TYPE_INFO, typeMult } from '../logic/types.js';
 import { maxHp, petName, petType, xpForLevel, MAX_LEVEL, learnMove, canEvolve } from '../logic/pet.js';
 import { partyPanel, bagPanel, learnPanel, nicknamePanel, tipPanel, closeAll, blocking } from './panels.js';
+import { hit } from '../padkit.js';
 import { earn, stat } from '../trophies.js';
 
 const SCREEN = { x: 8, y: 60, w: 344, h: 266 };
@@ -53,6 +54,8 @@ export class Battle extends Phaser.Scene {
     this.msgText = text(this, 20, MSG_Y + 12, '', { origin: 0, align: 'left', color: PALETTE.night, wrap: WIDTH - 40 });
     this.menu = this.add.container(0, 0);
     this.input.on('pointerup', () => { if (this.tapResolve) { const r = this.tapResolve; this.tapResolve = null; r(); } });
+    // Controller: A hurries a message along (the menus use the shared gold frame: A picks, B = Back).
+    this.events.on('update', () => { if (this.tapResolve && hit('a')) { const r = this.tapResolve; this.tapResolve = null; r(); } });
     this.intro();
   }
 
