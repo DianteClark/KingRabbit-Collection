@@ -1,7 +1,7 @@
 // The journey: state, walking, talking, chests, puzzles, shops, inns and battle rewards.
 // Pure logic (no Phaser) so the tests and the bot can play the whole game.
 import { MAPS, LANDMARKS, GATES, tileDef, charAt, chestsOf, stairsOf, leversOf, locksOf, torchesOf, signsOf, npcSpots, indexAt, cond, groundUnder } from './maps.js';
-import { CLASSES, ITEMS, GEAR, KEY_ITEMS, SKILLS, AREAS, MONSTERS, RARE, SHOPS, INN_PRICE, PARTY_ORDER, itemName } from './data.js';
+import { CLASSES, ITEMS, GEAR, KEY_ITEMS, SKILLS, AREAS, RARE, SHOPS, INN_PRICE, PARTY_ORDER, itemName } from './data.js';
 import { newMember, statsOf, gainXp, canEquip, skillsAt } from './stats.js';
 import { makeRng } from './rng.js';
 
@@ -146,6 +146,13 @@ export function step(st, dir, rng = rngOf(st)) {
     }
   }
   return { moved: true, events };
+}
+
+/** The name shown in the header: the map, or the region of the world map you stand in. */
+export function placeName(st) {
+  const map = mapOf(st);
+  if (map.kind !== 'world') return map.name;
+  return map.zones.find((r) => st.x >= r.x0 && st.x <= r.x1 && st.y >= r.y0 && st.y <= r.y1)?.name || map.name;
 }
 
 /** Pick a group of monsters for an area. Groups grow when you out-level the area, shrink when behind. */
@@ -559,4 +566,4 @@ export function chestCounts(st) {
   return { total, open };
 }
 
-export { MAPS, MONSTERS };
+export { MAPS };

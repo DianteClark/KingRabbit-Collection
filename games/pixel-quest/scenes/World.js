@@ -1,15 +1,15 @@
 import Phaser from 'phaser';
 import { PALETTE, hex } from '../../../shared/core/palette.js';
 import { text, button, panel } from '../../../shared/core/ui.js';
-import { WIDTH, HEIGHT, header, go, modal, modalOpen, busyUi, toast, store, persist, pin, fit, drawBar, hpColor } from './common.js';
-import { menuPanel, shopPanel, tipPanel, closeAll, blocking } from './panels.js';
+import { WIDTH, HEIGHT, header, go, modal, busyUi, toast, store, persist, pin, fit, drawBar, hpColor } from './common.js';
+import { menuPanel, shopPanel, tipPanel, closeAll } from './panels.js';
 import { personFrame } from '../art.js';
 import * as G from '../logic/game.js';
-import { MAPS, LANDMARKS, GATES, tileDef, chestsOf, leversOf, locksOf, torchesOf, cond } from '../logic/maps.js';
-import { CLASSES, MONSTERS, ITEMS, GEAR, KEY_ITEMS, itemIcon } from '../logic/data.js';
+import { MAPS, LANDMARKS, GATES, tileDef, chestsOf, leversOf, locksOf, torchesOf } from '../logic/maps.js';
+import { CLASSES, MONSTERS, ITEMS, GEAR, KEY_ITEMS } from '../logic/data.js';
 import { statsOf } from '../logic/stats.js';
 import { playMusic, jingle, fx } from '../music.js';
-import { save, writeSave } from '../save.js';
+import { save } from '../save.js';
 import { checkTrophies, give } from '../trophies.js';
 
 const T = 32;
@@ -34,7 +34,9 @@ export class World extends Phaser.Scene {
     this.rng = G.rngOf(st);
     this.cameras.main.setBackgroundColor('#0c0a18').fadeIn(180);
     document.body.style.background = PALETTE.night;
+    // The scene object is reused on every restart: reset everything a previous visit left behind.
     this.busy = false; this.moving = false; this.path = null; this.held = null; this.pending = null; this.dialog = null;
+    this.queuedDir = null; this.queuedTap = null; this.objTimer = null; this.marker = null; this.saveTimer = null;
     this.lastSave = 0;
 
     this.drawMap();
@@ -53,7 +55,7 @@ export class World extends Phaser.Scene {
     }
     this.cameraTo(true);
 
-    header(this, this.map.name, () => this.backToTitle());
+    this.titleText = header(this, G.placeName(st), () => this.backToTitle());
     this.hud();
     this.input.on('pointerup', (p) => this.onTap(p));
     const release = (p) => { if (this.held && p.id === this.heldId) { this.held = null; this.showDir?.(null); } };
@@ -76,7 +78,10 @@ export class World extends Phaser.Scene {
 
   tune() {
     const m = this.map;
-    if (m.id === 'cs3' && !this.state.flags.vesper) return 'castle';
+    if (m.kind === 'world') {
+      const z = m.zones.find((r) => this.state.x >= r.x0 && this.state.x <= r.x1 && this.state.y >= r.y0 && this.state.y <= r.y1);
+      return { desert: 'desert', frost: 'snow' }[z?.area] || 'field';
+    }
     return m.music || 'field';
   }
 
@@ -503,7 +508,11 @@ export class World extends Phaser.Scene {
     if (now - this.lastSave > 1500) { persist(); this.lastSave = now; }
     this.saveTimer?.remove();
     this.saveTimer = this.time.delayedCall(600, () => { persist(); this.lastSave = Date.now(); });
-    if (this.state.repel >= 0) this.refreshHud();
+    this.refreshHud();
+    if (this.map.kind === 'world') {
+      const name = G.placeName(this.state);
+      if (name !== this.titleText.text) { this.titleText.setText(name); fit(this.titleText, 220); toast(this, name, 120, PALETTE.cream); playMusic(this.tune()); }
+    }
     for (const e of events) {
       if (e.t === 'map') {
         this.held = null; this.path = null; this.pending = null; this.queuedDir = null;
@@ -538,7 +547,7 @@ export class World extends Phaser.Scene {
     if (o.after) { this.afterBattle(o.after); return; }
     if (o.lines?.length) { this.say(o.lines, null); return; }
     if (o.entered) {
-      toast(this, this.map.name, 120, PALETTE.cream);
+      toast(this, G.placeName(this.state), 120, PALETTE.cream);
       if (this.map.kind === 'dungeon' && !save.get('tips')?.dungeon) this.time.delayedCall(400, () => this.tip('dungeon'));
       else if (this.map.kind === 'world' && !save.get('tips')?.world) this.time.delayedCall(300, () => this.tip('world'));
     }
@@ -775,4 +784,3 @@ function gateHint(ch) {
 
 function sfx0() { fx('error'); }
 
-export { blocking, modalOpen, cond, ITEMS, itemIcon, writeSave };

@@ -78,10 +78,10 @@ const world = {
   decor: [{ frame: 'castle', x: 5, y: 4 }, { frame: 'tower', x: 35, y: 21 }],
   // Encounter areas by rectangle (first match wins).
   zones: [
-    { x0: 0, y0: 0, x1: 16, y1: 13, area: 'frost' },
-    { x0: 17, y0: 0, x1: 39, y1: 13, area: 'desert' },
-    { x0: 0, y0: 14, x1: 15, y1: 35, area: 'plains' },
-    { x0: 16, y0: 14, x1: 39, y1: 35, area: 'eastfield' },
+    { x0: 0, y0: 0, x1: 16, y1: 13, area: 'frost', name: 'Frostlands' },
+    { x0: 17, y0: 0, x1: 39, y1: 13, area: 'desert', name: 'Ember Desert' },
+    { x0: 0, y0: 14, x1: 15, y1: 35, area: 'plains', name: 'Bright Plains' },
+    { x0: 16, y0: 14, x1: 39, y1: 35, area: 'eastfield', name: 'East Fields' },
   ],
   rate: 1 / 22,
 };
@@ -502,7 +502,7 @@ const ec2 = {
 };
 
 const cs1 = {
-  id: 'cs1', name: 'Nightspire', kind: 'dungeon', music: 'castle', wall: 'wallR', floor: 'floorR', back: 'castle', area: 'castle', rate: 1 / 18,
+  id: 'cs1', name: 'Nightspire', kind: 'dungeon', music: 'castle', wall: 'wallR', floor: 'floorRw', back: 'castle', area: 'castle', rate: 1 / 18,
   world: [5, 4],
   tiles: [
     '##################',
@@ -529,7 +529,7 @@ const cs1 = {
 };
 
 const cs2 = {
-  id: 'cs2', name: 'Nightspire 2F', kind: 'dungeon', music: 'castle', wall: 'wallR', floor: 'floorR', back: 'castle', area: 'castle', rate: 1 / 18,
+  id: 'cs2', name: 'Nightspire 2F', kind: 'dungeon', music: 'castle', wall: 'wallR', floor: 'floorRw', back: 'castle', area: 'castle', rate: 1 / 18,
   red: 'cs_l0&cs_l1', levers: ['cs_l0', 'cs_l1'],
   tiles: [
     '####################',
@@ -557,7 +557,7 @@ const cs2 = {
 };
 
 const cs3 = {
-  id: 'cs3', name: 'Throne of Night', kind: 'dungeon', music: 'castle', wall: 'wallR', floor: 'floorR', back: 'castle', area: null,
+  id: 'cs3', name: 'Throne of Night', kind: 'dungeon', music: 'castle', wall: 'wallR', floor: 'floorRw', back: 'castle', area: null,
   tiles: [
     '################',
     '#......v.......#',

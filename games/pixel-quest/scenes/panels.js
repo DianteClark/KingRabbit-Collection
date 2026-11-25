@@ -1,9 +1,8 @@
 // HTML panels for Pixel Quest: the menu, items, spells, gear, status, shops, options and the
 // battle skill/item lists. Plain DOM over the canvas so long lists scroll naturally on a phone.
-import { sfx } from '../../../shared/core/sfx.js';
-import { isMuted, setMuted } from '../../../shared/core/sfx.js';
+import { sfx, isMuted, setMuted } from '../../../shared/core/sfx.js';
 import { frameUrl } from '../art.js';
-import { CLASSES, SKILLS, ITEMS, GEAR, KEY_ITEMS, STATUS, SHOPS, CLASS_LETTER, itemName, itemIcon } from '../logic/data.js';
+import { CLASSES, SKILLS, ITEMS, GEAR, KEY_ITEMS, STATUS, SHOPS, itemName } from '../logic/data.js';
 import { statsOf, canEquip, skillsAt, xpFor } from '../logic/stats.js';
 import { MAX_LEVEL } from '../logic/data.js';
 import * as G from '../logic/game.js';
@@ -399,4 +398,3 @@ export function battleItemPanel(b, { onPick, onClose }) {
   return p;
 }
 
-export { itemIcon, CLASS_LETTER };

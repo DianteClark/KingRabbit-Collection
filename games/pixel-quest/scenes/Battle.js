@@ -2,12 +2,11 @@ import Phaser from 'phaser';
 import { PALETTE, hex } from '../../../shared/core/palette.js';
 import { text, button, panel } from '../../../shared/core/ui.js';
 import { reportDaily } from '../../../shared/core/trophies.js';
-import { WIDTH, HEIGHT, header, go, modal, busyUi, store, persist, fit, drawBar, hpColor, sleep } from './common.js';
+import { WIDTH, header, go, modal, busyUi, store, persist, fit, drawBar, hpColor, sleep } from './common.js';
 import { battleSkillPanel, battleItemPanel, tipPanel, closeAll } from './panels.js';
 import * as B from '../logic/battle.js';
 import * as G from '../logic/game.js';
 import { CLASSES, SKILLS, ITEMS, MONSTERS, STATUS } from '../logic/data.js';
-import { statsOf } from '../logic/stats.js';
 import { makeRng } from '../logic/rng.js';
 import { dailySetup, breather, dailyScore, WAVES } from '../logic/daily.js';
 import { playMusic, jingle, fx } from '../music.js';
@@ -42,6 +41,8 @@ export class Battle extends Phaser.Scene {
     this.auto = !!save.get('autoBattle');
     this.daily = !!this.data0.daily;
     this.tapResolve = null;
+    // The scene object is reused for every battle: reset what the last one left behind.
+    this.ending = false; this.choosing = null; this.targetMode = null; this.markers = null; this.dailyRun = null; this.st = null;
     this.input.on('pointerup', () => { if (this.tapResolve && !busyUi(this) && Date.now() - (this.__modalClosedAt || 0) > 250) { const r = this.tapResolve; this.tapResolve = null; r(); } });
 
     if (this.daily) {
@@ -381,7 +382,7 @@ export class Battle extends Phaser.Scene {
 
   // ------------------------------------------------------------ choosing commands
 
-  clearCmd() { this.cmd.removeAll(true); this.targetMode = null; }
+  clearCmd() { this.cmd.removeAll(true); this.targetMode = null; this.markers?.forEach((m) => m.destroy()); this.markers = null; }
 
   /** Ask each hero for a command. Resolves to the command list. */
   chooseAll() {
@@ -452,7 +453,7 @@ export class Battle extends Phaser.Scene {
     if (!list.length) { fx('error'); cancel(); return; }
     if (list.length === 1) { done({ side: list[0].side, idx: list[0].idx }); return; }
     this.clearCmd();
-    this.msgText.setText(kind === 'foe' ? 'Tap a monster to target.' : kind === 'dead' ? 'Tap a fallen hero.' : 'Tap a hero.');
+    this.msgText.setText(kind === 'foe' ? `Tap a monster: ${list.map((f) => f.name).join(', ')}` : kind === 'dead' ? 'Tap a fallen hero.' : 'Tap a hero.');
     this.targetMode = { kind, done: (t) => { this.targetMode = null; this.markers?.forEach((m) => m.destroy()); done(t); } };
     this.markers = list.map((u) => {
       const p = this.posOf(u.side, u.idx);
@@ -569,4 +570,3 @@ export class Battle extends Phaser.Scene {
   }
 }
 
-export { Phaser, statsOf, checkTrophies, HEIGHT };

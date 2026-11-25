@@ -1,4 +1,3 @@
-import Phaser from 'phaser';
 import { PALETTE, hex } from '../../../shared/core/palette.js';
 import { text, button, panel, fadeTo } from '../../../shared/core/ui.js';
 import { WIDTH, HEIGHT } from '../../../shared/core/boot.js';
@@ -133,4 +132,3 @@ export function fmtTime(ms) {
   return `${Math.floor(m / 60)}h ${String(m % 60).padStart(2, '0')}m`;
 }
 
-export { Phaser, PALETTE, hex, text, button, panel };
