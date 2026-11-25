@@ -326,8 +326,8 @@ const EVENTS = {
     if (lost) ask(s, 'info', { title: 'Rats!', text: `Rats got into the food and spoiled ${lost} portions. Food kept in a Storage crate is safe from rats.` });
   },
   coldsnap(s) {
-    s.story.tempMod = -12; s.story.tempUntil = s.t + 2 * TPD;
-    log(s, 'A cold snap! It will be 12 degrees colder for two days. Keep the fires fed.', 'bad');
+    s.story.tempMod = -8; s.story.tempUntil = s.t + 2 * TPD;
+    log(s, 'A cold snap! It will be 8 degrees colder for two days. Keep the fires fed and get indoors.', 'bad');
     note(s, { type: 'toast', text: 'Cold snap! Keep the fires going.' });
   },
   heatwave(s) {

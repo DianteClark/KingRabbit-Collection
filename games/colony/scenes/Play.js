@@ -134,7 +134,7 @@ export class Play extends Phaser.Scene {
     this.cameras.main.fadeIn(200, 28, 22, 24);
     if (this.s.t <= 7 * TPH + 1) stat('colonies');
     if (this.s.result) this.time.delayedCall(300, () => this.showEnd());
-    else if (this.s.pending) this.time.delayedCall(300, () => this.openEvent());
+
   }
 
   // ================================================================ drawing the map
@@ -436,7 +436,12 @@ export class Play extends Phaser.Scene {
     if (p.id !== g.id) return;
     this.gest = null;
     if (PN.blocking()) { this.preview.clear(); return; }
-    if (g.kind === 'draw') { this.commitDraw(g); return; }
+    if (g.kind === 'draw') {
+      // Use where the finger lifted, in case the last move event was not seen.
+      if (p.x || p.y) { const t = this.tileAt(p.x, Phaser.Math.Clamp(p.y, VIEW.y, VIEW.y + VIEW.h - 1)); g.b = t; }
+      this.commitDraw(g);
+      return;
+    }
     if (g.moved <= DRAG_PX && g.a.inside) this.tapTile(g.a, p);
     else this.preview.clear();
   }
@@ -877,7 +882,7 @@ export class Play extends Phaser.Scene {
     if (!this.hudAt || time - this.hudAt > 250) { this.hudAt = time; this.refreshHud(); this.tutorialCheck(); }
     const h = Math.floor(s.t / TPH);
     if (h !== this.lastHour) { this.lastHour = h; if (time - this.lastSave > 5000) this.save(); }
-    if (s.pending && !PN.isOpen('event')) this.openEvent();
+    if (s.pending && !s.result && !PN.isOpen('event')) this.openEvent();
   }
 
   openEvent() {
@@ -895,6 +900,15 @@ export class Play extends Phaser.Scene {
     this.refreshHud(true);
   }
 
+  /** Effects at high speed would machine-gun: each sound plays at most every 120 ms. */
+  sfxT(name) {
+    const now = this.time.now;
+    this.sfxAt = this.sfxAt || {};
+    if (now - (this.sfxAt[name] || 0) < 120) return;
+    this.sfxAt[name] = now;
+    sfx(name);
+  }
+
   handleNotes() {
     const r = Wd.rt(this.s);
     if (!r.notes.length) return;
@@ -907,11 +921,11 @@ export class Play extends Phaser.Scene {
           else if (n.kind === 'good' && /joined|friends|Contact|ship|raid is over|hunted|made/.test(n.text)) this.toast(n.text, n.at, '#c9e6a8');
           break;
         case 'toast': this.toast(n.text); break;
-        case 'sfx': sfx(n.name); break;
-        case 'shot': this.shot(n); sfx('shoot'); break;
+        case 'sfx': this.sfxT(n.name); break;
+        case 'shot': this.shot(n); this.sfxT('shoot'); break;
         case 'swing': break;
-        case 'bash': sfx('thud'); break;
-        case 'built': this.puff(n.i); sfx('place'); if (n.k === 'bed') this.checkBeds(); break;
+        case 'bash': this.sfxT('thud'); break;
+        case 'built': this.puff(n.i); this.sfxT('place'); if (n.k === 'bed') this.checkBeds(); break;
         case 'cooked': give('hot-meal'); stat('meals', n.n); break;
         case 'harvest': give('harvest'); break;
         case 'crafted': if (n.k === 'spear' || n.k === 'bow') give('armed'); sfx('coin'); break;

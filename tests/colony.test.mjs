@@ -218,3 +218,55 @@ test('colony orders: designations only stick to the right things; zones skip roc
   assert.equal(S.designate(s, 'cancel', [grass, rock]), 2, 'cancel removes the blueprint and the order');
   assert.ok(!s.bld[grass]);
 });
+
+test('colony health: a doctor tends a downed settler and carries them to a bed', () => {
+  const s = calm(51);
+  const bedAt = near(s, 0, -4); clearTile(s, bedAt);
+  const r = S.build(s, 'bed', bedAt); Wd.completeBuilding(s, s.blds[r.id]);
+  const [hurt, doc] = settlers(s);
+  hurt.hp = 15; hurt.downed = true; hurt.bleed = true;
+  doc.skills.heal = 6;
+  runHours(s, 8);
+  assert.equal(hurt.bleed, false, 'bleeding stopped');
+  assert.ok(hurt.tendAt > 0, 'tended');
+  assert.equal(Wd.bAt(s, hurt.at)?.k, 'bed', 'carried to the bed');
+  runHours(s, 24);
+  assert.ok(!hurt.downed && !hurt.dead, 'back on their feet');
+});
+
+test('colony cold: winter without warmth hurts, a lit campfire keeps settlers warm', () => {
+  const cold = calm(52); cold.day0 = 33;
+  for (const p of settlers(cold)) p.gear.coat = null;
+  runHours(cold, 30);
+  assert.ok(settlers(cold).some((p) => p.cold > 0.5 || p.hp < 100), 'freezing with no fire');
+  const warm = calm(52); warm.day0 = 33;
+  const f = near(warm, 0, -2); clearTile(warm, f);
+  const r = S.build(warm, 'campfire', f); Wd.completeBuilding(warm, warm.blds[r.id]);
+  warm.blds[r.id].fuel = 10;
+  Wd.dropNear(warm, near(warm, 1, 1), 'wood', 40);
+  runHours(warm, 30);
+  assert.ok(settlers(warm).every((p) => p.cold < 1 && p.hp > 90), 'warm by the fire');
+});
+
+test('colony rooms: walls and a door make a room; a lit fire inside keeps it warm', () => {
+  const s = calm(53); s.day0 = 33;
+  // A 5x5 room (3x3 inside) around (24, 26)
+  const cx = START.x; const cy = START.y - 6;
+  for (let y = cy - 2; y <= cy + 2; y++) for (let x = cx - 2; x <= cx + 2; x++) clearTile(s, idx(x, y));
+  for (let y = cy - 2; y <= cy + 2; y++) {
+    for (let x = cx - 2; x <= cx + 2; x++) {
+      const edge = Math.abs(x - cx) === 2 || Math.abs(y - cy) === 2;
+      if (!edge) continue;
+      const k = x === cx && y === cy + 2 ? 'door' : 'swall';
+      const r = S.build(s, k, idx(x, y)); Wd.completeBuilding(s, s.blds[r.id]);
+    }
+  }
+  const inside = idx(cx, cy);
+  assert.ok(Wd.isIndoors(s, inside), 'inside is a room');
+  assert.ok(!Wd.isIndoors(s, idx(cx, cy + 4)), 'outside is not');
+  const out = Wd.outdoorTemp(s);
+  assert.ok(Wd.tileTemp(s, inside) > out, 'walls keep some warmth in');
+  const r = S.build(s, 'campfire', idx(cx - 1, cy)); Wd.completeBuilding(s, s.blds[r.id]);
+  Wd.roomsChanged(s);
+  assert.ok(Wd.tileTemp(s, inside) >= 19, `heated room is warm (${Wd.tileTemp(s, inside)})`);
+});

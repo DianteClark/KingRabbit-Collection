@@ -293,7 +293,7 @@ export function rooms(s) {
           const x = tx(b.i) + dx; const y = ty(b.i) + dy;
           if (!inMap(x, y) || Math.hypot(dx, dy) > rad + 0.5) continue;
           const j = idx(x, y);
-          if (!room[j]) heat[j] = Math.max(heat[j], 14);
+          if (!room[j]) heat[j] = Math.max(heat[j], Math.hypot(dx, dy) <= 2 ? 16 : 11);
         }
       }
     }

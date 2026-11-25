@@ -140,11 +140,11 @@ function hourly(s) {
     if (it.r >= 1) { rotten += it.n; delete s.items[i]; markTile(s, i); }
   }
   if (rotten) {
-    log(s, `${rotten} food rotted. Store food indoors or in a Storage crate.`, 'bad');
+    s.stats.rotted = (s.stats.rotted || 0) + rotten;
+    if (s.t - (s.lastRotLog || -1e9) > 12 * TPH) { s.lastRotLog = s.t; log(s, `${rotten} food rotted. Store food indoors or in a Storage crate.`, 'bad'); }
     for (const p of settlers(s)) { p.thoughts = p.thoughts.filter((t) => t.k !== 'rotten'); p.thoughts.push({ k: 'rotten', v: -3, until: s.t + 24 * TPH }); }
   }
-  storyHour(s);
-  checkResult(s);
+  if (!checkResult(s)) storyHour(s);
 }
 
 function daily(s) {
@@ -233,6 +233,7 @@ export function checkResult(s) {
   return null;
 }
 function end(s, won, reason, how = null) {
+  s.pending = null;
   s.result = { won, reason, how, day: dayOf(s), score: dailyScore(s, won), alive: settlers(s).length, deaths: s.stats.deaths };
   log(s, reason, won ? 'good' : 'bad');
   note(s, { type: 'end', won });

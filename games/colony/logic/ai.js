@@ -592,6 +592,8 @@ const RUN = {
     const day = h >= 6 && h < 21;
     const hs = hostiles(s);
     if (hs.some((o) => mobDist(o, p) < 8)) { p.sleeping = false; return true; }
+    // Freezing in bed: get up and find somewhere warm, if there is anywhere.
+    if (p.cold > 0.9 && j.slept % 60 === 0 && warmTile(s, p, distanceMap(p.at, pass(s))) != null) { p.sleeping = false; addThought(s, p, 'coldsleep'); return true; }
     const done = j.sickRest ? !p.sick || p.sick.sev < 0.25 || p.food < 0.2 : (p.rest >= 0.99 && (day || j.slept > 9 * TPH)) || (p.food < 0.12 && p.rest > 0.3);
     if (!done) return undefined;
     p.sleeping = false;
