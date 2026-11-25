@@ -13,6 +13,7 @@ import { isMuted, setMuted } from '../../../shared/core/sfx.js';
 import { bagPanel, shopPanel, heroPanel, mapPanel, perkPanel, logPanel } from './panels.js';
 import { DEBUG } from '../debug.js';
 import { earn, stat, daily } from '../trophies.js';
+import { hit, rep, down, hideWhilePad } from '../padkit.js';
 
 const T = 32;             // tile size on screen (16px art at 2x)
 const TOP = 52;           // top bar
@@ -78,6 +79,11 @@ export class Play extends Phaser.Scene {
 
     this.time.addEvent({ delay: 170, loop: true, callback: () => this.flicker() });
     this.input.keyboard?.on('keydown', (e) => this.onKey(e));
+    // Controller: the gold menu frame only works inside popups; the scene reads the rest itself.
+    this.padNav = 'modal';
+    this.padModalDepth = 100;
+    this.padStart = () => { if (!overlayOpen(this)) this.pauseMenu(); };
+    this.events.on('update', () => this.padTick());
     // When a popup closes: ignore map taps for a moment (a double tap must not walk), then show
     // any level-up choice or tip that was waiting.
     this.events.on('overlayClosed', () => {
@@ -357,8 +363,9 @@ export class Play extends Phaser.Scene {
     this.add.rectangle(0, BOT, WIDTH, HEIGHT - BOT, hex(DARK.navy)).setOrigin(0).setDepth(D - 1);
     this.add.rectangle(0, BOT, WIDTH, 3, hex(PALETTE.ink)).setOrigin(0).setDepth(D - 1);
     const cx = 80; const cy = 556;
+    const touchPad = [];
     const pad = [['up', cx, cy - 52, 0, -1], ['left', cx - 54, cy, -1, 0], ['right', cx + 54, cy, 1, 0], ['down', cx, cy + 52, 0, 1]];
-    this.add.rectangle(cx, cy, 52, 52, hex(DARK.blue)).setDepth(D);
+    touchPad.push(this.add.rectangle(cx, cy, 52, 52, hex(DARK.blue)).setDepth(D));
     for (const [dir, x, y, dx, dy] of pad) {
       const c = this.add.container(x, y).setDepth(D + 1);
       const sh = this.add.rectangle(0, 3, 50, 48, hex(PALETTE.ink));
@@ -370,12 +377,15 @@ export class Play extends Phaser.Scene {
       g.fillTriangle(pts[0][0], pts[0][1], pts[1][0], pts[1][1], pts[2][0], pts[2][1]);
       c.add([sh, face, g]);
       c.setSize(52, 52).setInteractive({ useHandCursor: true });
+      touchPad.push(c);
       c.on('pointerdown', () => { face.y = 2; g.y = 2; this.startHold(dx, dy); });
       const up = () => { face.y = 0; g.y = 0; if (this.held && this.held.dx === dx && this.held.dy === dy) this.held = null; };
       c.on('pointerup', up);
       c.on('pointerout', up);
     }
-    button(this, cx, cy, 50, 46, 'Wait', () => { if (this.canAct()) { this.stopWalk(); this.doAct({ type: 'wait' }); } }, { fill: DARK.purple, color: PALETTE.cream, silent: true }).setDepth(D + 1);
+    touchPad.push(button(this, cx, cy, 50, 46, 'Wait', () => { if (this.canAct()) { this.stopWalk(); this.doAct({ type: 'wait' }); } }, { fill: DARK.purple, color: PALETTE.cream, silent: true }).setDepth(D + 1));
+    // The arrow pad hides while a controller is in use (the action buttons stay: they show labels).
+    hideWhilePad(this, touchPad);
 
     this.bagBtn = button(this, 212, 502, 94, 44, 'Bag', () => this.openBag(), { fill: PALETTE.cream }).setDepth(D);
     this.fireBtn = button(this, 310, 502, 94, 44, 'Fire', () => this.pressFire(), { fill: PALETTE.orange }).setDepth(D);
@@ -393,6 +403,37 @@ export class Play extends Phaser.Scene {
     if (this.busy) return false;
     if (this.st.levelUp) { this.showPerks(); return false; }
     return true;
+  }
+
+  /**
+   * Controller, once a frame: d-pad steps (repeating while held, but a held direction stops
+   * when something needs attention, like walking does), A = pick up / descend here, else wait.
+   * B = search, X = fire, Y = bag, L = rest, R = hero, Select = map, Start = pause menu.
+   */
+  padTick() {
+    if (!this.st || this.ended || overlayOpen(this) || document.getElementById('howto')) return;
+    const dirs = [['left', -1, 0], ['right', 1, 0], ['up', 0, -1], ['down', 0, 1]];
+    if (this.padStop && !dirs.some(([n]) => down(n))) this.padStop = false;
+    for (const [n, dx, dy] of dirs) {
+      if (this.padStop || !rep(n, 260, STEP_MS + 50)) continue;
+      const first = hit(n);
+      if (!this.canAct()) break;
+      this.stopWalk();
+      this.cancelAim();
+      const before = this.snapshot();
+      const ok = this.doAct({ type: 'move', dx, dy });
+      if (!first && (!ok || this.alarming(before))) this.padStop = true;
+      if (first && this.alarming(before)) this.padStop = true;
+      return;
+    }
+    if (hit('a')) {
+      if (this.ctxMode === 'descend' || this.ctxMode === 'pickup') this.pressContext();
+      else if (this.canAct()) { this.stopWalk(); this.doAct({ type: 'wait' }); }
+    } else if (hit('b')) this.pressContext();
+    else if (hit('x2')) this.pressFire();
+    else if (hit('y2')) this.openBag();
+    else if (hit('l')) this.rest();
+    else if (hit('r')) { if (this.canAct(true)) heroPanel(this, this.st); } else if (hit('select')) { if (this.canAct(true)) mapPanel(this, this.st); }
   }
 
   onKey(e) {

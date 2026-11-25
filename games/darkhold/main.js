@@ -9,10 +9,11 @@ import * as Bot from './logic/bot.js';
 import { save, saveRun, loadRun } from './save.js';
 import { DEBUG } from './debug.js';
 import { initTrophies } from './trophies.js';
+import { installPad } from './padkit.js';
 
 initTrophies();
 
-startGame({ scenes: [Boot, Title, ClassSelect, Play, End], background: '#08070d' });
+startGame({ scenes: [Boot, Title, ClassSelect, Play, End], background: '#08070d' }).then(installPad);
 
 // Test hooks for the automated browser checks: only in dev, or with ?debug in the address.
 if (DEBUG) window.__dark = { G, Bot, save, saveRun, loadRun };
