@@ -32,8 +32,8 @@ export const GAMES = [
   { id: 'hearth-valley', title: 'Hearth Valley', tagline: 'Farm, fish and make friends', cat: 'sim', status: 'playable' },
   { id: 'sand-siege', title: 'Sand Siege', tagline: 'Desert tower defense', cat: 'strategy', status: 'playable' },
   { id: 'gem-quest', title: 'Gem Quest', tagline: 'Match gems, power your hero', cat: 'classic', status: 'playable' },
+  { id: 'pixel-quest', title: 'Pixel Quest', tagline: 'A classic party RPG', cat: 'adventure', status: 'playable' },
   // In development
   { id: 'racers', title: 'Tiny Town Racers', tagline: 'Drift through the city streets', cat: 'action', status: 'soon', landscape: true },
-  { id: 'pixel-quest', title: 'Pixel Quest', tagline: 'A classic party RPG', cat: 'adventure', status: 'soon' },
   { id: 'colony', title: 'Colony', tagline: 'Keep your settlers alive', cat: 'sim', status: 'soon' },
 ];
