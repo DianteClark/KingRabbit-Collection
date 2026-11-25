@@ -66,7 +66,7 @@ export class BoardView {
   makeSprite(cell, i, yOff = 0) {
     const [px, py] = this.pos(i);
     const c = this.scene.add.container(px, py + yOff);
-    const scale = Math.floor(this.cell / 8) - (this.cell % 8 < 2 ? 1 : 0);
+    const scale = Math.floor((this.cell - 1) / 8);
     const img = this.scene.add.image(0, 0, 'gq', gemFrame(cell.c)).setScale(scale);
     c.add(img);
     c.gem = img;

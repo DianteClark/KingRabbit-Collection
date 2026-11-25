@@ -49,24 +49,24 @@ export class Heroes extends Phaser.Scene {
     const h = this.p.heroes[id];
     const def = HEROES[id];
     const st = PR.statsOf(this.p, id);
-    const y0 = 122;
+    const y0 = 116;
     this.add.rectangle(0, y0, WIDTH, 96, hex(PALETTE.ink), 0.5).setOrigin(0);
     unit(this, 40, y0 + 80, def.sprite, 4);
     text(this, 80, y0 + 14, `${def.name}  Lv ${h.lvl}`, { origin: [0, 0.5], color: PALETTE.gold });
     const xpb = bar(this, 80, y0 + 36, 176, 16, PALETTE.lavender);
     if (h.lvl >= MAX_LEVEL) xpb.set(1, 1, 'Max level'); else xpb.set(h.xp, xpToNext(h.lvl), `XP ${h.xp}/${xpToNext(h.lvl)}`);
     text(this, 80, y0 + 58, `HP ${st.maxHp}   Skull ${st.skull}   Power +${st.power}`, { origin: [0, 0.5] });
-    text(this, 80, y0 + 80, def.blurb, { origin: [0, 0.5], color: PALETTE.lavender, wrap: 270, align: 'left' }).setOrigin(0, 0.5);
+    text(this, 80, y0 + 80, def.blurb, { origin: [0, 0.5], color: PALETTE.lavender });
     if (this.p.active === id) text(this, WIDTH - 12, y0 + 14, 'Active', { origin: [1, 0.5], color: PALETTE.leaf });
-    else button(this, WIDTH - 52, y0 + 18, 92, 34, 'Use', () => { this.p.active = id; setProgress(this.p); sfx('power'); go(this, 'Heroes', { from: this.from, region: this.region, sel: id }); }, { fill: PALETTE.gold });
+    else button(this, WIDTH - 52, y0 + 20, 92, 36, 'Use', () => { this.p.active = id; setProgress(this.p); sfx('power'); go(this, 'Heroes', { from: this.from, region: this.region, sel: id }); }, { fill: PALETTE.gold });
 
     // Gear slots
-    const gy = 252;
-    text(this, 12, gy - 20, 'Gear (tap a slot to change it)', { origin: [0, 0.5], color: PALETTE.sand });
+    const gy = 240;
+    text(this, 12, gy - 16, 'Gear (tap a slot to change it)', { origin: [0, 0.5], color: PALETTE.sand });
     SLOTS.forEach(([slot, label], i) => {
       const x = 62 + i * 118;
       const item = h.gear[slot];
-      const b = button(this, x, gy + 22, 112, 54, '', () => this.pickGear(slot, label), { fill: PALETTE.indigo, color: PALETTE.cream });
+      const b = button(this, x, gy + 24, 112, 50, '', () => this.pickGear(slot, label), { fill: PALETTE.indigo, color: PALETTE.cream });
       b.face.add(text(this, 0, -14, label, { color: PALETTE.lavender }));
       if (item) {
         b.face.add(icon(this, -36, 8, GEAR[item].icon, 1.5));
@@ -75,10 +75,10 @@ export class Heroes extends Phaser.Scene {
     });
 
     // Skills
-    const sy = 318;
+    const sy = 306;
     text(this, 12, sy, 'Skills (tap for details)', { origin: [0, 0.5], color: PALETTE.sand });
     def.skills.forEach((sid, k) => {
-      const y = sy + 22 + k * 68;
+      const y = sy + 14 + k * 66;
       const open = h.lvl >= SKILL_LEVELS[k];
       const sk = SKILLS[sid];
       const row = this.add.rectangle(8, y, WIDTH - 16, 62, hex(PALETTE.night)).setOrigin(0).setStrokeStyle(2, hex(open ? PALETTE.indigo : PALETTE.ink))
@@ -86,25 +86,25 @@ export class Heroes extends Phaser.Scene {
       row.on('pointerup', () => { if (!this._modals) { sfx('select'); modal(this, sk.name, `${describe(sid, Math.max(h.lvl, SKILL_LEVELS[k]), st.power)}\nCost: ${costLabel(sid)}.${open ? '' : `\nOpens at level ${SKILL_LEVELS[k]}.`}`, [['Close', (c) => c(), PALETTE.lavender]], { art: { make: (ax, ay) => icon(this, ax, ay, sk.icon, 4) } }); } });
       const ic = icon(this, 30, y + 31, sk.icon, 2);
       if (!open) ic.setAlpha(0.4);
-      text(this, 54, y + 14, sk.name, { origin: [0, 0.5], color: open ? PALETTE.cream : PALETTE.lavender });
-      text(this, WIDTH - 16, y + 14, open ? costLabel(sid) : `Lv ${SKILL_LEVELS[k]}`, { origin: [1, 0.5], color: open ? PALETTE.gold : PALETTE.lavender });
-      const d = text(this, 54, y + 30, describe(sid, Math.max(h.lvl, SKILL_LEVELS[k]), st.power), { origin: [0, 0], color: PALETTE.lavender, wrap: WIDTH - 72, align: 'left' });
-      if (d.height > 32) { d.setText(this.clip(describe(sid, Math.max(h.lvl, SKILL_LEVELS[k]), st.power), d, WIDTH - 72)); }
+      text(this, 54, y + 12, sk.name, { origin: [0, 0.5], color: open ? PALETTE.cream : PALETTE.lavender });
+      text(this, WIDTH - 16, y + 12, open ? costLabel(sid) : `Lv ${SKILL_LEVELS[k]}`, { origin: [1, 0.5], color: open ? PALETTE.gold : PALETTE.lavender });
+      const d = text(this, 54, y + 23, describe(sid, Math.max(h.lvl, SKILL_LEVELS[k]), st.power), { origin: [0, 0], color: PALETTE.lavender, wrap: WIDTH - 72, align: 'left' });
+      d.setLineSpacing(0);
+      if (d.height > 36) this.clip(describe(sid, Math.max(h.lvl, SKILL_LEVELS[k]), st.power), d);
     });
-    button(this, WIDTH / 2, 616, 200, 40, 'Auto equip best', () => { PR.autoEquip(this.p, id); setProgress(this.p); sfx('power'); go(this, 'Heroes', { from: this.from, region: this.region, sel: id }); }, { fill: PALETTE.lavender });
+    button(this, WIDTH / 2, 612, 200, 40, 'Auto equip best', () => { PR.autoEquip(this.p, id); setProgress(this.p); sfx('power'); go(this, 'Heroes', { from: this.from, region: this.region, sel: id }); }, { fill: PALETTE.lavender });
   }
 
   shortName(name) { return name.length > 10 ? `${name.split(' ')[0]}` : name; }
 
   /** Shorten text so it fits two lines (full text is in the popup). */
-  clip(s, t, w) {
+  clip(s, t) {
     let cut = s;
     while (cut.length > 4) {
       cut = cut.slice(0, cut.lastIndexOf(' '));
       t.setText(`${cut}...`);
-      if (t.height <= 32) return `${cut}...`;
+      if (t.height <= 36) return;
     }
-    return s;
   }
 
   pickGear(slot, label, page = 0) {
@@ -144,7 +144,7 @@ export class Heroes extends Phaser.Scene {
     }
     content.h = y;
     const buttons = [['Close', (c) => c(), PALETTE.lavender]];
-    if (pages > 1) buttons.unshift([`Page ${(page + 1) % pages + 1} of ${pages}`, (c) => { c(); this.time.delayedCall(10, () => this.pickGear(slot, label, (page + 1) % pages)); }, PALETTE.sand]);
+    if (pages > 1) buttons.unshift([`More (${(page + 1) % pages + 1}/${pages})`, (c) => { c(); this.time.delayedCall(10, () => this.pickGear(slot, label, (page + 1) % pages)); }, PALETTE.sand]);
     const md = modal(this, `${label} for ${HEROES[id].name}`, null, buttons, { width: 330, content, row: true });
     m.close = md.close;
   }

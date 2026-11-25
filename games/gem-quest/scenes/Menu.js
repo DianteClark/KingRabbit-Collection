@@ -41,6 +41,7 @@ export class Menu extends Phaser.Scene {
     const daily = playedDailyToday(GAME_ID);
     B(daily ? `Daily Duel (best ${profile().daily[GAME_ID]?.best?.[today()] ?? 0})` : 'Daily Duel - new today!', () => this.daily(), daily ? PALETTE.lavender : PALETTE.sand);
 
+    text(this, WIDTH / 2, 562, 'Pixel art by Aleksandr Makarov', { color: PALETTE.lavender });
     button(this, 90, 606, 160, 40, '< All Games', () => { window.location.href = '../'; }, { fill: PALETTE.indigo, color: PALETTE.cream });
     this.soundBtn = button(this, 268, 606, 140, 40, '', () => { setMuted(!isMuted()); this.syncSound(); }, { color: PALETTE.cream });
     this.syncSound();
@@ -73,6 +74,7 @@ export class Menu extends Phaser.Scene {
     };
     const body = `Everyone gets the same duel today: a level 8 ${heroName} with no gear against ${battle.enemy.name}, on the same board.\n\nWin fast and keep your HP for a high score. Play as often as you like: your best counts.`;
     const current = getBattle();
+    if (current?.ctx.mode === 'daily' && current.ctx.day === today()) { go(this, 'Battle', current); return; }
     modal(this, 'Daily Duel', body, [
       ['Fight!', (close) => {
         close();

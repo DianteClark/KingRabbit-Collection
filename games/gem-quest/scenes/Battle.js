@@ -17,10 +17,10 @@ import { reportDaily, today } from '../../../shared/core/trophies.js';
 import { aiParams } from '../logic/ai.js';
 import { DEBUG } from '../debug.js';
 
-const BOARD = { x: 12, y: 150, cell: 42 };
+const BOARD = { x: 16, y: 150, cell: 41 };
 const EP = { top: 46, h: 100 };   // enemy panel
-const HP_TOP = 492;               // hero panel
-const SKILL_Y = [574, 618];
+const HP_TOP = 482;               // hero panel
+const SKILL_Y = [570, 614];
 const STATUS_ICONS = { shield: MAP_ART.shield, poison: MAP_ART.poison, stun: MAP_ART.stun, rage: MAP_ART.rage, weak: MAP_ART.weak };
 
 export class Battle extends Phaser.Scene {
@@ -84,17 +84,15 @@ export class Battle extends Phaser.Scene {
     const scale = size === 24 ? 3 : 4;
     this.add.ellipse(304, EP.top + 92, 60, 10, hex(PALETTE.ink), 0.4);
     this.enemySprite = unit(this, 304, EP.top + 94, e.sprite, scale, true);
-    this.add.zone(304, EP.top + 50, 80, 96).setInteractive({ useHandCursor: true }).on('pointerup', () => this.enemyInfo());
+    // The whole monster panel is one big tap target for its details.
+    this.add.zone(0, EP.top, WIDTH, EP.h).setOrigin(0).setInteractive({ useHandCursor: true }).on('pointerup', () => this.enemyInfo());
     this.enemyName = text(this, 12, EP.top + 12, `${e.name}  Lv ${e.level}`, { origin: [0, 0.5], color: PALETTE.cream });
     this.enemyHp = bar(this, 12, EP.top + 32, 230, 18, PALETTE.red);
     this.enemyMana = this.manaBars(12, EP.top + 52, 54, 10, false);
     this.enemyStatus = this.add.container(0, 0);
     // Intent box
     const iy = EP.top + 78;
-    const ib = this.add.rectangle(12, iy, 230, 30, hex(PALETTE.ink), 0.75).setOrigin(0, 0.5).setStrokeStyle(2, hex(PALETTE.indigo))
-      .setInteractive({ useHandCursor: true });
-    ib.on('pointerup', () => this.enemyInfo());
-    this.intentBox = ib;
+    this.intentBox = this.add.rectangle(12, iy, 230, 30, hex(PALETTE.ink), 0.75).setOrigin(0, 0.5).setStrokeStyle(2, hex(PALETTE.indigo));
     this.intentIcon = icon(this, 26, iy, 'sp:2,0', 1.5);
     this.intentText = text(this, 40, iy, '', { origin: [0, 0.5], color: PALETTE.cream });
     this.intentNeed = text(this, 236, iy, '', { origin: [1, 0.5], color: PALETTE.lavender });
@@ -116,7 +114,7 @@ export class Battle extends Phaser.Scene {
     this.goldText = text(this, WIDTH - 10, HP_TOP + 14, '', { origin: [1, 0.5], color: PALETTE.gold });
     this.heroHp = bar(this, 52, HP_TOP + 34, 196, 18, PALETTE.leaf);
     this.heroStatus = this.add.container(0, 0);
-    this.heroMana = this.manaBars(12, HP_TOP + 58, 81, 16, true);
+    this.heroMana = this.manaBars(12, HP_TOP + 56, 81, 14, true);
     // Skills 2 x 2
     this.skillBtns = [];
     const heroId = this.ctx.hero;
@@ -131,7 +129,8 @@ export class Battle extends Phaser.Scene {
         b.face.add(name);
         const chips = this.add.container(0, 0);
         let cx = 80;
-        SKILLS[id].cost.forEach((n, c) => {
+        // Right to left, so the colours read in the same order as everywhere else.
+        [...SKILLS[id].cost.entries()].reverse().forEach(([c, n]) => {
           if (!n) return;
           const t = outlined(this, cx, 0, String(n), { origin: [1, 0.5], color: GEM_COLORS[c] });
           chips.add(t);
@@ -358,7 +357,7 @@ export class Battle extends Phaser.Scene {
         }
         case 'gold':
           this.goldText.setText(`${ev.total} gold`);
-          if (!this.st.rules?.turnLimit && this.ctx.mode !== 'daily') floatText(this, WIDTH - 40, HP_TOP + 14, `+${ev.amount}`, PALETTE.gold, 16);
+          if (!this.st.rules?.turnLimit && this.ctx.mode !== 'daily') floatText(this, 250, HP_TOP + 14, `+${ev.amount} gold`, PALETTE.gold, 16);
           break;
         case 'extra':
           sfx('goal');
@@ -470,8 +469,8 @@ export class Battle extends Phaser.Scene {
     if (this.coachBox?.key === key) return;
     this.hideCoach();
     const c = this.add.container(0, 0).setDepth(95);
-    const y = key === 'skill' ? HP_TOP - 58 : EP.top + 2;
-    const h = key === 'skill' ? 52 : EP.h - 4;
+    const y = EP.top + 2;
+    const h = EP.h - 4;
     c.add(this.add.rectangle(4, y, WIDTH - 8, h, hex(PALETTE.night), 0.96).setOrigin(0).setStrokeStyle(3, hex(PALETTE.gold))
       .setInteractive().on('pointerup', () => this.hideCoach()));
     c.add(text(this, WIDTH / 2, y + h / 2, msgs[key], { wrap: WIDTH - 36, color: PALETTE.cream }));
@@ -479,7 +478,7 @@ export class Battle extends Phaser.Scene {
     this.coachBox = c;
     if (key === 'skill') {
       const b = this.skillBtns.find((s) => s.learned && canAfford(this.st.hero, s.skill));
-      if (b) { this.coachArrow = this.tweens.add({ targets: b, y: b.y - 4, duration: 300, yoyo: true, repeat: -1 }); this.coachArrowTarget = b; }
+      if (b) { this.coachArrow = this.tweens.add({ targets: b, scale: 1.05, duration: 300, yoyo: true, repeat: -1 }); this.coachArrowTarget = b; }
     }
   }
 
@@ -488,13 +487,13 @@ export class Battle extends Phaser.Scene {
     if (this.coachBox.key === 'skill') markSeen('tut-skill');
     this.coachBox.destroy();
     this.coachBox = null;
-    if (this.coachArrow) { this.coachArrow.stop(); this.coachArrowTarget.y = SKILL_Y[this.skillBtns.indexOf(this.coachArrowTarget) >> 1]; this.coachArrow = null; }
+    if (this.coachArrow) { this.coachArrow.stop(); this.coachArrowTarget.setScale(1); this.coachArrow = null; }
   }
 
   // ------------------------------------------------------------------ saving, pausing, ending
 
   saveNow() {
-    if (this.st.over) return;
+    if (this.ended) return;
     setBattle({ battle: this.st, ctx: this.ctx });
   }
 
@@ -531,7 +530,6 @@ export class Battle extends Phaser.Scene {
     this.hideCoach();
     const won = this.st.over === 'win';
     if (this.tut) markSeen('tut-battle');
-    clearBattle();
     if (won) { playOnce(this.enemySprite, 'hit'); this.tweens.add({ targets: this.enemySprite, alpha: 0, duration: 600, delay: 200 }); sfx('win'); } else sfx('lose');
     stat('battles');
     if (won) {
@@ -540,11 +538,10 @@ export class Battle extends Phaser.Scene {
       if (this.st.hero.hp <= 5) give('close-call');
     }
     stat('gems', this.st.stats.gems);
-    this.time.delayedCall(900, () => {
-      if (this.ctx.mode === 'campaign') this.finishCampaign(won);
-      else if (this.ctx.mode === 'tower') this.finishTower(won);
-      else this.finishDaily(won);
-    });
+    // Pay out now (so closing the game during the fanfare loses nothing), show the results after.
+    const show = this.ctx.mode === 'campaign' ? this.finishCampaign(won) : this.ctx.mode === 'tower' ? this.finishTower(won) : this.finishDaily(won);
+    clearBattle();
+    this.time.delayedCall(900, show);
   }
 
   finishCampaign(won) {
@@ -561,21 +558,27 @@ export class Battle extends Phaser.Scene {
     const lines = [];
     if (won) lines.push(`+${r.xp} XP for ${HEROES[this.ctx.hero].name}`, `+${r.gold} gold (you have ${p.gold})`);
     else lines.push(this.st.reason === 'time' ? 'Out of turns!' : `${this.st.enemy.name} wins this time.`, `+${r.xp} XP and ${r.gold} gold for trying.`);
-    for (const [id, n] of Object.entries(r.levelUps)) if (n > 0) lines.push(`${HEROES[id].name} is now level ${p.heroes[id].lvl}!`);
+    for (const [id, n] of Object.entries(r.levelUps)) {
+      if (n <= 0) continue;
+      const lvl = p.heroes[id].lvl;
+      lines.push(`${HEROES[id].name} is now level ${lvl}!`);
+      HEROES[id].skills.forEach((sk, k) => { if (SKILL_LEVELS[k] > lvl - n && SKILL_LEVELS[k] <= lvl) lines.push(`${HEROES[id].name} learns ${SKILLS[sk].name}!`); });
+    }
     if (r.item) lines.push(`Reward: ${this.gearName(r.item)}! Equip it on the Heroes screen.`);
     for (const id of r.joined) lines.push(`${HEROES[id].name} joins your party!`);
     if (r.boss && won && r.firstClear) lines.push(node.region < 3 ? `The road to ${REGIONS[node.region + 1].name} is open.` : 'The Rift is sealed. You win the campaign!');
-    if (Object.values(r.levelUps).some((n) => n > 0)) sfx('power');
+    if (Object.values(r.levelUps).some((n) => n > 0)) this.time.delayedCall(1000, () => sfx('power'));
     const title = won ? (node.region === 3 && node.kind === 'boss' ? 'Dragon slain!' : 'Victory!') : 'Defeated';
     const buttons = won
-      ? [['Continue', () => go(this, 'WorldMap', { region: node.region, justWon: this.ctx.node })]]
+      ? [['Continue', () => go(this, 'WorldMap', r.boss && r.firstClear && node.region < 3 ? { region: node.region + 1 } : { region: node.region, justWon: this.ctx.node })]]
       : [['Try again', () => this.retry()], ['Back to map', () => go(this, 'WorldMap', { region: node.region }), PALETTE.lavender]];
-    modal(this, title, lines.join('\n'), buttons, { width: 330 });
+    return () => modal(this, title, lines.join('\n'), buttons, { width: 330 });
   }
 
   gearName(id) { return GEAR[id]?.name || id; }
 
   retry() {
+    if (this._leaving) return;
     const p = getProgress();
     const { battle, ctx } = PR.campaignBattle(p, this.ctx.node, (Math.random() * 2 ** 31) >>> 0);
     setBattle({ battle, ctx });
@@ -597,7 +600,7 @@ export class Battle extends Phaser.Scene {
       setProgress(p);
       const hp = PR.towerHeal(this.st.hero.hp, this.st.hero.maxHp);
       save.set('tower', { ...tower, floor: floor + 1, hp });
-      modal(this, `Floor ${floor} cleared!`, `+${gold} gold for the campaign.\nYou rest and heal to ${hp}/${this.st.hero.maxHp} HP.\nBest floor: ${best}.`, [
+      return () => modal(this, `Floor ${floor} cleared!`, `+${gold} gold for the campaign.\nYou rest and heal to ${hp}/${this.st.hero.maxHp} HP.\nBest floor: ${best}.`, [
         ['Next floor', () => this.nextFloor()],
         ['Rest (leave tower)', () => go(this, 'Tower'), PALETTE.lavender],
       ], { width: 330 });
@@ -605,11 +608,12 @@ export class Battle extends Phaser.Scene {
       p.gold += this.st.gold;
       setProgress(p);
       save.set('tower', null);
-      modal(this, 'The climb ends', `You fell on floor ${floor}.\nBest floor: ${best}.${this.st.gold ? `\n+${this.st.gold} gold from coins.` : ''}`, [['OK', () => go(this, 'Tower')]]);
+      return () => modal(this, 'The climb ends', `You fell on floor ${floor}.\nBest floor: ${best}.${this.st.gold ? `\n+${this.st.gold} gold from coins.` : ''}`, [['OK', () => go(this, 'Tower')]]);
     }
   }
 
   nextFloor() {
+    if (this._leaving) return;
     const p = getProgress();
     const { battle, ctx } = PR.towerBattle(p, save.get('tower'));
     setBattle({ battle, ctx });
@@ -623,7 +627,7 @@ export class Battle extends Phaser.Scene {
     give('daily');
     const lines = [won ? `You won in ${this.st.heroTurns} turns with ${this.st.hero.hp} HP left.` : `You dealt ${this.st.stats.dmgDealt} damage.`, `Score: ${score}`];
     if (res) lines.push(`Today's best: ${res.best}${res.isBest ? ' (new!)' : ''}`, `Streak: ${res.streak} day${res.streak === 1 ? '' : 's'}`);
-    modal(this, won ? 'Duel won!' : 'Duel lost', lines.join('\n'), [['Done', () => go(this, 'Menu')]]);
+    return () => modal(this, won ? 'Duel won!' : 'Duel lost', lines.join('\n'), [['Done', () => go(this, 'Menu')]]);
   }
 }
 

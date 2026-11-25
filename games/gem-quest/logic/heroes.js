@@ -6,12 +6,12 @@ export const HEROES = {
   knight: {
     name: 'Knight', sprite: 'castle:64', hp: [72, 8], skull: 2, colors: [0, 3],
     skills: ['cleave', 'shieldWall', 'rally', 'judgement'],
-    blurb: 'Tough and steady. Big shields and heals.',
+    blurb: 'Tough and steady: shields and heals.',
   },
   mage: {
     name: 'Mage', sprite: 'tower:80', hp: [60, 6], skull: 2, colors: [0, 1],
     skills: ['fireball', 'frostBolt', 'transmute', 'meteor'],
-    blurb: 'Fragile, but her spells hit hard and bend the board.',
+    blurb: 'Frail, but her spells bend the board.',
   },
   ranger: {
     name: 'Ranger', sprite: 'rampart:64', hp: [66, 7], skull: 2, colors: [2, 3],
@@ -21,7 +21,7 @@ export const HEROES = {
   berserker: {
     name: 'Berserker', sprite: 'strong:224', hp: [78, 8], skull: 3, colors: [0, 2],
     skills: ['rage', 'bloodlust', 'skullStorm', 'earthquake'],
-    blurb: 'Skulls hit harder. Lives on rage and stolen blood.',
+    blurb: 'Big skulls, rage and stolen blood.',
   },
 };
 export const HERO_IDS = Object.keys(HEROES);

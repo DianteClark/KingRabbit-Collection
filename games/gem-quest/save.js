@@ -22,9 +22,10 @@ export function getProgress() {
 }
 export const setProgress = (p) => save.set('progress', p);
 
+/** The battle in progress (a finished one too, until its rewards are paid on the results screen). */
 export const getBattle = () => {
   const b = save.get('battle');
-  return b && b.battle && b.battle.v === 1 && !b.battle.over ? b : null;
+  return b && b.battle && b.battle.v === 1 && b.ctx ? b : null;
 };
 export const setBattle = (b) => save.set('battle', b);
 export const clearBattle = () => save.set('battle', null);
@@ -40,7 +41,7 @@ export function abandonBattle() {
   if (!cur) return;
   if (cur.ctx.mode === 'campaign') {
     const p = getProgress();
-    cur.battle.over = 'lose';
+    if (!cur.battle.over) cur.battle.over = 'lose';
     finishCampaignBattle(p, cur.ctx.node, cur.battle, cur.ctx.hero);
     setProgress(p);
   } else if (cur.ctx.mode === 'tower') save.set('tower', null);

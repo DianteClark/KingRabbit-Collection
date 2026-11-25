@@ -107,9 +107,8 @@ def main():
     frames = {}
     for name, (px, py, im) in placed.items():
         atlas.alpha_composite(im, (px, py))
-        frames[name] = {'frame': {'x': px, 'y': py, 'w': im.width, 'h': im.height}, 'rotated': False, 'trimmed': False,
-                        'spriteSourceSize': {'x': 0, 'y': 0, 'w': im.width, 'h': im.height},
-                        'sourceSize': {'w': im.width, 'h': im.height}}
+        # Phaser's JSON Hash parser only needs 'frame' for untrimmed, unrotated frames.
+        frames[name] = {'frame': {'x': px, 'y': py, 'w': im.width, 'h': im.height}}
     out = os.path.join(ROOT, 'games', 'gem-quest', 'assets')
     os.makedirs(out, exist_ok=True)
     atlas.save(os.path.join(out, 'atlas.png'), optimize=True)

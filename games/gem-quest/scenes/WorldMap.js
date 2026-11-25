@@ -102,7 +102,7 @@ export class WorldMap extends Phaser.Scene {
     const r = boss ? 30 : 23;
     const c = this.add.container(x, y).setDepth(10);
     const ring = this.add.circle(0, 0, r, hex(state === 'done' ? PALETTE.leaf : state === 'open' ? PALETTE.gold : PALETTE.indigo)).setStrokeStyle(3, hex(PALETTE.ink));
-    const inner = this.add.circle(0, 0, r - 5, hex(PALETTE.night));
+    const inner = this.add.circle(0, 0, r - 5, 0x4a4560);
     c.add([ring, inner]);
     if (n.kind === 'puzzle') c.add(icon(this, 0, 0, MAP_ART.puzzle, 1));
     else if (n.kind === 'quest') {
@@ -114,7 +114,14 @@ export class WorldMap extends Phaser.Scene {
       c.add(u);
     }
     if (state === 'locked') { c.setAlpha(0.55); inner.setFillStyle(hex(PALETTE.ink)); }
-    if (state === 'done') c.add(outlined(this, r - 6, -r + 6, 'ok', { color: '#8fd16a' }));
+    if (state === 'done') {
+      // A small green tick.
+      const t = this.add.graphics();
+      t.fillStyle(hex(PALETTE.ink)).fillCircle(r - 6, -r + 6, 9);
+      t.fillStyle(hex(PALETTE.leaf)).fillCircle(r - 6, -r + 6, 7);
+      t.lineStyle(3, 0xf9f5ef).beginPath().moveTo(r - 10, -r + 6).lineTo(r - 7, -r + 9).lineTo(r - 2, -r + 2).strokePath();
+      c.add(t);
+    }
     if (state === 'open') {
       this.tweens.add({ targets: ring, scale: 1.12, duration: 500, yoyo: true, repeat: -1 });
       if (n.kind === 'quest' || n.kind === 'puzzle') c.add(outlined(this, 0, -r - 8, '!', { color: PALETTE.gold }));
@@ -213,6 +220,7 @@ export class WorldMap extends Phaser.Scene {
 
   coachTips() {
     const p = this.p;
+    if (!PR.regionUnlocked(p, this.region)) return;
     let msg = null; let key = null;
     if (!Object.keys(p.cleared).length) { key = 'map-start'; msg = 'Tap the glowing battle at the bottom to begin your quest!'; }
     else if (p.cleared['b0-1'] && !seen('map-shop') && p.gold >= 80) { key = 'map-shop'; msg = 'You have gold! The shop (house, left) sells gear. Equip it on the Heroes screen.'; }
