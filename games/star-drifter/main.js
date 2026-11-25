@@ -13,7 +13,7 @@ import * as D from './logic/data.js';
 import { save, saveRun, loadRun } from './save.js';
 import { DEBUG } from './debug.js';
 import { initTrophies } from './trophies.js';
-import { installPad } from './padkit.js';
+import { installPad } from '../../shared/core/padkit.js';
 
 initTrophies();
 

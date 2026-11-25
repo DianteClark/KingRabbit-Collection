@@ -1,5 +1,5 @@
-// Controller support for this game, on top of shared/core/gamepad.js. Identical copies live in
-// each game that has controller support (tests/padkit.test.mjs keeps them in step).
+// Controller support for the games, on top of gamepad.js: one poll per frame, a "controller
+// mode" for hiding touch controls, and a menu frame that works the shared UI with the d-pad.
 //
 //   installPad(game)            once at boot: polls the controller once per frame, tracks
 //                               "controller mode", and runs the menu navigator (below)
@@ -15,12 +15,13 @@
 // A scene can tune it with properties:
 //   scene.padNav = 'off'        no navigator (the scene reads the controller itself)
 //   scene.padNav = 'modal'      only inside popups (layers with a full-screen dim behind them)
+//   scene.padNav = () => mode   decided each frame (e.g. 'off' while a message waits for A)
 //   scene.padBack = fn          what B does (default: tap a '<' / Back / Cancel button)
 //   scene.padStart = fn         what Start does
 //   scene.padAfterPress = fn    called after A taps an object (scenes that finish taps on scene pointerup)
 //   obj.padSkip = true          never select this object; obj.padTarget = true: always selectable;
 //   obj.padFirst = true         start the frame here
-import { pad } from '../../shared/core/gamepad.js';
+import { pad } from './gamepad.js';
 
 const NAMES = ['a', 'b', 'x2', 'y2', 'l', 'r', 'start', 'select', 'up', 'down', 'left', 'right'];
 let held = {};
@@ -109,7 +110,7 @@ function navigate(game) {
   if (top?.padStart && hit('start')) { eaten.add('start'); top.padStart(); }
   // Finding the tappable objects walks the scenes, so only do it every few frames or on a key.
   const keys = ['a', 'b', 'up', 'down', 'left', 'right'].some((n) => rep(n));
-  if (keys || !cache || ++tick % 6 === 0) cache = candidates(active.filter((s) => s.padNav !== 'off'));
+  if (keys || !cache || ++tick % 6 === 0) cache = candidates(active.filter((s) => navMode(s) !== 'off'));
   const cands = cache.filter((c) => c.obj.scene && c.obj.active !== false);
   if (!cands.length) { clearFrame(); return; }
   let cur = sel && cands.find((c) => c.obj === sel.obj);
@@ -123,6 +124,8 @@ function navigate(game) {
 }
 let cache = null;
 let tick = 0;
+
+const navMode = (scene) => (typeof scene.padNav === 'function' ? scene.padNav() : scene.padNav);
 
 function candidates(scenes) {
   const out = [];
@@ -153,7 +156,7 @@ function candidates(scenes) {
       list.push({ scene, obj: o, b, sf, depth: root.depth, cx, cy, label: o.label?.text ?? o.text ?? '' });
     };
     scene.children.list.forEach((o) => walk(o, o));
-    const floor = popup > -Infinity ? popup : scene.padNav === 'modal' ? Infinity : -Infinity;
+    const floor = popup > -Infinity ? popup : navMode(scene) === 'modal' ? Infinity : -Infinity;
     const mine = list.filter((c) => c.depth >= floor && c.depth >= (scene.padModalDepth ?? -Infinity));
     if (popup > -Infinity) { modalScene = scene; modalDepth = popup; out.length = 0; }
     if (modalScene && modalScene !== scene && popup === -Infinity) continue; // a popup lower down still wins over plain screens above
@@ -242,7 +245,7 @@ function domNav(sheet) {
     cur = [...btns].reverse().find((b) => /gold|primary/.test(b.className)) || btns[btns.length - 1];
     sel?.el?.classList.remove('pad-focus');
   }
-  const scroll = sheet.querySelector('.scroll, .sheet-body, .pp-scroll, .sd-scroll, .al-scroll, [data-pad-scroll]');
+  const scroll = sheet.querySelector('[data-pad-scroll], .scroll, .sheet-body, [class*="-scroll"]');
   for (const [dir, dx, dy] of [['left', -1, 0], ['right', 1, 0], ['up', 0, -1], ['down', 0, 1]]) {
     if (!rep(dir)) continue;
     eaten.add(dir);

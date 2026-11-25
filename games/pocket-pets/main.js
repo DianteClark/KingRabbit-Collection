@@ -5,7 +5,7 @@ import { Title } from './scenes/Title.js';
 import { World } from './scenes/World.js';
 import { Battle } from './scenes/Battle.js';
 import { initTrophies } from './trophies.js';
-import { installPad } from './padkit.js';
+import { installPad } from '../../shared/core/padkit.js';
 
 initTrophies();
 

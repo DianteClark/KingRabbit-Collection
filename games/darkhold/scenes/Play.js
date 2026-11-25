@@ -13,7 +13,7 @@ import { isMuted, setMuted } from '../../../shared/core/sfx.js';
 import { bagPanel, shopPanel, heroPanel, mapPanel, perkPanel, logPanel } from './panels.js';
 import { DEBUG } from '../debug.js';
 import { earn, stat, daily } from '../trophies.js';
-import { hit, rep, down, hideWhilePad } from '../padkit.js';
+import { hit, rep, down, hideWhilePad } from '../../../shared/core/padkit.js';
 
 const T = 32;             // tile size on screen (16px art at 2x)
 const TOP = 52;           // top bar
@@ -83,7 +83,8 @@ export class Play extends Phaser.Scene {
     this.padNav = 'modal';
     this.padModalDepth = 100;
     this.padStart = () => { if (!overlayOpen(this)) this.pauseMenu(); };
-    this.events.on('update', () => this.padTick());
+    // Scene events outlive a restart, so hook the controller only once.
+    if (!this.padHooked) { this.padHooked = true; this.events.on('update', () => this.padTick()); }
     // When a popup closes: ignore map taps for a moment (a double tap must not walk), then show
     // any level-up choice or tip that was waiting.
     this.events.on('overlayClosed', () => {

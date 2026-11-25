@@ -9,7 +9,7 @@ import { dirToPitch } from '../logic/view.js';
 import { W, L } from '../logic/constants.js';
 import { applyResult, needsPens, matchData, QUIT_SCORE, isFriendly } from '../flow.js';
 import { save } from '../save.js';
-import { down, stick, hideWhilePad } from '../padkit.js';
+import { down, stick, hideWhilePad } from '../../../shared/core/padkit.js';
 
 // Landscape layout (640x360): scoreboard bar with the mini-map inside it across the top, the
 // floating stick on the left edge, Shoot and Pass on the right edge.

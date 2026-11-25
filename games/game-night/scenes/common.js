@@ -4,7 +4,7 @@ import { WIDTH, HEIGHT } from '../../../shared/core/boot.js';
 import { showHowTo } from '../../../shared/core/howto.js';
 import { RULES } from '../rules.js';
 import { TABLES } from '../tables.js';
-import { down, hit, stick, hideWhilePad } from '../padkit.js';
+import { down, hit, stick, hideWhilePad } from '../../../shared/core/padkit.js';
 import { skillLabel } from '../adaptive.js';
 
 /** Top bar used by every Game Night screen: back button + title. */
