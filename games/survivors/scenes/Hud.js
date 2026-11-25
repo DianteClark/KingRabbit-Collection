@@ -187,25 +187,41 @@ export class Hud extends Phaser.Scene {
     let ky = (k.S.isDown || k.DOWN.isDown ? 1 : 0) - (k.W.isDown || k.UP.isDown ? 1 : 0);
     const s = stick();
     if (!kx && !ky && (Math.abs(s.x) > 0.2 || Math.abs(s.y) > 0.2)) { kx = s.x; ky = s.y; }
-    this.move = this.touchMove || { x: kx, y: ky };
+    if (this.touchMove) this.move = this.touchMove;
+    else { this.keyMove ||= { x: 0, y: 0 }; this.keyMove.x = kx; this.keyMove.y = ky; this.move = this.keyMove; }
     if (this.joyHint.visible && (run.t > 8 || kx || ky)) this.joyHint.setVisible(false);
     if (this.overlay && usingPad() && hit('b') && this.overlay === 'pause') this.closePause();
 
     this.xpFill.width = Math.round(544 * Math.min(1, run.xp / run.xpNext));
-    this.lvText.setText(`Lv ${run.level}`);
-    this.timer.setText(fmtClock(run.t)).setColor(run.finalPhase ? PALETTE.gold : PALETTE.cream);
-    this.kills.setText(String(run.kills));
-    this.coins.setText(String(run.coins));
-    const wi = Object.keys(run.build.weapons).map((id) => (run.build.evolved[id] ? EVOLUTIONS[run.build.evolved[id]].icon : WEAPONS[id].icon));
-    const pi = Object.keys(run.build.passives).map((id) => PASSIVES[id].icon);
-    this.icons.forEach((im, i) => {
-      const name = i < 6 ? wi[i] : pi[i - 6]; // weapons on the first row, passives on the second
-      im.setVisible(!!name);
-      if (name) im.setFrame(name);
-    });
+    // Text redraws a texture whenever it changes, so only touch it when the value is new.
+    if (this.lastLv !== run.level) { this.lastLv = run.level; this.lvText.setText(`Lv ${run.level}`); }
+    const clock = fmtClock(run.t);
+    if (this.lastClock !== clock) { this.lastClock = clock; this.timer.setText(clock); }
+    if (this.lastFinal !== run.finalPhase) { this.lastFinal = run.finalPhase; this.timer.setColor(run.finalPhase ? PALETTE.gold : PALETTE.cream); }
+    // kills tick fast late on: refresh a few times a second at most
+    if (time > (this.countT || 0)) {
+      this.countT = time + 250;
+      if (this.lastKills !== run.kills) { this.lastKills = run.kills; this.kills.setText(String(run.kills)); }
+      if (this.lastCoins !== run.coins) { this.lastCoins = run.coins; this.coins.setText(String(run.coins)); }
+    }
+    const sig = run.buildVer || 0;
+    if (this.lastSig !== sig) {
+      this.lastSig = sig;
+      const wi = Object.keys(run.build.weapons).map((id) => (run.build.evolved[id] ? EVOLUTIONS[run.build.evolved[id]].icon : WEAPONS[id].icon));
+      const pi = Object.keys(run.build.passives).map((id) => PASSIVES[id].icon);
+      this.icons.forEach((im, i) => {
+        const name = i < 6 ? wi[i] : pi[i - 6]; // weapons on the first row, passives on the second
+        im.setVisible(!!name);
+        if (name) im.setFrame(name);
+      });
+    }
     const b = run.boss;
-    this.bossBox.setVisible(!!(b && b.active));
-    if (b && b.active) { this.bossName.setText(b.boss.name); this.bossFill.width = Math.max(0, Math.round(296 * b.hp / b.maxHp)); }
+    const showBoss = !!(b && b.active);
+    if (this.bossBox.visible !== showBoss) this.bossBox.setVisible(showBoss);
+    if (showBoss) {
+      if (this.lastBoss !== b.boss.name) { this.lastBoss = b.boss.name; this.bossName.setText(b.boss.name); }
+      this.bossFill.width = Math.max(0, Math.round(296 * b.hp / b.maxHp));
+    }
     // low HP: pulsing red edges
     this.low.clear();
     if (run.lowHp && !run.over) {

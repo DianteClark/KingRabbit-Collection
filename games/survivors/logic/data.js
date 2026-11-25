@@ -95,7 +95,7 @@ export const ENEMIES = {
 export const BOSSES = [
   { at: 300, type: 'orc', name: 'Orc Warlord', hp: 1600, speed: 40, dmg: 20, scale: 3 },
   { at: 600, type: 'vampire', name: 'Count Nocturne', hp: 5200, speed: 48, dmg: 26, scale: 3 },
-  { at: 900, type: 'devil', name: 'The Horned King', hp: 14000, speed: 46, dmg: 34, scale: 3.5, final: true },
+  { at: 900, type: 'devil', name: 'The Horned King', hp: 10000, speed: 46, dmg: 34, scale: 3.5, final: true },
 ];
 
 // Permanent upgrades bought with coins between runs. cost of the next level = base * (level + 1).

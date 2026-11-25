@@ -78,6 +78,9 @@ export class Game extends Phaser.Scene {
       this.nums.push({ t, life: 0 });
     }
     this.grid = new Grid(WORLD.W, WORLD.H, 32, MAX_ENEMIES + 8);
+    this.bufA = new Int32Array(MAX_ENEMIES + 8); // forEnemiesNear
+    this.bufB = new Int32Array(MAX_ENEMIES + 8); // monster separation
+    this.cullT = 0;
 
     this.heroSpr = this.add.image(this.run.x, this.run.y, KEY, `h_${hero}_0`).setDepth(10);
     this.hpBar = this.add.graphics().setDepth(11);
@@ -96,14 +99,15 @@ export class Game extends Phaser.Scene {
   /** Trees, graves and a pine wall round the edge, placed from a fixed seed. */
   decorate() {
     const r = makeRng(1234);
+    this.decor = [];
     const kinds = ['tree1', 'tree2', 'tree3', 'bush', 'grave1', 'grave2', 'cross', 'deadtree', 'pine'];
     for (let i = 0; i < 260; i++) {
       const x = 40 + r() * (WORLD.W - 80); const y = 40 + r() * (WORLD.H - 80);
       if (Math.hypot(x - WORLD.W / 2, y - WORLD.H / 2) < 90) continue;
-      this.add.image(Math.round(x), Math.round(y), KEY, `d_${r.pick(kinds)}`).setDepth(0).setAlpha(0.85);
+      this.decor.push(this.add.image(Math.round(x), Math.round(y), KEY, `d_${r.pick(kinds)}`).setDepth(0).setAlpha(0.85));
     }
     for (let p = 0; p <= WORLD.W; p += 14) {
-      for (const [x, y] of [[p, 4], [p, WORLD.H - 4], [4, p], [WORLD.W - 4, p]]) this.add.image(x, y, KEY, r() < 0.5 ? 'd_pine' : 'd_pine2').setDepth(0);
+      for (const [x, y] of [[p, 4], [p, WORLD.H - 4], [4, p], [WORLD.W - 4, p]]) this.decor.push(this.add.image(x, y, KEY, r() < 0.5 ? 'd_pine' : 'd_pine2').setDepth(0));
     }
   }
 
@@ -196,11 +200,12 @@ export class Game extends Phaser.Scene {
     Object.assign(e, {
       active: true, type, x, y, hp, maxHp: hp, speed: boss ? boss.speed : def.speed * (elite ? 0.9 : 1) * (0.92 + this.rng() * 0.16),
       dmg: (boss ? boss.dmg : def.dmg * (elite ? 1.5 : 1)), r: def.r * (boss ? boss.scale : elite ? 1.6 : 1), xp: def.xp,
-      elite, boss, flash: 0, kbx: 0, kby: 0, numT: 0, anim: this.rng() * 4, hitT: {},
+      elite, boss, fr: -1, flash: 0, kbx: 0, kby: 0, numT: 0, anim: this.rng() * 4, hitT: {},
     });
     e.spr.setVisible(true).setFrame(`e_${type}_0`).setScale(boss ? boss.scale : elite ? 1.6 : 1);
     if (elite) e.spr.setTint(0xffd84a); else if (boss) e.spr.setTint(0xff9a9a); else e.spr.clearTint();
-    e.spr.setDepth(boss ? 7 : elite ? 6 : 5);
+    const dep = boss ? 7 : elite ? 6 : 5;
+    if (e.spr.depth !== dep) e.spr.setDepth(dep);
     if (boss) run.boss = e;
     return e;
   }
@@ -257,29 +262,36 @@ export class Game extends Phaser.Scene {
     // keep them from stacking into one blob: push overlapping pairs apart
     for (const e of this.enemies) {
       if (!e.active) continue;
-      g.query(e.x, e.y, e.r * 2, (j) => {
-        if (j <= e.i) return;
+      const buf = this.bufB; const n = g.collect(e.x, e.y, e.r * 2, buf);
+      for (let q = 0; q < n; q++) {
+        const j = buf[q];
+        if (j <= e.i) continue;
         const f = this.enemies[j];
         const dx = f.x - e.x; const dy = f.y - e.y;
         const min = (e.r + f.r) * 0.9;
         const d2 = dx * dx + dy * dy;
-        if (d2 >= min * min || d2 === 0) return;
+        if (d2 >= min * min || d2 === 0) continue;
         const d = Math.sqrt(d2); const push = (min - d) * 0.5;
         const wE = e.boss ? 0 : f.boss ? 1 : 0.5; const wF = 1 - wE;
         e.x -= (dx / d) * push * wE * 2; e.y -= (dy / d) * push * wE * 2;
         f.x += (dx / d) * push * wF * 2; f.y += (dy / d) * push * wF * 2;
-      });
+      }
     }
   }
 
   forEnemiesNear(x, y, r, fn) {
-    this.grid.query(x, y, r + 24, (i) => {
-      const e = this.enemies[i];
-      if (!e.active) return;
+    // nested calls (a hit that queries again) get their own buffer
+    const buf = this.nearDepth ? new Int32Array(MAX_ENEMIES + 8) : this.bufA;
+    this.nearDepth = (this.nearDepth || 0) + 1;
+    const n = this.grid.collect(x, y, r + 24, buf);
+    for (let q = 0; q < n; q++) {
+      const e = this.enemies[buf[q]];
+      if (!e.active) continue;
       const rr = r + e.r;
       const dx = e.x - x; const dy = e.y - y;
-      if (dx * dx + dy * dy <= rr * rr) return fn(e);
-    });
+      if (dx * dx + dy * dy <= rr * rr && fn(e) === false) break;
+    }
+    this.nearDepth--;
     // bosses are big: the grid only knows their centre, so check them directly
     const b = this.run.boss;
     if (b && b.active && Math.hypot(b.x - x, b.y - y) > r + 24 && Math.hypot(b.x - x, b.y - y) <= r + b.r) fn(b);
@@ -551,7 +563,8 @@ export class Game extends Phaser.Scene {
     const p = this.picks.find((q) => !q.active);
     if (!p) return;
     Object.assign(p, { active: true, kind, x, y, pull: false, sp: 0, t: 0 });
-    p.spr.setVisible(true).setFrame({ coin: 'i_coin', meat: 'i_meat', magnet: 'i_horseshoe', chest: 'i_chest' }[kind]).setScale(kind === 'chest' ? 1.3 : 1).setDepth(kind === 'chest' ? 4 : 3);
+    p.spr.setVisible(true).setFrame({ coin: 'i_coin', meat: 'i_meat', magnet: 'i_horseshoe', chest: 'i_chest' }[kind]).setScale(kind === 'chest' ? 1.3 : 1);
+    if (p.spr.depth !== (kind === 'chest' ? 4 : 3)) p.spr.setDepth(kind === 'chest' ? 4 : 3);
   }
 
   movePickups(dt) {
@@ -629,6 +642,7 @@ export class Game extends Phaser.Scene {
     else if (o.kind === 'heal') run.hp = Math.min(run.stats.maxHp, run.hp + 30);
     else applyOffer(run.build, o);
     run.stats = playerStats(run.hero, run.shop, run.build.passives, run.easy);
+    run.buildVer = (run.buildVer || 0) + 1;
     run.hp = Math.min(run.stats.maxHp, run.hp + Math.max(0, run.stats.maxHp - before));
     if (o.kind === 'evolve') { award('evolve'); stat('evolutions'); this.cameras.main.flash(250, 255, 230, 120); }
     if (WEAPON_IDS.every((id) => run.build.weapons[id])) award('arsenal');
@@ -641,10 +655,15 @@ export class Game extends Phaser.Scene {
   // ------------------------------------------------------------------ feel
 
   number(x, y, v, color = '#f9f5ef') {
+    // each number redraws a text texture: keep it to about 8 a second
+    const now = this.run.t;
+    if (color === '#f9f5ef' && (this.numGate || 0) > now) return;
+    this.numGate = now + 0.12;
     const n = this.nums.find((q) => q.life <= 0);
     if (!n) return;
     n.life = 0.45;
-    n.t.setText(String(v)).setColor(color).setPosition(Math.round(x), Math.round(y)).setVisible(true).setAlpha(1);
+    if (n.color !== color) { n.color = color; n.t.setColor(color); }
+    n.t.setText(String(v)).setPosition(Math.round(x), Math.round(y)).setVisible(true).setAlpha(1);
   }
 
   stepNumbers(dt) {
@@ -656,7 +675,9 @@ export class Game extends Phaser.Scene {
       if (n.life <= 0) n.t.setVisible(false);
     }
     for (const f of this.fxList) f.t = (f.t || 0) + dt;
-    this.fxList = this.fxList.filter((f) => f.t < f.life);
+    let w = 0;
+    for (let i = 0; i < this.fxList.length; i++) if (this.fxList[i].t < this.fxList[i].life) this.fxList[w++] = this.fxList[i];
+    this.fxList.length = w;
     this.heroFlash = Math.max(0, (this.heroFlash || 0) - dt);
   }
 
@@ -678,13 +699,31 @@ export class Game extends Phaser.Scene {
     const f = Math.max(0, run.hp / run.stats.maxHp);
     this.hpBar.fillStyle(0x040303).fillRect(Math.round(run.x) - 10, Math.round(run.y) + 10, 20, 4);
     this.hpBar.fillStyle(f < 0.3 ? 0xff4040 : 0xa13d3b).fillRect(Math.round(run.x) - 9, Math.round(run.y) + 11, Math.round(18 * f), 2);
+    const vx0 = cam.scrollX - 40; const vx1 = cam.scrollX + WIDTH + 40;
+    const vy0 = cam.scrollY - 40; const vy1 = cam.scrollY + HEIGHT + 40;
+    const on = (x, y) => x > vx0 && x < vx1 && y > vy0 && y < vy1;
+    // trees and the pine wall: only what is near the screen is drawn (checked a few times a second)
+    if ((this.cullT = (this.cullT || 0) - 1) <= 0) {
+      this.cullT = 6;
+      for (const d of this.decor) { const v = d.x > vx0 - 80 && d.x < vx1 + 80 && d.y > vy0 - 80 && d.y < vy1 + 80; if (d.visible !== v) d.setVisible(v); }
+    }
     for (const e of this.enemies) {
       if (!e.active) continue;
-      e.spr.setPosition(Math.round(e.x), Math.round(e.y)).setFrame(`e_${e.type}_${Math.floor(e.anim) % 4}`).setFlipX(e.face < 0);
+      const vis = !!e.boss || on(e.x, e.y);
+      if (e.spr.visible !== vis) e.spr.setVisible(vis);
+      if (!vis) continue;
+      const fr = Math.floor(e.anim) % 4;
+      if (e.fr !== fr || e.frType !== e.type) { e.fr = fr; e.frType = e.type; e.spr.setFrame(`e_${e.type}_${fr}`); }
+      e.spr.setPosition(Math.round(e.x), Math.round(e.y)).setFlipX(e.face < 0);
       if (e.flash > 0) e.spr.setTintFill(0xffffff);
       else if (e.spr.isTintFill) { e.spr.clearTint(); if (e.elite) e.spr.setTint(0xffd84a); else if (e.boss) e.spr.setTint(0xff9a9a); }
     }
-    for (const g of this.gems) if (g.active) g.spr.setPosition(Math.round(g.x), Math.round(g.y));
+    for (const g of this.gems) {
+      if (!g.active) continue;
+      const vis = on(g.x, g.y);
+      if (g.spr.visible !== vis) g.spr.setVisible(vis);
+      if (vis) g.spr.setPosition(Math.round(g.x), Math.round(g.y));
+    }
     for (const p of this.picks) if (p.active) p.spr.setPosition(Math.round(p.x), Math.round(p.y + (p.kind === 'chest' ? 0 : Math.sin(p.t * 5) * 1.5)));
     for (const s of this.shots) if (s.active) s.spr.setPosition(Math.round(s.x), Math.round(s.y));
     // effects
