@@ -8,7 +8,7 @@ export const RULES = {
       heading: 'Controls',
       items: [
         'Steer with your left thumb: hold the left quarter of the screen to turn left, the next quarter to turn right. Slide your thumb across to switch.',
-        'Your car speeds up by itself (you can switch to a GAS button on the main menu).',
+        'Your car speeds up by itself (you can switch to a GAS button on the main menu). With no steering held, it gently straightens up along the road.',
         'DRIFT (big right button): hold it while you turn to slide round the corner. Held without turning, it brakes, and from a standstill it reverses.',
         'Drifting fills the boost meter. Tap BOOST to use it: the fuller the meter, the longer the boost.',
         'Orange chevron pads on the road give a free boost.',

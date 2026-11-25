@@ -6,6 +6,7 @@ import { save } from '../save.js';
 import { fmtTime, ordinal } from '../logic/cup.js';
 import { wrapIdx } from '../logic/track.js';
 import { PAINT_HEX } from '../art.js';
+import { modelById } from '../logic/car.js';
 import { layout, steerFromX, inCircle } from '../layout.js';
 
 /** Overlay for the race: top bar, mini-map, touch controls, countdown, hints and the pause menu. */
@@ -54,10 +55,19 @@ export class Hud extends Phaser.Scene {
     this.hintBox.add([this.hintBg, this.hintText]);
 
     this.setupInput();
+    if (this.race.phase === 'countdown') this.countdown(Math.ceil(-this.race.time));
+    if (this.rs.data0.mode === 'daily') this.time.delayedCall(300, () => this.toast(`Daily: everyone drives the ${modelById(this.rs.model).name}`));
     this.events.on('resume', () => this.resetTouches());
     this.onBlur = () => { if (!this.modalOpen && !this.leaving && document.hidden) this.pause(); };
     document.addEventListener('visibilitychange', this.onBlur);
-    this.events.once('shutdown', () => document.removeEventListener('visibilitychange', this.onBlur));
+    // turning the phone upright (the rotate overlay shows) pauses the race too
+    this.wrongWay = window.matchMedia('(orientation: portrait) and (max-width: 540px)');
+    this.onTurn = () => { if (this.wrongWay.matches && !this.modalOpen && !this.leaving) this.pause(); };
+    this.wrongWay.addEventListener?.('change', this.onTurn);
+    this.events.once('shutdown', () => {
+      document.removeEventListener('visibilitychange', this.onBlur);
+      this.wrongWay.removeEventListener?.('change', this.onTurn);
+    });
     this.refresh();
     window.__hud = this;
   }
@@ -114,7 +124,7 @@ export class Hud extends Phaser.Scene {
     // with a GAS button, holding DRIFT while steering keeps the power on through the slide
     if (!this.auto && drift && steer) gas = 1;
     this.lastSteer = steer;
-    return { steer, gas, brake: false, drift, boost };
+    return { steer, gas, brake: false, drift, boost, assist: 1 };
   }
 
   /** Forget held touches (a finger lifted over a popup or the How to Play sheet never reports). */

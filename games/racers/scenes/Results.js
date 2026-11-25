@@ -4,6 +4,7 @@ import { text, button, panel } from '../../../shared/core/ui.js';
 import { header, go, setBackground } from './common.js';
 import { trackById } from '../logic/tracks.js';
 import { fmtTime, ordinal, POINTS } from '../logic/cup.js';
+import { modelById } from '../logic/car.js';
 
 /** After a race: the finishing order (or your lap times when racing alone) and what next. */
 export class Results extends Phaser.Scene {
@@ -27,7 +28,7 @@ export class Results extends Phaser.Scene {
     if (!solo) {
       const big = r.place === 1 ? 'You win!' : `${ordinal(r.place)} place`;
       text(this, x, 92, big, { size: 32, color: r.place <= 3 ? PALETTE.gold : PALETTE.cream });
-      text(this, x, 124, r.mode === 'cup' ? `+${POINTS[r.place - 1]} points` : r.place <= 3 ? 'On the podium' : 'Keep at it!', { color: PALETTE.lavender });
+      text(this, x, 124, r.mode === 'cup' ? `+${POINTS[r.place - 1]} points` : r.place === 1 ? 'Fastest in town!' : r.place <= 3 ? 'On the podium' : 'Keep at it!', { color: PALETTE.lavender });
     } else {
       text(this, x, 92, fmtTime(r.total), { size: 32, color: PALETTE.gold });
       let line = r.newBestLap ? 'New best lap!' : `Best lap ${fmtTime(r.prevBestLap)}`;
@@ -71,6 +72,7 @@ export class Results extends Phaser.Scene {
     this.add.rectangle(196, y - 12, 300, 2, hex(PALETTE.lavender));
     text(this, 48, y + 8, 'Total', { color: PALETTE.gold, origin: [0, 0.5] });
     text(this, 340, y + 8, fmtTime(r.total), { color: PALETTE.gold, origin: [1, 0.5] });
-    text(this, 196, y + 52, r.mode === 'tt' ? 'Your best lap comes back as a ghost.' : 'Same track and car all day.', { color: PALETTE.lavender });
+    const line = r.mode === 'tt' ? 'Your best lap comes back as a ghost.' : `Today's car: ${modelById(r.model).name}`;
+    text(this, 196, y + 52, line, { color: PALETTE.lavender });
   }
 }

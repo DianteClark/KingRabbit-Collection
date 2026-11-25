@@ -5,7 +5,7 @@
 import { save } from './save.js';
 
 export const SKILL_ID = 'racers';
-const START = 0.3;
+const START = 0.25;
 
 export function getSkill(id = SKILL_ID) {
   const s = (save.get('skill') || {})[id];

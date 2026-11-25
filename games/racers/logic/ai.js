@@ -6,9 +6,9 @@ import { speedProfile, wrapIdx, wrapAngle } from './track.js';
 import { forwardSpeed } from './car.js';
 
 export const PRESETS = {
-  easy: { pace: 0.8, corner: 0.84, boostUse: 0.25, wobble: 5, react: 0.7 },
-  normal: { pace: 0.905, corner: 0.93, boostUse: 0.65, wobble: 2.5, react: 0.85 },
-  hard: { pace: 0.985, corner: 1.0, boostUse: 1, wobble: 0.8, react: 1 },
+  easy: { pace: 0.76, corner: 0.8, boostUse: 0.25, wobble: 5, react: 0.7, driftUse: 0 },
+  normal: { pace: 0.92, corner: 0.95, boostUse: 0.65, wobble: 2.5, react: 0.85, driftUse: 0.45 },
+  hard: { pace: 1, corner: 1.04, boostUse: 1, wobble: 0.8, react: 1, driftUse: 1 },
 };
 
 export function tune(s) {
@@ -25,7 +25,9 @@ export function tune(s) {
 export function newDriver(t, line, car, { skill = 0.5, lane = 0, seed = 1 } = {}) {
   const k = tune(Math.max(0, Math.min(1, skill)));
   const P = car.p;
-  const prof = speedProfile(t, line, { top: P.top, turnRate: P.turn * 0.93 * k.corner, brake: P.brake * 0.6 });
+  // drivers who drift can carry more speed into bends (a slide turns quicker than grip)
+  const turn = P.turn * 0.93 + (P.driftTurn * 0.8 - P.turn * 0.93) * k.driftUse;
+  const prof = speedProfile(t, line, { top: P.top, turnRate: turn * k.corner, brake: P.brake * 0.6 });
   return { k, prof, lane, phase: (seed % 100) / 16, avoid: 0, think: 0, wantBoost: false, rnd: seed };
 }
 
@@ -75,8 +77,10 @@ export function drive(t, line, d, car, others, time, env = {}) {
   if (v > target + 4) { gas = 0; if (v > target + 14) brake = true; }
 
   // drift through tight bends (also fills the meter), never from a crawl
-  const tight = Math.abs(line.k[wrapIdx(t, i + 4)]) > 1 / 70;
-  const drift = !brake && tight && Math.abs(steer) > 0.45 && v > 95 && k.react > 0.75;
+  // drift when the bend needs more turn than grip gives at this speed
+  const kAhead = Math.max(Math.abs(line.k[wrapIdx(t, i + 3)]), Math.abs(line.k[wrapIdx(t, i + 8)]));
+  const tight = kAhead > 1 / 70;
+  const drift = k.driftUse > 0.1 && !brake && v * kAhead > car.p.turn * 0.9 && Math.abs(steer) > 0.3 && v > 70;
 
   // boost on a straight when the meter is decent
   let boost = false;

@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { PALETTE, hex } from '../../../shared/core/palette.js';
 import { text, button } from '../../../shared/core/ui.js';
 import { isMuted, setMuted } from '../../../shared/core/sfx.js';
-import { dailySeed, playedDailyToday, profile } from '../../../shared/core/trophies.js';
+import { dailySeed, profile } from '../../../shared/core/trophies.js';
 import { WIDTH, go, setBackground, shadowTitle, openHowTo, modal } from './common.js';
 import { save } from '../save.js';
 import { skillLabel, resetSkill } from '../adaptive.js';
@@ -58,7 +58,7 @@ export class Title extends Phaser.Scene {
     this.modeButton(220, 'Time Trial', 'Race your ghost', () => go(this, 'Tracks', { mode: 'tt' }));
     const daily = dailyConfig(dailySeed(GAME_ID));
     const best = this.dailyBest();
-    const dsub = `${trackById(daily.trackId).name}${best != null ? '  ' + fmtTime(best) : playedDailyToday(GAME_ID) ? '' : '  New!'}`;
+    const dsub = best != null ? `${trackById(daily.trackId).name}  ${fmtTime(best)}` : `${trackById(daily.trackId).name}, ${modelById(daily.model).name}`;
     this.modeButton(286, 'Daily', dsub, () => go(this, 'RaceScene', { mode: 'daily', trackId: daily.trackId, model: daily.model, colour: daily.colour }));
     if (first) this.tweens.add({ targets: cupBtn, scale: 1.04, yoyo: true, repeat: -1, duration: 500 });
   }

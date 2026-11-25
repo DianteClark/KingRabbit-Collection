@@ -122,6 +122,12 @@ export function stepCar(t, car, input, dt = DT, env = {}) {
   const rate = car.drifting ? P.driftTurn : P.turn;
   let wantW = steer * rate * speedFac * Math.sign(vf || 1);
   if (car.drifting) wantW = (0.55 * car.driftDir + 0.6 * steer) * rate * speedFac;   // held in the slide
+  // steering assist (yours only, switchable): with no steering held, the car gently lines itself
+  // up with the road, so a late or missed correction doesn't end in the wall
+  if (input.assist && Math.abs(steer) < 0.1 && !car.drifting && vf > 30 && car.idx != null) {
+    const err = wrapAngle(Math.atan2(t.ty[car.idx], t.tx[car.idx]) - car.h);
+    if (Math.abs(err) < 1.2) wantW += Math.max(-input.assist, Math.min(input.assist, err * 3));
+  }
   car.w += (wantW - car.w) * Math.min(1, dt * 14);
   car.h = wrapAngle(car.h + car.w * dt);
 

@@ -25,6 +25,7 @@ export class RaceScene extends Phaser.Scene {
     this.acc = 0;
     this.finishedAt = null;
     this.leavingRace = false;
+    this.pilot = null; this.autopilot = false; this.turbo = 1;
   }
 
   create() {
@@ -61,7 +62,9 @@ export class RaceScene extends Phaser.Scene {
     cam.roundPixels = true;
     cam.fadeIn(250);
 
+    const t0 = performance.now();
     this.add.image(0, 0, trackTexture(this, race)).setOrigin(0).setDepth(-10);
+    window.__paintMs = Math.round(performance.now() - t0);
     this.skids = this.add.renderTexture(0, 0, t.W, t.H).setOrigin(0).setDepth(-5);
     this.fx = this.add.graphics().setDepth(5);
     this.night = race.def.mood === 'night';
@@ -83,6 +86,8 @@ export class RaceScene extends Phaser.Scene {
       const lamp = this.night ? this.add.image(0, 0, 'headlight').setOrigin(0, 0.5).setBlendMode(Phaser.BlendModes.ADD).setDepth(12) : null;
       return { car: c, s, shadow, lamp };
     });
+    // a gold arrow over your car at the start, so you can find it in the pack
+    this.marker = this.add.triangle(0, 0, 0, 0, 10, 0, 5, 6, 0xe3d245).setStrokeStyle(1, 0x140c1c).setDepth(13);
     this.puffs = [];
     this.camPos = { x: race.player.x, y: race.player.y };
     cam.centerOn(this.camPos.x, this.camPos.y);
@@ -98,13 +103,12 @@ export class RaceScene extends Phaser.Scene {
 
   update(_, dtMs) {
     if (this.paused || this.leavingRace) { engineUpdate(0, false, false, false); return; }
-    this.acc += Math.min(0.1, dtMs / 1000);
     const race = this.race;
     let n = 0;
     // Debug hooks for automated play-testing: window.__racer.autopilot = true drives your car
     // with the computer's brain; .turbo = k runs k times faster.
     const turbo = this.turbo || 1;
-    if (turbo > 1) this.acc += DT * (turbo - 1) * Math.min(6, dtMs / 16.7);
+    this.acc += Math.min(0.1, dtMs / 1000) * turbo;
     while (this.acc >= DT && n < 6 * turbo) {
       this.acc -= DT; n++;
       let input = this.hud?.readInput ? this.hud.readInput() : {};
@@ -256,6 +260,10 @@ export class RaceScene extends Phaser.Scene {
       fx.fillStyle(pf.col, pf.life * 0.6).fillRect(Math.round(pf.x), Math.round(pf.y), 2, 2);
       pf.y -= 0.15;
     }
+    const pl = race.player;
+    const showMark = race.time < 3;
+    this.marker.setVisible(showMark && Math.floor(this.time.now / 250) % 4 !== 3);
+    if (showMark) this.marker.setPosition(Math.round(pl.x), Math.round(pl.y) - 14);
     // ghost
     if (this.ghost) {
       const p = race.player;

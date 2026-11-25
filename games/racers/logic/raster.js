@@ -2,7 +2,7 @@
 // boost pads, puddles), pixel by pixel so every edge is crisp pixel art. Also places the
 // scenery (buildings, trees, parked cars) and applies night or rain lighting. Pure JS: the game
 // copies the buffer into a canvas texture; node tests and the preview tool use it directly.
-import { hash2, noise2, mulberry32 } from './rng.js';
+import { hash2, noise2, noiseField, mulberry32 } from './rng.js';
 
 // DawnBringer-style colours shared with the Tiny Town art.
 export const C = {
@@ -25,7 +25,7 @@ export const THEME_STYLE = {
  * Exact (every pixel within `near` of the road): distance, signed lateral offset, arc length.
  * Coarse (8 px cells, up to `far`): distance only, for scenery and water.
  */
-export function fields(t, near = t.wall + 6, far = 260) {
+export function fields(t, near = t.wall + 4, far = 190) {
   const W = t.W; const H = t.H;
   const fd = new Float32Array(W * H).fill(1e9);
   const fl = new Float32Array(W * H);
@@ -48,22 +48,27 @@ export function fields(t, near = t.wall + 6, far = 260) {
         let f = (qx * dx + qy * dy) / L2;
         if (f < 0) f = 0; else if (f > 1) f = 1;
         const ex = qx - dx * f; const ey = qy - dy * f;
-        const d = Math.sqrt(ex * ex + ey * ey);
+        const d2 = ex * ex + ey * ey;
         const k = py * W + px;
-        if (d < fd[k]) { fd[k] = d; fl[k] = ex * nx + ey * ny; fs[k] = (i + f) * t.step; }
+        if (d2 < fd[k]) { fd[k] = d2; fl[k] = ex * nx + ey * ny; fs[k] = (i + f) * t.step; }
       }
     }
-    if (i % 2) continue;
+    if (i % 3) continue;
     const r = Math.ceil(far / CELL);
+    const r2 = (far + CELL) * (far + CELL);
     const cx = Math.floor(ax / CELL); const cy = Math.floor(ay / CELL);
     for (let gy = Math.max(0, cy - r); gy <= Math.min(ch - 1, cy + r); gy++) {
       for (let gx = Math.max(0, cx - r); gx <= Math.min(cw - 1, cx + r); gx++) {
-        const d = Math.hypot((gx + 0.5) * CELL - ax, (gy + 0.5) * CELL - ay);
+        const ddx = (gx + 0.5) * CELL - ax; const ddy = (gy + 0.5) * CELL - ay;
+        const d2 = ddx * ddx + ddy * ddy;
         const k = gy * cw + gx;
-        if (d < cd[k]) cd[k] = d;
+        if (d2 < cd[k] && d2 < r2) cd[k] = d2;
       }
     }
   }
+  // squared -> real distances
+  for (let k = 0; k < fd.length; k++) if (fd[k] < 1e9) fd[k] = Math.sqrt(fd[k]);
+  for (let k = 0; k < cd.length; k++) cd[k] = cd[k] < 1e9 ? Math.sqrt(cd[k]) : 1e4;
   // bilinear between cell centres, so water edges and scenery limits follow smooth curves
   const at = (gx, gy) => cd[Math.min(ch - 1, Math.max(0, gy)) * cw + Math.min(cw - 1, Math.max(0, gx))];
   const coarse = (x, y) => {
@@ -74,11 +79,20 @@ export function fields(t, near = t.wall + 6, far = 260) {
   return { W, H, fd, fl, fs, coarse };
 }
 
-/** Is a ground pixel water? (harbor: past a wobbly quay line; park: ponds) */
-export function isWater(theme, x, y, dist, seed) {
-  if (theme === 'harbor') return dist > 90 + noise2(x, y, 64, seed) * 70;
-  if (theme === 'park') return dist > 70 && noise2(x, y, 90, seed + 7) > 0.68;
+/** Is a ground pixel water? (harbor: past a wobbly quay line; park: ponds). n = noise sampler. */
+export function isWater(theme, x, y, dist, n) {
+  if (theme === 'harbor') return dist > 90 + n(x, y) * 70;
+  if (theme === 'park') return dist > 70 && n(x, y) > 0.68;
   return false;
+}
+
+/** The noise samplers a theme's ground uses (lattices worked out once per picture). */
+export function groundNoise(theme, W, H, seed) {
+  return {
+    water: noiseField(W, H, theme === 'harbor' ? 64 : 90, theme === 'harbor' ? seed : seed + 7),
+    ripple: noiseField(W, H, 10, seed + 3),
+    dirt: noiseField(W, H, 80, seed + 11),
+  };
 }
 
 /** Paint the track. Returns { W, H, data, f } (f = the distance fields, for scenery placement). */
@@ -86,6 +100,9 @@ export function paintTrack(t, { theme = 'downtown', mood = 'day', seed = 1 } = {
   const f = fields(t);
   const { W, H, fd, fl, fs, coarse } = f;
   const st = THEME_STYLE[theme] || THEME_STYLE.downtown;
+  const N = groundNoise(theme, W, H, seed);
+  const wet = theme === 'harbor' || theme === 'park';
+  f.noise = N;
   const data = new Uint8ClampedArray(W * H * 4);
   const hw = t.hw; const wall = t.wall;
   const set = (k, c) => { const o = k * 4; data[o] = c[0]; data[o + 1] = c[1]; data[o + 2] = c[2]; data[o + 3] = 255; };
@@ -120,17 +137,17 @@ export function paintTrack(t, { theme = 'downtown', mood = 'day', seed = 1 } = {
         }
         continue;
       }
-      // ground
-      const dd = d < 1e8 ? d : coarse(x, y);
-      if (isWater(theme, x, y, dd, seed)) {
+      // ground (only water themes need to know how far from the road it is)
+      const dd = d < 1e8 ? d : wet ? coarse(x, y) : 1e4;
+      if (isWater(theme, x, y, dd, N.water)) {
         let c = C.water;
-        if (h < 0.004) c = C.line; else if (y % 9 === 0 && noise2(x, y, 10, seed + 3) > 0.62) c = C.water2;
+        if (h < 0.004) c = C.line; else if (y % 9 === 0 && N.ripple(x, y) > 0.62) c = C.water2;
         // a quay edge / bank one or two pixels wide
-        if (!isWater(theme, x, y - 2, dd - 2, seed) || !isWater(theme, x - 2, y, dd - 2, seed)) c = theme === 'harbor' ? C.brown : C.sand;
+        if (!isWater(theme, x, y - 2, dd - 2, N.water) || !isWater(theme, x - 2, y, dd - 2, N.water)) c = theme === 'harbor' ? C.brown : C.sand;
         set(k, c);
         continue;
       }
-      set(k, groundColour(st.ground, x, y, h, seed));
+      set(k, groundColour(st.ground, x, y, h, N));
     }
   }
   paintGrid(t, data, W);
@@ -139,7 +156,7 @@ export function paintTrack(t, { theme = 'downtown', mood = 'day', seed = 1 } = {
   return { W, H, data, f };
 }
 
-function groundColour(kind, x, y, h, seed) {
+function groundColour(kind, x, y, h, N) {
   if (kind === 'plaza') {
     if (x % 16 === 0 || y % 16 === 0) return C.side2;
     return h < 0.05 ? C.side2 : C.side;
@@ -149,12 +166,12 @@ function groundColour(kind, x, y, h, seed) {
     return h < 0.06 ? C.side2 : C.concrete;
   }
   if (kind === 'fields') {
-    const n = noise2(x, y, 80, seed + 11);
+    const n = N.dirt(x, y);
     if (n > 0.66) return (y % 6 < 2) ? C.dirt2 : C.dirt;        // ploughed fields
     return h < 0.05 ? C.grass2 : C.grass;
   }
   // park: grass with darker tufts
-  return h < 0.06 || noise2(x, y, 6, seed + 5) > 0.86 ? C.grass2 : C.grass;
+  return h < 0.07 ? C.grass2 : C.grass;
 }
 
 /** Start grid slot marks behind the line. */
@@ -242,7 +259,7 @@ export function placeScenery(t, f, theme, catalog, seed = 1) {
     for (const [px, py] of [[x, y], [x + w, y], [x, y + h], [x + w, y + h], [x + w / 2, y + h / 2], [x + w / 2, y], [x + w / 2, y + h], [x, y + h / 2], [x + w, y + h / 2]]) {
       const d = coarse(px, py) - 6;   // coarse cells are 8 px: be conservative
       if (d < minD) return false;
-      if (isWater(theme, px, py, d + 6, seed)) return false;
+      if (isWater(theme, px, py, d + 6, f.noise.water)) return false;
     }
     return true;
   };
