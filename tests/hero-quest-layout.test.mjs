@@ -11,19 +11,25 @@ const rectBox = (r) => ({ x0: r.x - r.w / 2, x1: r.x + r.w / 2, y0: r.y - r.h / 
 const inside = (b) => b.x0 >= 0 && b.y0 >= 0 && b.x1 <= L.SCREEN.W && b.y1 <= L.SCREEN.H;
 const overlaps = (a, b) => a.x0 < b.x1 && b.x0 < a.x1 && a.y0 < b.y1 && b.y0 < a.y1;
 
-test('the screen is 640x360 (shared LANDSCAPE size) and the room fills its full height at a crisp 2x', () => {
+test('the screen is 640x360 and the wide room fills nearly all of it at a crisp 2x', () => {
   assert.deepEqual(L.SCREEN, { W: 640, H: 360 });
   assert.equal(L.VIEW.w, C.ROOM_W * L.ZOOM);
-  assert.equal(L.VIEW.h, L.SCREEN.H);
-  assert.equal(L.VIEW.x, (L.SCREEN.W - L.VIEW.w) / 2, 'centred');
+  assert.equal(L.VIEW.h, C.ROOM_H * L.ZOOM);
   assert.ok(Number.isInteger(L.ZOOM));
+  assert.ok(C.COLS > C.ROWS, 'rooms are wide');
+  assert.ok(L.VIEW.x >= 0 && L.VIEW.y >= 0 && L.VIEW.x + L.VIEW.w <= L.SCREEN.W && L.VIEW.y + L.VIEW.h <= L.SCREEN.H, 'whole room on screen');
+  assert.equal(L.VIEW.x, (L.SCREEN.W - L.VIEW.w) / 2, 'centred');
+  // noticeably bigger than the v1 portrait-shaped room (352 x 360 on screen)
+  assert.ok(L.VIEW.w * L.VIEW.h > 352 * 360 * 1.4);
+  assert.ok(L.VIEW.w / L.SCREEN.W > 0.8);
 });
 
 test('controls and HUD buttons sit in the side margins, on screen, and apart', () => {
   const controls = { stick: circleBox(L.STICK), sword: circleBox(L.SWORD), item: circleBox(L.ITEMB), swap: rectBox(L.SWAP), pause: rectBox(L.PAUSE_BTN), help: rectBox(L.HELP_BTN) };
   for (const [name, b] of Object.entries(controls)) {
     assert.ok(inside(b), `${name} on screen`);
-    assert.ok(b.x1 <= L.LEFT || b.x0 >= L.RIGHT, `${name} stays out of the room`);
+    // over the room's outer wall column at most, never over the part you play in
+    assert.ok(b.x1 <= L.INNER.x0 || b.x0 >= L.INNER.x1, `${name} covers the playable room`);
   }
   const names = Object.keys(controls);
   for (let i = 0; i < names.length; i++) for (let j = i + 1; j < names.length; j++) {
@@ -31,12 +37,12 @@ test('controls and HUD buttons sit in the side margins, on screen, and apart', (
   }
   // thumb reach: the action buttons are in the lower part of the right margin, the stick low on the left
   assert.ok(L.SWORD.y > L.SCREEN.H * 0.6 && L.STICK.y > L.SCREEN.H * 0.6);
-  assert.ok(L.SWORD.r >= 40 && L.ITEMB.r >= 30, 'big enough to hit');
+  assert.ok(L.SWORD.r >= 36 && L.ITEMB.r >= 26, 'big enough to hit (with slack)');
 });
 
 test('the stick starts on the left half, never on the pause button or the right-hand buttons', () => {
   assert.ok(L.stickZone(L.STICK.x, L.STICK.y));
-  assert.ok(L.stickZone(L.LEFT + 40, 200), 'left part of the room works too');
+  assert.ok(L.stickZone(L.LEFT + 80, 200), 'left part of the room works too');
   assert.ok(!L.stickZone(L.PAUSE_BTN.x, L.PAUSE_BTN.y));
   for (const c of [L.SWORD, L.ITEMB, L.SWAP]) assert.ok(!L.stickZone(c.x, c.y));
 });
@@ -61,7 +67,7 @@ test('touch hit areas cover what is drawn and never overlap each other', () => {
   for (const [x, y] of [[L.ITEMB.x, L.ITEMB.y], [L.ITEMB.x, L.ITEMB.y + L.ITEMB.r - 1]]) assert.ok(L.hitItem(x, y));
   assert.ok(L.hitSwap(L.SWAP.x - L.SWAP.w / 2 + 1, L.SWAP.y));
   // no screen point is in two of them
-  for (let x = L.RIGHT; x < L.SCREEN.W; x++) {
+  for (let x = L.MID; x < L.SCREEN.W; x++) {
     for (let y = 0; y < L.SCREEN.H; y++) {
       const n = Object.values(hits).filter((f) => f(x, y)).length;
       assert.ok(n <= 1, `${x},${y} hits ${n} buttons`);

@@ -11,7 +11,7 @@ import { makeEnemy, updateEnemy, hurtEnemy, harmful } from './enemies.js';
 import { PRESETS, tune, makeRng } from './tune.js';
 import { ITEM_TEXT, talk, shopStock } from './story.js';
 
-export const VERSION = 1;
+export const VERSION = 2; // 2: wide rooms (17 x 11). See migrate.js for older saves.
 
 export function newState() {
   return {
@@ -385,6 +385,7 @@ export class Game {
     if (this.flags[trigFlag(r, kind)]) return;
     this.flags[trigFlag(r, kind)] = true;
     this.dirty = true;
+    this.emit({ type: 'trigger', kind });
     const act = r.on[kind] || {};
     let text = '';
     if (act.door) {
@@ -494,7 +495,7 @@ export class Game {
     }
     this.dirty = true;
     this.p.showing = item;
-    this.emit({ type: 'get', item });
+    this.emit({ type: 'get', item, room: this.room.id });
     this.emit({ type: 'sfx', name: item.startsWith('gems') || item === 'key' || item === 'potion' ? 'coin' : 'fanfare' });
     this.say(ITEM_TEXT[item] || ['You found something.'], null, { item });
   }
@@ -513,6 +514,7 @@ export class Game {
     if (id === 'potion') s.potions++;
     if (id === 'bombs') s.bombs = Math.min(BOMB.max, s.bombs + 5);
     if (id === 'heart') { s.flags['bought:heart'] = true; s.maxHp += 2; s.hp = s.maxHp; }
+    this.emit({ type: 'bought', id });
     if (!s.selected) this.autoSelect();
     this.dirty = true;
     return { ok: true, msg: `Bought ${it.name}!` };
@@ -638,7 +640,7 @@ export class Game {
       this.dirty = true;
       for (const o of this.enemies) if (!o.dead) { o.dead = true; this.emit({ type: 'die', id: o.id, x: o.x, y: o.y, kind: o.kind }); }
       this.shots = [];
-      this.emit({ type: 'bossDown', area: this.room.area, hpFrac: this.s.hp / this.s.maxHp });
+      this.emit({ type: 'bossDown', area: this.room.area, hpFrac: this.s.hp / this.s.maxHp, hurt: this.roomHurt });
       this.spawnBossRewards(e.x, e.y);
       return;
     }
@@ -658,8 +660,16 @@ export class Game {
 
   clampInside(x, y) {
     let tx = clamp(Math.floor(x / TILE), 1, COLS - 2); let ty = clamp(Math.floor(y / TILE), 1, ROWS - 2);
-    if (!this.passable(tx, ty, 'enemy')) [tx, ty] = [5, 5];
+    if (!this.passable(tx, ty, 'enemy')) [tx, ty] = [(COLS - 1) / 2, (ROWS - 1) / 2];
     return [center(tx), center(ty)];
+  }
+
+  /** Every chest in the vale opened? */
+  allChestsOpen() {
+    return Object.values(ROOMS).every((r) => Object.keys(r.chests).every((xy) => {
+      const [x, y] = xy.split(',').map(Number);
+      return this.flags[chestFlag(r, x, y)];
+    }));
   }
 
   // ------------------------------------------------------------------ items
@@ -799,7 +809,7 @@ export class Game {
     this.bombSupplyT -= dt;
     if (this.bombSupplyT > 0) return;
     this.bombSupplyT = 5;
-    const spots = [[2, 3], [8, 3], [2, 10], [8, 10]];
+    const spots = [[3, 2], [COLS - 4, 2], [3, ROWS - 3], [COLS - 4, ROWS - 3]];
     const [x, y] = spots[Math.floor(this.rng() * spots.length)];
     this.addPickup('bombs', center(x), center(y), { keep: true });
   }
@@ -868,8 +878,8 @@ export class Game {
     const area = this.room.area;
     this.dirty = true;
     switch (it.kind) {
-      case 'gem': s.gems = Math.min(999, s.gems + 1); this.emit({ type: 'sfx', name: 'coin' }); break;
-      case 'gem5': s.gems = Math.min(999, s.gems + 5); this.emit({ type: 'sfx', name: 'coin' }); break;
+      case 'gem': s.gems = Math.min(999, s.gems + 1); this.emit({ type: 'sfx', name: 'coin' }); this.emit({ type: 'gems', n: 1 }); break;
+      case 'gem5': s.gems = Math.min(999, s.gems + 5); this.emit({ type: 'sfx', name: 'coin' }); this.emit({ type: 'gems', n: 5 }); break;
       case 'heart': s.hp = Math.min(s.maxHp, s.hp + 2); this.emit({ type: 'sfx', name: 'select' }); break;
       case 'bombs': s.bombs = Math.min(BOMB.max, s.bombs + 3); this.emit({ type: 'sfx', name: 'place' }); break;
       case 'heartC':

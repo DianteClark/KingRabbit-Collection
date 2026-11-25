@@ -186,7 +186,7 @@ class Bot {
   }
 
   boss(id) {
-    this.goto(id, 5, 10);
+    this.goto(id, (C.COLS - 1) / 2, C.ROWS - 3);
     const g = this.g;
     const k = g.enemies.find((e) => e.boss);
     assert.ok(k, `no boss in ${id}`);
@@ -207,72 +207,139 @@ class Bot {
   }
 }
 
+
+// ---- route helpers: find targets from the room data, so the bot works with any layout
+
+const FLY = new Set(['.', ',', ':', '=', 'x', 'P', 'w', 'W', 'D', 'e']);
+const OFFS = [['up', 0, 1], ['down', 0, -1], ['left', 1, 0], ['right', -1, 0]]; // facing, where you stand
+
+function cellsOf(id, ch) {
+  const r = ROOMS[id]; const out = [];
+  r.map.forEach((row, y) => [...row].forEach((c, x) => { if (c === ch) out.push([x, y]); }));
+  return out;
+}
+
+/** A cell next to (tx, ty), inside the room, that the bot can walk to, and the way to face. */
+function standBy(b, id, tx, ty) {
+  for (const [dir, ox, oy] of OFFS) {
+    const sx = tx + ox; const sy = ty + oy;
+    if (sx < 1 || sy < 1 || sx > C.COLS - 2 || sy > C.ROWS - 2) continue;
+    if (!S.walk(ROOMS[id], sx, sy, b.g.flags)) continue;
+    if (b.route(id, sx, sy)) return [sx, sy, dir];
+  }
+  throw new Error(`nowhere to stand next to ${id} ${tx},${ty}`);
+}
+
+function openChest(b, id) {
+  const r = ROOMS[id];
+  const [x, y] = cellsOf(id, 'C').find(([cx, cy]) => !b.g.flags[W.chestFlag(r, cx, cy)]);
+  const [sx, sy, dir] = standBy(b, id, x, y);
+  b.act(id, sx, sy, dir);
+  assert.ok(b.g.flags[W.chestFlag(r, x, y)], `chest ${id} ${x},${y} opened`);
+}
+
+function talkTo(b, id, who) {
+  const n = ROOMS[id].npcs.find((o) => o.who === who);
+  const [sx, sy, dir] = standBy(b, id, n.x, n.y);
+  b.act(id, sx, sy, dir);
+}
+
+function unlockSide(b, id, side) {
+  const [x, y] = C.DOOR_CELL[side];
+  const [dx, dy] = C.SIDE_DELTA[side];
+  b.unlock(id, x - dx, y - dy, { top: 'up', bottom: 'down', left: 'left', right: 'right' }[side]);
+}
+
+function hitCrystal(b, id) {
+  const r = ROOMS[id];
+  const [cx, cy] = cellsOf(id, 'X')[0];
+  for (const [dir, ox, oy] of OFFS) {
+    for (let k = 1; k <= 5; k++) {
+      const sx = cx + ox * k; const sy = cy + oy * k;
+      if (sx < 1 || sy < 1 || sx > C.COLS - 2 || sy > C.ROWS - 2) break;
+      let clear = true;
+      for (let j = 1; j < k; j++) if (!FLY.has(r.map[cy + oy * j][cx + ox * j])) clear = false;
+      if (!clear) break;
+      if (!S.walk(r, sx, sy, b.g.flags) || !b.route(id, sx, sy)) continue;
+      b.use('boomerang', id, sx, sy, dir);
+      assert.ok(b.g.flags[W.trigFlag(r, 'crystal')], `crystal ${id}`);
+      return;
+    }
+  }
+  throw new Error(`no boomerang line to the crystal in ${id}`);
+}
+
+/** Bomb the cracked wall in the room (or the one on `side`). */
+function bombWall(b, id, side = null) {
+  const r = ROOMS[id];
+  const [x, y] = side ? C.DOOR_CELL[side] : cellsOf(id, 'c')[0];
+  const [sx, sy, dir] = standBy(b, id, x, y);
+  b.use('bombs', id, sx, sy, dir);
+  assert.ok(b.g.flags[W.cellFlag(r, x, y)], `wall ${id} ${x},${y} bombed`);
+}
+
 test('a bot can play Hollow Crown from the first line to the ending', () => {
   const b = new Bot(); const g = b.g;
-  const has = (f) => !!g.flags[f];
 
-  b.act('in:elder', 5, 6, 'up');
+  talkTo(b, 'in:elder', 'elder');
   assert.ok(g.s.items.sword, 'got the sword');
 
   // ---- Mossy Hollow
-  b.act('d1:0,2', 5, 6, 'up');
+  openChest(b, 'd1:0,2');
   assert.equal(g.s.keys.d1, 1);
-  b.unlock('d1:1,2', 5, 1, 'up');
+  unlockSide(b, 'd1:1,2', 'top');
   b.puzzle('d1:2,2');
-  b.act('d1:2,1', 5, 6, 'up');
+  openChest(b, 'd1:2,1');
   assert.ok(g.s.items.boomerang, 'boomerang');
-  b.use('boomerang', 'd1:0,1', 6, 2, 'left');
-  assert.ok(has(W.trigFlag(ROOMS['d1:0,1'], 'crystal')), 'bridge lowered');
-  b.act('d1:0,1', 3, 5, 'left');
+  hitCrystal(b, 'd1:0,1');
+  openChest(b, 'd1:0,1');
   assert.ok(g.s.bigKeys.d1);
-  b.act('d1:1,1', 5, 5, 'down');
-  b.unlock('d1:1,1', 5, 1, 'up');
+  openChest(b, 'd1:1,1');
+  unlockSide(b, 'd1:1,1', 'top');
   b.boss('d1:1,0');
   assert.equal(g.room.id, 'ow:0,0', 'warped out of Mossy Hollow');
   assert.equal(g.s.maxHp, 8);
-
-  b.act('ow:1,0', 5, 1, 'left');
+  openChest(b, 'ow:1,0');
 
   // ---- Ember Lab
-  b.use('boomerang', 'ow:2,1', 6, 8, 'right');
-  assert.ok(has(W.trigFlag(ROOMS['ow:2,1'], 'crystal')), 'river bridge');
+  hitCrystal(b, 'ow:2,1');
   b.puzzle('d2:0,2');
-  b.act('d2:0,2', 5, 7, 'up');
-  b.unlock('d2:1,2', 5, 1, 'up');
-  b.act('d2:0,1', 5, 6, 'up');
+  openChest(b, 'd2:0,2');
+  unlockSide(b, 'd2:1,2', 'top');
+  openChest(b, 'd2:0,1');
   assert.ok(g.s.items.bombs, 'bombs');
-  b.use('bombs', 'd2:1,1', 9, 6, 'right');
-  b.use('boomerang', 'd2:2,1', 9, 4, 'left');
-  b.act('d2:2,1', 5, 5, 'down');
+  bombWall(b, 'd2:1,1', 'right');
+  hitCrystal(b, 'd2:2,1');
+  openChest(b, 'd2:2,1');
   assert.equal(g.s.keys.d2, 1);
-  b.unlock('d2:2,1', 5, 11, 'down');
-  b.act('d2:2,2', 5, 7, 'up');
+  unlockSide(b, 'd2:2,1', 'bottom');
+  openChest(b, 'd2:2,2');
   assert.ok(g.s.bigKeys.d2);
-  b.unlock('d2:1,1', 5, 1, 'up');
+  unlockSide(b, 'd2:1,1', 'top');
   b.boss('d2:1,0');
   assert.equal(g.room.id, 'ow:2,1');
 
   // ---- the hidden cave by the lake
-  b.use('bombs', 'ow:2,2', 4, 11, 'up');
-  b.act('in:cave', 5, 6, 'up');
+  bombWall(b, 'ow:2,2');
+  openChest(b, 'in:cave');
   assert.equal(g.s.maxHp, 12);
 
   // ---- Hollow Keep
   if (g.s.bombs < 4) g.s.bombs = 6; // (bombs come from drops and the shop in a real game)
-  b.use('bombs', 'ow:2,0', 5, 5, 'up');
+  bombWall(b, 'ow:2,0');
   b.puzzle('d3:0,2');
-  b.act('d3:0,2', 5, 7, 'up');
-  b.use('bombs', 'd3:1,2', 9, 6, 'right');
-  b.use('boomerang', 'd3:2,2', 8, 5, 'up');
-  b.act('d3:2,2', 5, 3, 'up');
+  openChest(b, 'd3:0,2');
+  bombWall(b, 'd3:1,2', 'right');
+  hitCrystal(b, 'd3:2,2');
+  openChest(b, 'd3:2,2');
   assert.equal(g.s.keys.d3, 2);
-  b.unlock('d3:1,2', 5, 1, 'up');
-  b.unlock('d3:1,1', 1, 6, 'left');
-  b.act('d3:0,1', 5, 7, 'up');
+  unlockSide(b, 'd3:1,2', 'top');
+  unlockSide(b, 'd3:1,1', 'left');
+  openChest(b, 'd3:0,1');
   assert.ok(g.s.bigKeys.d3);
-  b.use('bombs', 'd3:2,1', 3, 5, 'up');
-  b.act('d3:2,1', 3, 4, 'up');
-  b.unlock('d3:1,1', 5, 1, 'up');
+  bombWall(b, 'd3:2,1');
+  openChest(b, 'd3:2,1');
+  unlockSide(b, 'd3:1,1', 'top');
   b.boss('d3:1,0');
 
   assert.ok(g.s.done, 'carried the Crown home');

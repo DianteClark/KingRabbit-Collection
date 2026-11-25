@@ -9,6 +9,7 @@ import { showHowTo } from '../../../shared/core/howto.js';
 import { RULES } from '../rules.js';
 import { save } from '../save.js';
 import { DUNGEONS } from '../logic/constants.js';
+import { migrate } from '../logic/migrate.js';
 import { stopMusic } from '../music.js';
 
 export const fmtTime = (sec) => {
@@ -35,9 +36,9 @@ export class Title extends Phaser.Scene {
     text(this, L, 336, 'Art by Aleksandr Makarov', { color: PALETTE.lavender });
     button(this, WIDTH - 30, 26, 44, 40, '?', () => showHowTo(RULES), { size: 32, fill: PALETTE.gold });
 
-    const g = save.get('game');
+    const g = migrate(save.get('game'));
     let y = 110;
-    if (g && g.v === 1) {
+    if (g) {
       const done = DUNGEONS.filter((d) => g.flags[`boss:${d}`]).length;
       button(this, R, y, 240, 52, 'Continue', () => this.start(false), { fill: PALETTE.gold, size: 32 });
       text(this, R, y + 42, `${g.maxHp / 2} hearts   ${done}/3 dungeons   ${fmtTime(g.time)}`, { color: PALETTE.cream });

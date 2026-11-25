@@ -87,10 +87,10 @@ test('room edges match their neighbours, and openings lead somewhere', () => {
 
 test('doors on shared edges use the same flag from both sides', () => {
   const r = ROOMS['d1:1,2']; const n = ROOMS['d1:1,1'];
-  assert.equal(W.cellFlag(r, 5, 0), W.cellFlag(n, 5, 12));
+  assert.equal(W.cellFlag(r, 8, 0), W.cellFlag(n, 8, 10));
   const a = ROOMS['d2:1,1']; const b = ROOMS['d2:2,1'];
-  assert.equal(W.cellFlag(a, 10, 6), W.cellFlag(b, 0, 6));
-  assert.notEqual(W.cellFlag(r, 5, 0), W.cellFlag(a, 10, 6));
+  assert.equal(W.cellFlag(a, 16, 5), W.cellFlag(b, 0, 5));
+  assert.notEqual(W.cellFlag(r, 8, 0), W.cellFlag(a, 16, 5));
 });
 
 // ------------------------------------------------------------------ completability
@@ -114,16 +114,16 @@ test('each dungeon needs the previous dungeon\'s item (the item opens the new pa
   assert.ok(!rooms.has('d2:1,2'), 'Ember Lab closed at first');
   assert.ok(!rooms.has('d3:1,2'), 'Hollow Keep closed at first');
   flags[W.trigFlag(ROOMS['ow:2,1'], 'crystal')] = true;
-  assert.ok(S.reachable(flags).has('d2:1,2|5,11'), 'river crystal lowers the bridge');
-  flags[W.cellFlag(ROOMS['ow:2,0'], 5, 4)] = true;
-  assert.ok(S.reachable(flags).has('d3:1,2|5,11'), 'bombed rock opens Hollow Keep');
+  assert.ok(S.reachable(flags).has('d2:1,2|8,9'), 'river crystal lowers the bridge');
+  flags[W.cellFlag(ROOMS['ow:2,0'], 8, 3)] = true;
+  assert.ok(S.reachable(flags).has('d3:1,2|8,9'), 'bombed rock opens Hollow Keep');
 });
 
 test('every switch puzzle is solvable from every doorway, and blocks can never wall you in', () => {
   const puzzles = rooms.filter((r) => r.on.switch);
   assert.ok(puzzles.length >= 3);
   for (const r of puzzles) {
-    const res = S.solvePuzzle(r);
+    const res = S.solvePuzzle(r, {}, { traps: true });
     assert.ok(res.ok, `${r.id} puzzle unsolvable: ${JSON.stringify(res.results)}`);
     assert.deepEqual(res.traps, [], `${r.id}: blocks can wall you in`);
   }
@@ -181,7 +181,7 @@ test('a new game starts in the elder\'s house; talking gives the sword', () => {
 
 test('walking out of a door warps outside and sets the respawn point', () => {
   const g = freshGame();
-  place(g, 'in:elder', 5, 10, 'down');
+  place(g, 'in:elder', 8, 9, 'down');
   run(g, 1.5, { my: 1 });
   assert.equal(g.room.id, 'ow:0,2');
   assert.deepEqual([g.s.respawn.room, g.s.respawn.x, g.s.respawn.y], ['ow:0,2', 3, 6]);
@@ -189,7 +189,7 @@ test('walking out of a door warps outside and sets the respawn point', () => {
 
 test('walking off an edge scrolls to the neighbouring room', () => {
   const g = freshGame();
-  place(g, 'ow:0,2', 9, 6, 'right');
+  place(g, 'ow:0,2', 14, 5, 'right');
   run(g, 0.6, { mx: 1 });
   assert.equal(g.room.id, 'ow:1,2');
   assert.ok(g.p.x < 40);
@@ -197,8 +197,8 @@ test('walking off an edge scrolls to the neighbouring room', () => {
 
 test('the sword kills a slime in two hits and loot can drop', () => {
   const g = freshGame();
-  place(g, 'd1:1,2', 5, 6, 'right');
-  const e = g.spawnEnemy('slime', center(6), center(6));
+  place(g, 'd1:1,2', 7, 5, 'right');
+  const e = g.spawnEnemy('slime', center(8), center(5));
   e.spawnT = 0; e.state = 'rest'; e.t = 5;
   g.update(DT, { attack: true });
   run(g, 0.5);
@@ -213,7 +213,7 @@ test('the sword kills a slime in two hits and loot can drop', () => {
 
 test('enemies hurt on contact, knock you back and give invulnerability frames', () => {
   const g = freshGame();
-  place(g, 'd1:1,2', 5, 6);
+  place(g, 'd1:1,2', 7, 5);
   const e = g.spawnEnemy('slime', g.p.x, g.p.y);
   e.spawnT = 0;
   const hp = g.s.hp;
@@ -226,7 +226,7 @@ test('enemies hurt on contact, knock you back and give invulnerability frames', 
 
 test('facing a rock blocks it with the shield; turning your back does not', () => {
   const g = freshGame();
-  place(g, 'd1:1,2', 5, 6, 'right');
+  place(g, 'd1:1,2', 7, 5, 'right');
   g.throwRock(g.p.x + 30, g.p.y, -90, 0);
   run(g, 0.6);
   assert.equal(g.s.hp, g.s.maxHp, 'blocked');
@@ -238,17 +238,17 @@ test('facing a rock blocks it with the shield; turning your back does not', () =
 
 test('a small key opens a locked door, shared with the room behind it', () => {
   const g = freshGame({ state: { keys: { d1: 1, d2: 0, d3: 0 } } });
-  place(g, 'd1:1,2', 5, 2, 'up');
+  place(g, 'd1:1,2', 8, 2, 'up');
   run(g, 1.2, { my: -1 });
   assert.equal(g.s.keys.d1, 0);
-  assert.ok(g.flags[W.cellFlag(ROOMS['d1:1,2'], 5, 0)]);
+  assert.ok(g.flags[W.cellFlag(ROOMS['d1:1,2'], 8, 0)]);
   run(g, 1, { my: -1 });
   assert.equal(g.room.id, 'd1:1,1');
 });
 
 test('a locked door without a key stays shut', () => {
   const g = freshGame();
-  place(g, 'd1:1,2', 5, 2, 'up');
+  place(g, 'd1:1,2', 8, 2, 'up');
   run(g, 1.2, { my: -1 });
   assert.equal(g.room.id, 'd1:1,2');
   assert.ok(g.events.some((e) => e.type === 'toast'));
@@ -256,21 +256,19 @@ test('a locked door without a key stays shut', () => {
 
 test('pushing the block onto the switch opens the shutter (real movement)', () => {
   const g = freshGame();
-  place(g, 'd1:2,2', 2, 6, 'right');
+  place(g, 'd1:2,2', 2, 5, 'right');
   const b = g.blocks[0];
-  assert.deepEqual([b.x, b.y], [3, 6]);
-  // push right twice: block to 5,6
-  run(g, 1.2, { mx: 1 });
-  assert.equal(b.y, 6);
-  assert.ok(b.x >= 5, `block at ${b.x}`);
-  // if it went past 5, the puzzle can still be reset; for this test stop at 5
-  b.x = 5; b.px = center(5); b.py = center(6);
-  // go below it and push up three times
-  g.p.x = center(5); g.p.y = center(7) + 1; g.p.dir = 'up';
+  assert.deepEqual([b.x, b.y], [4, 5]);
+  run(g, 1.5, { mx: 1 });
+  assert.equal(b.y, 5);
+  assert.ok(b.x >= 6, `block at ${b.x}`);
+  // line it up under the switch and push up
+  b.x = 7; b.px = center(7); b.py = center(5);
+  g.p.x = center(7); g.p.y = center(6) + 1; g.p.dir = 'up';
   run(g, 1.6, { my: -1 });
   assert.ok(b.y <= 3, `block at ${b.x},${b.y}`);
   assert.ok(g.flags[W.trigFlag(ROOMS['d1:2,2'], 'switch')]);
-  assert.ok(W.cellOpen(ROOMS['d1:2,2'], 5, 0, g.flags, {}));
+  assert.ok(W.cellOpen(ROOMS['d1:2,2'], 8, 0, g.flags, {}));
 });
 
 test('the boomerang hits a crystal across water and lowers the bridge', () => {
@@ -279,15 +277,15 @@ test('the boomerang hits a crystal across water and lowers the bridge', () => {
   g.update(DT, { item: true });
   run(g, 1.2);
   assert.ok(g.flags[W.trigFlag(ROOMS['d1:0,1'], 'crystal')]);
-  assert.ok(g.passable(4, 6, 'player'));
+  assert.ok(g.passable(5, 5, 'player'));
   assert.equal(g.boom, null, 'boomerang came back');
 });
 
 test('the boomerang stuns enemies and fetches loot', () => {
   const g = freshGame({ state: { items: { sword: true, boomerang: true, bombs: false }, selected: 'boomerang' } });
-  place(g, 'd1:1,2', 3, 6, 'right');
-  const e = g.spawnEnemy('blueSlime', center(6), center(6)); e.spawnT = 0;
-  const gem = g.addPickup('gem5', center(7), center(6));
+  place(g, 'd1:1,2', 3, 5, 'right');
+  const e = g.spawnEnemy('blueSlime', center(6), center(5)); e.spawnT = 0;
+  const gem = g.addPickup('gem5', center(7), center(5));
   g.update(DT, { item: true });
   run(g, 0.25);
   assert.ok(e.stun > 0, 'stunned');
@@ -301,12 +299,12 @@ test('the boomerang stuns enemies and fetches loot', () => {
 
 test('bombs blow open cracked walls, hurt nearby enemies and you', () => {
   const g = freshGame({ state: { items: { sword: true, boomerang: false, bombs: true }, bombs: 3, selected: 'bombs' } });
-  place(g, 'd2:1,1', 8, 6, 'right');
+  place(g, 'd2:1,1', 14, 5, 'right');
   g.update(DT, { item: true });
   assert.equal(g.s.bombs, 2);
   run(g, 2);
-  assert.ok(g.flags[W.cellFlag(ROOMS['d2:1,1'], 10, 6)]);
-  assert.ok(W.cellOpen(ROOMS['d2:2,1'], 0, 6, g.flags, {}), 'open from the other side too');
+  assert.ok(g.flags[W.cellFlag(ROOMS['d2:1,1'], 16, 5)]);
+  assert.ok(W.cellOpen(ROOMS['d2:2,1'], 0, 5, g.flags, {}), 'open from the other side too');
   assert.equal(g.s.hp, g.s.maxHp - 1, 'stood too close');
 });
 
@@ -328,7 +326,7 @@ test('death sends you to the last entrance with progress kept', () => {
 
 test('a potion saves you from falling', () => {
   const g = freshGame({ state: { potions: 1 } });
-  place(g, 'd1:1,2', 5, 6);
+  place(g, 'd1:1,2', 7, 5);
   g.s.hp = 1;
   const e = g.spawnEnemy('slime', g.p.x, g.p.y); e.spawnT = 0;
   g.update(DT, {});
@@ -354,7 +352,7 @@ test('the shop sells potions, bombs (with a bag) and one heart charm', () => {
 
 test('the Golem King shrugs off the sword unless dazed; bombs daze it', () => {
   const g = freshGame({ state: { items: { sword: true, boomerang: true, bombs: true }, bombs: 5, keys: { d1: 0, d2: 0, d3: 0 } } });
-  place(g, 'd2:1,0', 5, 8, 'up', { enemies: true });
+  place(g, 'd2:1,0', 8, 7, 'up', { enemies: true });
   const k = g.enemies[0];
   k.spawnT = 0; k.x = g.p.x; k.y = g.p.y - 22; k.state = 'walk';
   assert.equal(g.hitEnemy(k, 1, 'sword', g.p.x, g.p.y), 'clink');
@@ -368,7 +366,7 @@ test('the Golem King shrugs off the sword unless dazed; bombs daze it', () => {
 
 test('the Hollow King needs the boomerang to drop his shield', () => {
   const g = freshGame();
-  place(g, 'd3:1,0', 5, 8, 'up', { enemies: true });
+  place(g, 'd3:1,0', 8, 7, 'up', { enemies: true });
   const k = g.enemies[0];
   assert.equal(g.hitEnemy(k, 1, 'sword', 0, 0), 'clink');
   assert.equal(g.hitEnemy(k, 0, 'boom', 0, 0), 'stun');
@@ -382,7 +380,7 @@ test('the Hollow King needs the boomerang to drop his shield', () => {
 test('beating a boss gives a heart container, then the way out', () => {
   const g = freshGame();
   g.warp('d1:1,2', 5, 11, 'up');
-  place(g, 'd1:1,0', 5, 8, 'up', { enemies: true });
+  place(g, 'd1:1,0', 8, 7, 'up', { enemies: true });
   const k = g.enemies[0];
   k.hp = 1; k.spawnT = 0;
   g.hitEnemy(k, 1, 'sword', g.p.x, g.p.y);
@@ -398,13 +396,13 @@ test('beating a boss gives a heart container, then the way out', () => {
   g.closeDialog();
   assert.equal(g.room.id, 'ow:0,0');
   // the boss stays beaten
-  place(g, 'd1:1,0', 5, 8, 'up', { enemies: true });
+  place(g, 'd1:1,0', 8, 7, 'up', { enemies: true });
   assert.equal(g.enemies.length, 0);
 });
 
 test('the Slime King sheds slimes as it is hurt', () => {
   const g = freshGame();
-  place(g, 'd1:1,0', 5, 8, 'up', { enemies: true });
+  place(g, 'd1:1,0', 8, 7, 'up', { enemies: true });
   const k = g.enemies[0];
   for (let i = 0; i < 6; i++) { k.inv = 0; g.hitEnemy(k, 1, 'sword', g.p.x, g.p.y); }
   assert.equal(g.enemies.filter((e) => e.kind === 'slime').length, 4);
@@ -412,8 +410,8 @@ test('the Slime King sheds slimes as it is hurt', () => {
 
 test('a red slime splits in two when beaten', () => {
   const g = freshGame();
-  place(g, 'd2:1,2', 5, 6);
-  const e = g.spawnEnemy('redSlime', center(5), center(4));
+  place(g, 'd2:1,2', 7, 5);
+  const e = g.spawnEnemy('redSlime', center(7), center(3));
   e.hp = 1;
   g.hitEnemy(e, 1, 'sword', g.p.x, g.p.y);
   assert.equal(g.enemies.filter((o) => o.kind === 'slimelet').length, 2);
@@ -421,22 +419,22 @@ test('a red slime splits in two when beaten', () => {
 
 test('clear-shutters close behind you and open when the room is clear', () => {
   const g = freshGame();
-  g.enterRoom('d2:0,1', center(10), center(6), 'left');
+  g.enterRoom('d2:0,1', center(16), center(5), 'left');
   g.events.length = 0;
   run(g, 0.5, { mx: -1 });
-  assert.ok(!g.passable(10, 6, 'player'), 'shut behind you');
+  assert.ok(!g.passable(16, 5, 'player'), 'shut behind you');
   for (const e of g.enemies) e.dead = true;
   g.update(DT, {});
-  assert.ok(g.passable(10, 6, 'player'), 'open once clear');
+  assert.ok(g.passable(16, 5, 'player'), 'open once clear');
 });
 
 test('enemies never leave the room or end up inside walls', () => {
   for (const id of ['ow:1,1', 'ow:1,0', 'd1:1,1', 'd2:1,1', 'd3:1,1', 'ow:2,0']) {
     const g = freshGame({ game: { skill: 1 } });
-    place(g, id, 5, 6, 'down', { enemies: true });
+    place(g, id, 8, 5, 'down', { enemies: true });
     g.p.inv = 1e9; // a ghost player the enemies chase around
     for (let t = 0; t < 20; t += DT) {
-      g.p.x = center(5) + Math.sin(t) * 40; g.p.y = center(6) + Math.cos(t * 0.7) * 50;
+      g.p.x = center(8) + Math.sin(t) * 80; g.p.y = center(5) + Math.cos(t * 0.7) * 40;
       g.update(DT, {});
       g.shots = [];
       for (const e of g.enemies) {
@@ -455,8 +453,8 @@ test('the adaptive skill only changes enemy pace, and in the right direction', (
   // the same hit kills the same enemy at any skill
   for (const skill of [0, 1]) {
     const g = freshGame({ game: { skill } });
-    place(g, 'd1:1,2', 5, 6);
-    const e = g.spawnEnemy('slime', center(5), center(4));
+    place(g, 'd1:1,2', 7, 5);
+    const e = g.spawnEnemy('slime', center(7), center(4));
     g.hitEnemy(e, 1, 'sword', g.p.x, g.p.y); e.inv = 0;
     g.hitEnemy(e, 1, 'sword', g.p.x, g.p.y);
     assert.ok(e.dead);
@@ -476,34 +474,34 @@ test('the save state survives a JSON round trip mid-adventure', () => {
 
 test('the hidden cave by the lake opens with a bomb and holds a heart container', () => {
   const g = freshGame({ state: { items: { sword: true, boomerang: true, bombs: true }, bombs: 2, selected: 'bombs' } });
-  place(g, 'ow:2,2', 4, 11, 'up');
+  place(g, 'ow:2,2', 4, 9, 'up');
   g.update(DT, { item: true });
   run(g, 1.6);
-  g.p.x = center(4); g.p.y = center(11); g.p.kt = 0;
+  g.p.x = center(4); g.p.y = center(9); g.p.kt = 0;
   run(g, 1, { my: -1 });
   assert.equal(g.room.id, 'in:cave');
 });
 
 test('"Reset blocks" puts the blocks back but keeps a solved switch solved', () => {
   const g = freshGame();
-  place(g, 'd1:2,2', 1, 6, 'right');
+  place(g, 'd1:2,2', 1, 5, 'right');
   assert.ok(g.hasBlocks());
   const b = g.blocks[0];
-  run(g, 1.2, { mx: 1 });
-  assert.notDeepEqual([b.x, b.y], [3, 6]);
+  run(g, 1.5, { mx: 1 });
+  assert.notDeepEqual([b.x, b.y], [4, 5]);
   g.flags[W.trigFlag(ROOMS['d1:2,2'], 'switch')] = true;
   g.resetRoom();
-  assert.deepEqual([g.blocks[0].x, g.blocks[0].y], [3, 6]);
+  assert.deepEqual([g.blocks[0].x, g.blocks[0].y], [4, 5]);
   assert.equal(g.room.id, 'd1:2,2');
   assert.ok(Math.abs(g.p.x - center(1)) < 1);
   assert.ok(g.flags[W.trigFlag(ROOMS['d1:2,2'], 'switch')]);
-  place(g, 'd1:1,2', 5, 6);
+  place(g, 'd1:1,2', 7, 5);
   assert.ok(!g.hasBlocks());
 });
 
 test('boss tells: the Slime King only hurts as it lands; the Hollow King blinks away after his stun', () => {
   const g = freshGame();
-  place(g, 'd1:1,0', 5, 8, 'up', { enemies: true });
+  place(g, 'd1:1,0', 8, 7, 'up', { enemies: true });
   const k = g.enemies[0];
   k.spawnT = 0; k.x = g.p.x; k.y = g.p.y; k.state = 'rest'; k.t = 5;
   const hp = g.s.hp;
@@ -517,7 +515,7 @@ test('boss tells: the Slime King only hurts as it lands; the Hollow King blinks 
   g.contactDamage();
   assert.equal(g.s.hp, hp - 1, 'landing on you');
 
-  place(g, 'd3:1,0', 5, 8, 'up', { enemies: true });
+  place(g, 'd3:1,0', 8, 7, 'up', { enemies: true });
   const h = g.enemies[0]; h.spawnT = 0;
   g.hitEnemy(h, 0, 'boom', h.x, h.y);
   run(g, 3.2);
@@ -550,14 +548,14 @@ test('SWORD becomes TALK / READ / OPEN only when that thing is right in front of
     }
   }
   // Odo talks across his counter
-  place(g, 'in:shop', 5, 5, 'up');
+  place(g, 'in:shop', 8, 5, 'up');
   assert.equal(g.actionLabel(), 'TALK');
   assert.ok(checked > 20);
 });
 
 test('opening a chest or reading a sign happens once per press, and the chest then says SWORD', () => {
   const g = freshGame();
-  place(g, 'd1:2,1', 5, 6, 'up');
+  place(g, 'd1:2,1', 8, 6, 'up');
   assert.equal(g.actionLabel(), 'OPEN');
   g.update(DT, { attack: true });
   assert.equal(g.mode, 'dialog');

@@ -2,8 +2,8 @@
 // rules, maps and puzzles can be tested in node.
 
 export const TILE = 16;
-export const COLS = 11;           // a room is 11 x 13 tiles (176 x 208 px, drawn at 2x)
-export const ROWS = 13;
+export const COLS = 17;           // a room is 17 x 11 tiles (272 x 176 px, drawn at 2x): wide, for landscape
+export const ROWS = 11;
 export const ROOM_W = COLS * TILE;
 export const ROOM_H = ROWS * TILE;
 
@@ -15,7 +15,7 @@ export const DIRS = ['down', 'left', 'right', 'up'];
 export const DIR_VEC = { down: [0, 1], up: [0, -1], left: [-1, 0], right: [1, 0] };
 
 /** Door cells of a dungeon room (the middle of each wall). */
-export const DOOR_CELL = { top: [5, 0], bottom: [5, ROWS - 1], left: [0, 6], right: [COLS - 1, 6] };
+export const DOOR_CELL = { top: [(COLS - 1) / 2, 0], bottom: [(COLS - 1) / 2, ROWS - 1], left: [0, (ROWS - 1) / 2], right: [COLS - 1, (ROWS - 1) / 2] };
 
 export const PLAYER = {
   w: 10, h: 10,

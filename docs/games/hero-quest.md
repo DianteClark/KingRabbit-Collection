@@ -1,33 +1,33 @@
 # Hollow Crown
 
-**Status:** Playable (v1.2, landscape): overworld, 3 dungeons, bosses, shop, saves, ending, music, onboarding
+**Status:** Playable (v2.0, landscape, wide rooms): overworld, 3 dungeons, bosses, shop, saves (with migration), trophies, ending, music, onboarding
 **Game id:** `hero-quest` (`games/hero-quest/`)
 **Art:** LAS Adventure Pack 1.0 and LAS Alchemist Lab 1.02 by Aleksandr Makarov (`shared/assets/las-zelda-adventure/`)
 **Rules text:** `games/hero-quest/rules.js` (gold ? button)
 
 A short top-down sword-and-dungeon adventure for a phone held in one hand. The Gremlin King stole the Hollow Crown; you get a sword from Elder Bram, clear the Mossy Hollow (boomerang), the Ember Lab (bombs) and Hollow Keep, and carry the Crown home. A full run is roughly 30-45 minutes.
 
-## Screen and controls (landscape since v1.2)
+## Screen and controls (wide rooms since v2.0)
 - `startGame({ orientation: 'landscape' })`: 640x360 logical canvas; held upright the shared overlay asks you to turn the phone.
-- The room (11 x 13 tiles of 16 px) is drawn at a crisp 2x in the middle (x 144-496) using the full screen height. At 2x it is 416 px tall, so the camera follows you up and down by up to 28 px and never shows past the room's edges (`layout.js` `camY`). Room slides start from the current camera position and end on the new room's clamped view.
-- Left margin: pause `<`, hearts (two rows of five), gems, dungeon keys, and the floating stick (thumb down anywhere on the left half of the screen, margin or room).
-- Right margin: `?`, then SWAP, ITEM and a big SWORD button stacked for the right thumb. SWORD turns into TALK / READ / OPEN next to people, signs and chests.
-- Dialogs sit over the lower part of the room, or the top when the bottom box would cover you; toasts at its bottom edge; the area name at its top.
-- A tap that advances or closes a dialog never also fires a HUD button (pause, help) on release. Touch hit areas (`layout.js` `hitSword/hitItem/hitSwap`) are slightly larger than drawn and never overlap.
-- Shop prices you can't afford grey out and say how many more gems you need.
+- Rooms are wide, 17 x 11 tiles of 16 px (like a classic screen), drawn at a crisp 2x: 544 x 352 on screen, centred, the whole room visible (no vertical camera follow any more). That is about 50 % more room on screen than v1's 11 x 13 room, and fills 85 % of the width.
+- Slim 48 px side margins. Left: pause `<`, hearts (two columns), gems, dungeon keys. Right: `?`.
+- Touch controls reach just over the room's outer wall/tree column and never over the part you play in (tested): the floating stick (thumb down anywhere on the left half), and stacked on the right SWAP, ITEM and a big SWORD (TALK / READ / OPEN next to people, signs and chests). Buttons are drawn slightly see-through.
+- Dialogs sit inside the room at its bottom, or its top when the bottom box would cover you; toasts at its bottom edge; the area name at its top.
 - Pause and shop are two-column panels; title and ending use left/right columns.
 - All positions live in `layout.js` (plain numbers, tested). Text is 16/32 px only.
+- A tap that advances or closes a dialog never also fires a HUD button (pause, help) on release. Touch hit areas (`layout.js` `hitSword/hitItem/hitSwap`) are slightly larger than drawn and never overlap.
+- Shop prices you can't afford grey out and say how many more gems you need.
 - The shield is always up: rocks coming at the way you face bounce off unless you're mid-swing.
 - Keyboard: arrows/WASD, Space/J sword, K/X item, Q swap, Esc pause.
 
 ## World
 | Area | Rooms | What's there |
 |---|---|---|
-| Fernwick Vale (overworld) | 3x3 | Village (elder, shop, villagers with hints), fields, Mosswood, Northwood, Ember River, Lake Sorrel, Grey Peaks |
+| Fernwick Vale (overworld, 17 x 11 rooms) | 3x3 | Village (elder, shop, villagers with hints), fields, Mosswood, Northwood, Ember River, Lake Sorrel, Grey Peaks |
 | Interiors | 3 | Elder's house (start), Odo's shop, hidden cave by the lake (heart container, needs bombs) |
 | Mossy Hollow | 7 | Key from a cleared room, push-block switch opens a shutter, boomerang, crystal across water lowers a bridge to the Boss Key. Boss: Slime King |
 | Ember Lab | 7 | Two-block switch puzzle, clear-shutter room with the bombs, bombable wall, island chest via crystal, Stone Brute mini-boss. Boss: Golem King |
-| Hollow Keep | 7 | Three-block puzzle, bomb wall, crystal bridge, twin golem mini-boss, optional bomb pocket. Boss: Hollow King |
+| Hollow Keep | 7 | Two-block puzzle (13 pushes, with a trick: the top switch can only be reached by a detour through a gap in a pillar line), bomb wall, crystal bridge, twin golem mini-boss, optional bomb pocket. Boss: Hollow King |
 
 Progression gates: the boomerang lowers the Ember River bridge (crystal on the far bank); bombs break the rock sealing Hollow Keep and the lake cave.
 
@@ -55,10 +55,15 @@ Progression gates: the boomerang lowers the Ember River bridge (crystal on the f
 ## Enemies
 Green slime (hops at random), blue slime (lunges when you line up), red slime (follows you, splits in two), gremlin (keeps its distance, throws rocks), golem (charges when lined up, dazed after hitting a wall, double damage while dazed). The boomerang stuns most enemies.
 
+## Trophies
+`trophies.js` registers 13 trophies with `shared/core/trophies.js` (5 bronze, 4 silver, 4 gold; 2 secret) and calls `recordPlay` once per launch. Earned at the moment they happen: the sword, each of the first two bosses, a switch puzzle solved, the Heart Charm bought, the lake cave found (secret), a boss beaten without a hit, every chest opened, the Crown brought home, home without falling once, home in under 30 minutes (secret), 10 rocks blocked and 100 slimes beaten (lifetime). Lifetime counters (`bumpStat`): enemies, slimes, rocks blocked, gems. `awardsFor()` is plain logic and tested.
+
 ## Adaptive difficulty
 `adaptive.js` keeps one skill number (0-1, start 0.35). A fall: -0.07. A boss: -0.02 + 0.08 x hearts left. A dungeon room cleared without being hit: +0.008. `logic/tune.js` blends easy / normal / hard presets of enemy speed, aggression, attack cooldowns, wind-up time, projectile speed and heart drop rate. Damage, hit points and puzzles never change.
 
 ## Saving
+Save version 2 (wide rooms). `logic/migrate.js` brings older saves over: v1 (tall 11 x 13 rooms) keeps items, hearts, gems, potions, bombs, keys, Boss Keys, beaten bosses, opened doors, switches and crystals (the room grid and room ids are the same); opened chests and bombed rocks are found again by what they held; you restart at the start of the area you were in (a dungeon's entrance, otherwise Fernwick outside the elder's house) with a one-line note. A current save with a broken respawn point restarts at its area's start. Anything unreadable becomes a fresh adventure; nothing in storage can crash the game (tested with junk).
+
 `createSave('hero-quest')` stores the whole state (`game`), the skill, finishes and best time. It saves on every room change, pickup and purchase (throttled) and on `pagehide`. Continue resumes at the last entrance used.
 
 ## Code layout
@@ -72,7 +77,9 @@ Green slime (hops at random), blue slime (lunges when you line up), red slime (f
 | `logic/solver.js` | Completability solver (all key orders) and the push-block Sokoban search |
 | `scenes/painter.js` | Paints a room into a canvas (LAS tiles outdoors; dungeon floors/walls drawn in the same pixel style so any wall shape joins up) |
 | `scenes/Play.js` | World camera (2x), sprites, animations, effects, scroll/fade transitions |
-| `layout.js` | Landscape screen layout: room view, margins, stick/button positions, camera clamp |
+| `layout.js` | Landscape screen layout: room view, slim margins, stick/button positions and hit areas |
+| `logic/migrate.js` | Older saves to the current layout |
+| `trophies.js` | Trophy definitions, lifetime counters, which events earn what |
 | `scenes/Hud.js` | Side-margin HUD, stick and buttons, dialog box, shop, pause (with area map), death screen |
 | `scenes/Title.js`, `scenes/Ending.js`, `scenes/Boot.js` | Menus, ending, loading and baked textures/animations |
 
@@ -81,8 +88,9 @@ Tuned by playing each boss through the real scene with a scripted "human" (decis
 
 ## Tests
 - `tests/hero-quest.test.mjs`: map validity (sizes, legend, chest/sign/warp/house alignment, matching room edges, no openings to nowhere), the whole-game solver in every key order (every chest, every boss), item gating, every switch puzzle from every doorway, bomb refills near cracked walls, and rules (sword, contact damage and i-frames, shield, keys, block pushing, boomerang, bombs, death/respawn, potions, shop, bosses' immunities, splitting, clear-shutters, enemies stay in bounds, adaptive presets, save round-trip, the hidden cave), SWORD's TALK/READ/OPEN label for every NPC, sign and chest from every side (and not when facing away), one action per press, and `allTexts()` (every NPC line in every story state, signs, items, objectives, shop text).
-- `tests/hero-quest-layout.test.mjs`: the landscape layout fits 640x360, button hit areas cover what's drawn without overlapping, controls stay in the margins without overlapping, the stick zone avoids the buttons, and the camera keeps the player and only the room in view.
-- `tests/hero-quest-playthrough.test.mjs`: a bot plays from the first line to the ending through the real simulation (walking, pushing, unlocking, boomerang, bombs, chests), opening every chest.
+- `tests/hero-quest-layout.test.mjs`: the landscape layout fits 640x360, button hit areas cover what's drawn without overlapping, controls stay in the margins without overlapping, the stick zone avoids the buttons, and the room is wide, centred, whole and at least 40 % bigger on screen than v1, and controls never cover the playable inside of the room.
+- `tests/hero-quest-migrate.test.mjs`: v1 saves keep their progress and restart at their area's start, a migrated save can still go on, junk in storage never crashes, and trophies fire on the right events.
+- `tests/hero-quest-playthrough.test.mjs`: (finds chests, doors, crystals and cracked walls from the room data, so it follows any layout) a bot plays from the first line to the ending through the real simulation (walking, pushing, unlocking, boomerang, bombs, chests), opening every chest.
 
 ## Next ideas
 - A fourth dungeon item (bow) and more optional secrets; music.
