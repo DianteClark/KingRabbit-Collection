@@ -84,3 +84,49 @@ a.tile:active { transform: translateY(4px); box-shadow: inset 0 0 0 3px var(--ac
 .divider { grid-column: 1 / -1; color: var(--lavender); margin-top: 8px; padding-bottom: 4px; border-bottom: 3px solid var(--indigo); }
 
 footer { margin-top: auto; padding-top: 12px; text-align: center; color: var(--lavender); line-height: 1.5; }
+
+/* Header tools */
+#tools { display: flex; gap: 8px; width: 100%; }
+#tools button {
+  font: inherit; flex: 1; min-height: 40px; padding: 6px 8px; cursor: pointer;
+  color: var(--cream); background: var(--indigo); border: 3px solid var(--ink); box-shadow: 0 3px 0 var(--ink);
+}
+#tools button b { font-weight: normal; color: var(--night); background: var(--gold); padding: 0 5px; margin-left: 4px; }
+#tools button b:empty { display: none; }
+#tools button:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--ink); }
+
+/* Sheets */
+.sheet-wrap { position: fixed; inset: 0; z-index: 50; background: rgba(4, 3, 3, 0.7); display: flex; align-items: flex-end; justify-content: center; padding: max(12px, env(safe-area-inset-top)) 8px max(12px, env(safe-area-inset-bottom)); }
+.sheet { width: 100%; max-width: 520px; max-height: 100%; display: flex; flex-direction: column; background: var(--night); border: 4px solid var(--ink); box-shadow: inset 0 0 0 3px var(--indigo), 0 6px 0 var(--ink); }
+.sheet-head { display: flex; align-items: center; gap: 10px; padding: 12px 14px 6px; }
+.sheet-head h2 { margin: 0; flex: 1; font-weight: normal; font-size: 24px; color: var(--gold); }
+.sheet-head .x { font: inherit; font-size: 20px; width: 44px; height: 40px; background: var(--cream); color: var(--night); border: 3px solid var(--ink); box-shadow: 0 3px 0 var(--ink); cursor: pointer; }
+.sheet-body { overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 6px 14px 16px; line-height: 1.4; }
+.sheet-body h3 { font-weight: normal; color: var(--sand); margin: 16px 0 4px; }
+.sheet-body p { margin: 6px 0; }
+.note, .empty { color: var(--lavender); }
+.totals { display: flex; gap: 8px; margin-bottom: 10px; }
+.totals div { flex: 1; text-align: center; padding: 8px 4px; background: var(--indigo); border: 3px solid var(--ink); }
+.totals b { display: block; font-weight: normal; font-size: 24px; color: var(--gold); }
+.totals span { color: var(--cream); }
+.tgame { border-bottom: 2px solid var(--indigo); }
+.tgame summary, .drow { display: flex; align-items: center; gap: 10px; padding: 8px 0; min-height: 48px; cursor: pointer; list-style: none; color: var(--cream); text-decoration: none; }
+.tgame summary::-webkit-details-marker { display: none; }
+.tgame img, .drow img { image-rendering: pixelated; border: 2px solid var(--ink); flex: none; }
+.tname { flex: 1; min-width: 0; }
+.tname small, .dstat small { display: block; color: var(--lavender); }
+.pct { color: var(--gold); }
+.stats { color: var(--sand); }
+.tlist { list-style: none; margin: 0 0 10px; padding: 0; }
+.tlist li { display: flex; gap: 8px; padding: 5px 0; opacity: 0.5; }
+.tlist li.got { opacity: 1; }
+.tlist li b { display: block; font-weight: normal; color: var(--cream); }
+.tier { width: 14px; height: 14px; margin-top: 3px; flex: none; border: 2px solid var(--ink); }
+.tier.bronze { background: var(--orange); } .tier.silver { background: #b9b6c9; } .tier.gold { background: var(--gold); }
+.drow { border-bottom: 2px solid var(--indigo); }
+.drow .dstat { text-align: right; color: var(--gold); }
+.drow.done .dstat { color: var(--leaf); }
+.brow { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0; }
+.big { font: inherit; flex: 1; min-height: 44px; padding: 8px 10px; text-align: center; cursor: pointer; color: var(--night); background: var(--gold); border: 3px solid var(--ink); box-shadow: 0 3px 0 var(--ink); display: flex; align-items: center; justify-content: center; }
+.big.file { background: var(--lavender); }
+.sheet textarea { width: 100%; font: inherit; font-size: 16px; background: var(--indigo); color: var(--cream); border: 3px solid var(--ink); padding: 6px; resize: vertical; -webkit-user-select: text; user-select: text; }

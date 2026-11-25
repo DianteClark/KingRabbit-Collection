@@ -104,3 +104,119 @@ window.addEventListener('pageshow', (e) => { if (e.persisted) window.location.re
 if ('serviceWorker' in navigator && location.hostname !== 'localhost') {
   navigator.serviceWorker.register('./sw.js', { scope: './' }).catch(() => {});
 }
+
+// ---------------------------------------------------------------- Trophies, Daily, Backup
+
+import { profile, today } from '../shared/core/trophies.js';
+
+const TIER_PTS = { bronze: 10, silver: 25, gold: 50 };
+const titleOf = (id) => GAMES.find((g) => g.id === id)?.title || id;
+
+function sheet(title, html) {
+  const el = document.createElement('div');
+  el.className = 'sheet-wrap';
+  el.innerHTML = `<div class="sheet" role="dialog" aria-label="${esc(title)}"><div class="sheet-head"><h2>${esc(title)}</h2><button type="button" class="x" aria-label="Close">X</button></div><div class="sheet-body">${html}</div></div>`;
+  const close = () => el.remove();
+  el.addEventListener('click', (e) => { if (e.target === el || e.target.closest('.x')) close(); });
+  document.body.appendChild(el);
+  return { el, body: el.querySelector('.sheet-body'), close };
+}
+
+function refreshHeader() {
+  const p = profile();
+  document.getElementById('pts').textContent = p.earned ? `${p.earned}` : '';
+  const open = Object.entries(p.daily).filter(([, d]) => d.best?.[today()] == null).length;
+  document.getElementById('dailyBadge').textContent = open ? `${open}` : '';
+}
+refreshHeader();
+
+function trophiesPage() {
+  const p = profile();
+  const rows = Object.entries(p.games).filter(([, g]) => g.defs.length || g.plays)
+    .sort((a, b) => (b[1].last || 0) - (a[1].last || 0))
+    .map(([id, g]) => {
+      const got = g.defs.filter((d) => g.trophies[d.id]).length;
+      const pct = g.defs.length ? Math.round((got / g.defs.length) * 100) : 0;
+      const list = g.defs.map((d) => {
+        const has = g.trophies[d.id];
+        const hidden = d.secret && !has;
+        return `<li class="${has ? 'got' : ''}"><i class="tier ${d.tier}"></i><span><b>${esc(hidden ? 'Secret trophy' : d.name)}</b>${esc(hidden ? 'Keep playing to find it.' : d.desc)}</span></li>`;
+      }).join('');
+      const stats = Object.entries(g.stats || {}).map(([k, v]) => `${esc(k)} ${v}`).join(' &middot; ');
+      return `<details class="tgame"><summary><img src="./thumbs/${id}.png" alt="" width="32" height="32"><span class="tname">${esc(titleOf(id))}<small>${got}/${g.defs.length} trophies &middot; played ${g.plays}x</small></span><span class="pct">${pct}%</span></summary>
+        ${stats ? `<p class="stats">${stats}</p>` : ''}<ul class="tlist">${list || '<li>No trophies yet in this game.</li>'}</ul></details>`;
+    }).join('');
+  const s = sheet('Trophies', `
+    <div class="totals"><div><b>${p.points}</b><span>points</span></div><div><b>${p.earned}/${p.total}</b><span>trophies</span></div><div><b>${Object.values(p.games).reduce((a, g) => a + g.plays, 0)}</b><span>games played</span></div></div>
+    ${rows || '<p class="empty">Play any game to start collecting trophies. Each game lists its trophies here after you open it.</p>'}
+    <p class="note">Bronze ${TIER_PTS.bronze}, silver ${TIER_PTS.silver}, gold ${TIER_PTS.gold} points.</p>`);
+  s.body.querySelectorAll('img').forEach((img) => img.addEventListener('error', () => { img.style.visibility = 'hidden'; }));
+}
+
+function dailyPage() {
+  const p = profile();
+  const day = today();
+  const rows = Object.entries(p.daily).map(([id, d]) => {
+    const done = d.best?.[day] != null;
+    const g = GAMES.find((x) => x.id === id);
+    return `<a class="drow ${done ? 'done' : ''}" href="./${id}/" data-id="${id}">
+      <img src="./thumbs/${id}.png" alt="" width="32" height="32">
+      <span class="tname">${esc(d.title || titleOf(id))}<small>${esc(g?.title || id)}${d.desc ? ` &middot; ${esc(d.desc)}` : ''}</small></span>
+      <span class="dstat">${done ? `Best ${d.best[day]}` : 'Not played'}<small>${d.streak ? `Streak ${d.streak}` : ''}</small></span></a>`;
+  }).join('');
+  sheet(`Daily challenges`, `<p class="note">New challenges every day at midnight, the same for everyone.</p>${rows || '<p class="empty">Daily challenges appear here once you open games that have one (like Darkhold\'s Daily Run).</p>'}`);
+}
+
+function backupPage() {
+  const s = sheet('Backup', `
+    <p>Save all your progress, trophies and settings from every game, then restore it on this phone or a new one.</p>
+    <div class="brow"><button type="button" class="big" data-b="save">Save backup file</button><button type="button" class="big" data-b="copy">Copy backup code</button></div>
+    <p class="note" id="bmsg"></p>
+    <h3>Restore</h3>
+    <p>Choose a backup file, or paste a backup code. This replaces your current progress.</p>
+    <div class="brow"><label class="big file">Choose file<input type="file" accept=".json,.txt,application/json" hidden></label></div>
+    <textarea rows="3" placeholder="...or paste a backup code here"></textarea>
+    <div class="brow"><button type="button" class="big" data-b="restore">Restore from code</button></div>`);
+  const msg = s.body.querySelector('#bmsg');
+  const dump = () => {
+    const data = {};
+    for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (k.startsWith('kingrabbit')) data[k] = localStorage.getItem(k); }
+    return { app: 'kingrabbit', v: 1, at: new Date().toISOString(), data };
+  };
+  const encode = (o) => btoa(unescape(encodeURIComponent(JSON.stringify(o))));
+  const restore = (text) => {
+    let o;
+    try { o = JSON.parse(text.trim().startsWith('{') ? text : decodeURIComponent(escape(atob(text.trim())))); } catch { msg.textContent = 'That is not a valid backup.'; return; }
+    if (o?.app !== 'kingrabbit' || !o.data) { msg.textContent = 'That is not a KingRabbit backup.'; return; }
+    if (!confirm(`Restore the backup from ${new Date(o.at).toLocaleString()}? Your current progress will be replaced.`)) return;
+    for (const k of Object.keys(localStorage)) if (k.startsWith('kingrabbit')) localStorage.removeItem(k);
+    for (const [k, v] of Object.entries(o.data)) localStorage.setItem(k, v);
+    location.reload();
+  };
+  s.body.addEventListener('click', async (e) => {
+    const b = e.target.closest('[data-b]')?.dataset.b;
+    if (!b) return;
+    if (b === 'save') {
+      const blob = new Blob([JSON.stringify(dump())], { type: 'application/json' });
+      const name = `kingrabbit-backup-${today()}.json`;
+      const file = new File([blob], name, { type: 'application/json' });
+      try {
+        if (navigator.canShare?.({ files: [file] })) { await navigator.share({ files: [file], title: 'KingRabbit backup' }); msg.textContent = 'Backup shared.'; return; }
+      } catch (err) { if (err?.name === 'AbortError') return; }
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click();
+      msg.textContent = 'Backup file saved.';
+    }
+    if (b === 'copy') {
+      const code = encode(dump());
+      try { await navigator.clipboard.writeText(code); msg.textContent = `Backup code copied (${Math.round(code.length / 1024)} KB of text). Paste it somewhere safe, like Notes.`; } catch { s.body.querySelector('textarea').value = code; msg.textContent = 'Copy the code from the box below.'; }
+    }
+    if (b === 'restore') restore(s.body.querySelector('textarea').value);
+  });
+  s.body.querySelector('input[type=file]').addEventListener('change', async (e) => { const f = e.target.files?.[0]; if (f) restore(await f.text()); });
+}
+
+document.getElementById('tools').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-open]');
+  if (!b) return;
+  ({ trophies: trophiesPage, daily: dailyPage, backup: backupPage })[b.dataset.open]();
+});
