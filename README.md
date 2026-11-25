@@ -25,6 +25,7 @@ Aleksandr Makarov's (iknowkingrabbit) pixel-art packs.
 | Sand Siege: desert tower defense (see docs/games/sand-siege.md) | Playable | [/sand-siege/](https://dianteclark.github.io/KingRabbit-Collection/sand-siege/) |
 | Gem Quest: match-3 RPG (see docs/games/gem-quest.md) | Playable | [/gem-quest/](https://dianteclark.github.io/KingRabbit-Collection/gem-quest/) |
 | Pixel Quest: classic party JRPG (see docs/games/pixel-quest.md) | Playable | [/pixel-quest/](https://dianteclark.github.io/KingRabbit-Collection/pixel-quest/) |
+| Colony: survival colony sim (see docs/games/colony.md) | Playable | [/colony/](https://dianteclark.github.io/KingRabbit-Collection/colony/) |
 | City Chief: run the police force of Tiny Town (see docs/games/city-chief.md) | Playable | [/city-chief/](https://dianteclark.github.io/KingRabbit-Collection/city-chief/) |
 | Pocket Soccer: 5-a-side arcade football (see docs/games/soccer.md) | Playable | [/soccer/](https://dianteclark.github.io/KingRabbit-Collection/soccer/) |
 
