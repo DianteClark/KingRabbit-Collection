@@ -6,6 +6,7 @@ import { header, go, setBackground, toast, modal, holdButton, fitLine } from './
 import { getBest, submitBest } from '../save.js';
 import { sfx } from '../../../shared/core/sfx.js';
 import { getSkill, tune, reportResult } from '../adaptive.js';
+import { earn } from '../trophies.js';
 import { COLS, ROWS, LEVELS, parse, at, solid, supported, moves, chaseStep } from '../logic/molerunner.js';
 
 const TILE = 24;
@@ -260,6 +261,8 @@ export class MoleRunner extends Phaser.Scene {
     toast(this, 'All gems! Level clear', OY + 160);
     sfx('win');
     this.levelsCleared = (this.levelsCleared || 0) + 1;
+    earn('mole-1');
+    if (this.levelsCleared >= 3) earn('mole-3');
     this.time.delayedCall(1400, () => { this.levelIdx++; this.startLevel(); });
   }
 

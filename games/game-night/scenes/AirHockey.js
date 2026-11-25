@@ -5,6 +5,7 @@ import { WIDTH } from '../../../shared/core/boot.js';
 import { header, go, setBackground, toast } from './common.js';
 import { endGame } from './boardkit.js';
 import { sfx } from '../../../shared/core/sfx.js';
+import { earn } from '../trophies.js';
 import { getSkill, tune } from '../adaptive.js';
 
 
@@ -233,6 +234,7 @@ export class AirHockey extends Phaser.Scene {
     if (this.scores[scorer] >= WIN_SCORE) {
       this.over = true;
       const won = scorer === 0;
+      if (won && this.scores[1] === 0) earn('airhockey-shutout');
       endGame(this, {
         id: 'airhockey', mode: 'cpu', title: won ? 'You win!' : 'CPU wins',
         lines: [`${this.scores[0]} - ${this.scores[1]}`], outcome: won ? 'w' : 'l',

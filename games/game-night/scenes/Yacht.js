@@ -6,7 +6,8 @@ import { header, go, modal, setBackground, toast } from './common.js';
 import { CATEGORIES, totals, isComplete, UPPER_BONUS_AT, allowed, scoreFor, isYacht, grandTotal, cpuHold, cpuChoose, LEVELS } from '../logic/yacht.js';
 import { getSkill, tune } from '../adaptive.js';
 
-import { getBest, submitBest, record } from '../save.js';
+import { getBest, submitBest, record, finishedPvp } from '../save.js';
+import { earn } from '../trophies.js';
 import { sfx } from '../../../shared/core/sfx.js';
 
 const DIE_SCALE = 4;            // 12px dice -> 48px
@@ -182,6 +183,7 @@ export class Yacht extends Phaser.Scene {
       toast(this, 'Yacht bonus +100!', 220);
     }
     this.pending = null;
+    if (isYacht(dice) && (this.mode !== 'cpu' || this.turn === 0)) earn('yacht-yacht');
     card[id] = scoreFor(id, dice, card);
     sfx(card[id] ? 'coin' : 'place');
     if (this.players.every((p) => isComplete(p.card))) { this.refresh(); this.finish(); return; }
@@ -247,6 +249,7 @@ export class Yacht extends Phaser.Scene {
       const w = a === b ? null : a > b ? 0 : 1;
       title = w === null ? 'Tie game!' : this.mode === 'cpu' ? (w === 0 ? 'You win!' : 'CPU wins') : `${this.players[w].name} wins!`;
       lines = [`${this.players[0].name} ${a}  -  ${b} ${this.players[1].name}`];
+      if (this.mode === 'pvp') finishedPvp();
       if (this.mode === 'cpu') record('yacht', w === null ? 'd' : w === 0 ? 'w' : 'l', Math.min(1, Math.abs(a - b) / 80));
       sfx(w === 1 && this.mode === 'cpu' ? 'lose' : 'win');
     }

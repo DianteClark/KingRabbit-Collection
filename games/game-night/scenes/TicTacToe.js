@@ -7,7 +7,7 @@ import { result, cpuMove, PRESETS } from '../logic/tictactoe.js';
 import { getSkill, tune } from '../adaptive.js';
 
 import { sfx } from '../../../shared/core/sfx.js';
-import { record } from '../save.js';
+import { record, finishedPvp } from '../save.js';
 
 const BOARD = 312;
 const LEFT = (WIDTH - BOARD) / 2;
@@ -108,6 +108,7 @@ export class TicTacToe extends Phaser.Scene {
 
   finish(r) {
     this.over = true;
+    if (this.mode === 'pvp') finishedPvp();
     let title;
     if (r.winner === 'draw') {
       this.tally.draw++;

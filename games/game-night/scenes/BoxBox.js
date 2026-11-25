@@ -5,6 +5,7 @@ import { WIDTH } from '../../../shared/core/boot.js';
 import { header, go, setBackground, modal, dpad, swipeArea } from './common.js';
 import { sfx } from '../../../shared/core/sfx.js';
 import { save, submitBest } from '../save.js';
+import { earn } from '../trophies.js';
 import { LEVELS, parse, interior, step, solved } from '../logic/sokoban.js';
 
 const AREA = { x: 16, y: 104, w: WIDTH - 32, h: 344 };
@@ -128,6 +129,7 @@ export class BoxBox extends Phaser.Scene {
     const prev = bests[i];
     if (!prev || this.moves < prev) save.set('boxboxMoves', { ...bests, [i]: this.moves });
     const last = i === LEVELS.length - 1;
+    if (last) earn('box-all');
     this.time.delayedCall(500, () => {
       const m = modal(this, last ? 'All levels done!' : 'Level clear!', [`Solved in ${this.moves} moves`, prev ? (this.moves < prev ? `New record (was ${prev})` : `Your record: ${prev}`) : 'First solve!'], [
         last ? ['Play again', () => { m.destroy(); this.loadLevel(0); }] : ['Next level', () => { m.destroy(); this.loadLevel(i + 1); }],

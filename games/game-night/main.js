@@ -21,6 +21,9 @@ import { Bowling } from './scenes/Bowling.js';
 import { Pool } from './scenes/Pool.js';
 import { Tanks } from './scenes/Tanks.js';
 import { MoleRunner } from './scenes/MoleRunner.js';
+import { initTrophies } from './trophies.js';
+
+initTrophies();
 
 startGame({
   scenes: [Boot, Menu, TicTacToe, Reversi, Checkers, Chess, Go, Tables, Dominoes, SeaBattle, Yacht,

@@ -4,7 +4,8 @@ import { text } from '../../../shared/core/ui.js';
 import { WIDTH } from '../../../shared/core/boot.js';
 import { header, go, modal, toast, setBackground } from './common.js';
 import { SIZE, newBoard, legalMoves, play, count, isOver, cpuMove, other, LEVELS } from '../logic/reversi.js';
-import { record } from '../save.js';
+import { record, finishedPvp } from '../save.js';
+import { earn } from '../trophies.js';
 import { getSkill, tune } from '../adaptive.js';
 
 import { sfx } from '../../../shared/core/sfx.js';
@@ -179,6 +180,8 @@ export class Reversi extends Phaser.Scene {
     if (dark === light) title = 'Draw!';
     else if (this.mode === 'cpu') title = dark > light ? 'You win!' : 'CPU wins';
     else title = `${dark > light ? 'Dark' : 'Light'} wins!`;
+    if (this.mode === 'pvp') finishedPvp();
+    if (this.mode === 'cpu' && dark > light && dark >= 45) earn('reversi-big');
     if (this.mode === 'cpu') record('reversi', dark === light ? 'd' : (dark > light ? 'w' : 'l'), Math.min(1, Math.abs(dark - light) / 32));
     sfx(this.mode === 'pvp' || dark > light ? 'win' : dark === light ? 'place' : 'lose');
     this.status.setText(title);
