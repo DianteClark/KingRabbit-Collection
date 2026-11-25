@@ -28,4 +28,12 @@ export const GAMES = [
   { id: 'megaboy', title: 'MegaBoy Run', tagline: 'Run, jump, blast, steal boss weapons', cat: 'action', status: 'playable', landscape: true },
   { id: 'darkhold', title: 'Darkhold', tagline: 'A dungeon crawl by torchlight', cat: 'adventure', status: 'playable' },
   { id: 'town-builder', title: 'Tiny Town Builder', tagline: 'Zone, build and grow a little city', cat: 'sim', status: 'playable' },
+  // In development
+  { id: 'hearth-valley', title: 'Hearth Valley', tagline: 'Farm, fish and make friends', cat: 'sim', status: 'soon' },
+  { id: 'sand-siege', title: 'Sand Siege', tagline: 'Desert tower defense', cat: 'strategy', status: 'soon' },
+  { id: 'racers', title: 'Tiny Town Racers', tagline: 'Drift through the city streets', cat: 'action', status: 'soon', landscape: true },
+  { id: 'gem-quest', title: 'Gem Quest', tagline: 'Match gems, power your hero', cat: 'classic', status: 'soon' },
+  { id: 'pixel-quest', title: 'Pixel Quest', tagline: 'A classic party RPG', cat: 'adventure', status: 'soon' },
+  { id: 'colony', title: 'Colony', tagline: 'Keep your settlers alive', cat: 'sim', status: 'soon' },
+  { id: 'mini-golf', title: 'Mini Golf', tagline: '18 holes, one thumb', cat: 'classic', status: 'soon' },
 ];
