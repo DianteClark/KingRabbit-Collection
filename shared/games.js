@@ -36,4 +36,5 @@ export const GAMES = [
   { id: 'colony', title: 'Colony', tagline: 'Keep your settlers alive', cat: 'sim', status: 'playable' },
   { id: 'racers', title: 'Tiny Town Racers', tagline: 'Drift through the city streets', cat: 'action', status: 'playable', landscape: true },
   // In development
+  { id: 'survivors', title: 'Rabbit Survivors', tagline: 'Outlast the endless horde', cat: 'action', status: 'soon', landscape: true },
 ];
