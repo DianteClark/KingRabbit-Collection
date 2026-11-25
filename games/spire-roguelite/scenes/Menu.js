@@ -1,8 +1,9 @@
 import Phaser from 'phaser';
 import { PALETTE, hex, text, button, WIDTH, go, route, setBackground, modal, icon, unit, helpButton, sfx } from './common.js';
 import { isMuted, setMuted } from '../../../shared/core/sfx.js';
-import { loadRun, getRecords, recordRun } from '../save.js';
-import { HEROES } from '../logic/run.js';
+import { loadRun, getRecords, recordRun, saveRun } from '../save.js';
+import { HEROES, newRun } from '../logic/run.js';
+import { todaySeed, today } from '../trophies.js';
 
 export class Menu extends Phaser.Scene {
   constructor() { super('Menu'); }
@@ -27,13 +28,14 @@ export class Menu extends Phaser.Scene {
     const run = loadRun();
     let y = 396;
     if (run) {
-      const label = `Continue: ${HEROES[run.hero].name}${run.mode === 'endless' ? ' (Endless)' : ''}, floor ${run.floor}`;
+      const label = `Continue: ${HEROES[run.hero].name}${run.daily ? ' (Daily)' : run.mode === 'endless' ? ' (Endless)' : ''}, floor ${run.floor}`;
       button(this, WIDTH / 2, y, 300, 46, label, () => route(this, run), { fill: PALETTE.gold });
       y += 56;
     }
     button(this, WIDTH / 2, y, 300, 46, 'New Run', () => this.startNew('normal', run), { fill: run ? PALETTE.lavender : PALETTE.gold });
     y += 56;
-    button(this, WIDTH / 2, y, 300, 46, 'Endless Mode', () => this.startNew('endless', run), { fill: PALETTE.lavender });
+    button(this, WIDTH / 2 - 77, y, 146, 46, 'Endless', () => this.startNew('endless', run), { fill: PALETTE.lavender });
+    button(this, WIDTH / 2 + 77, y, 146, 46, 'Daily Climb', () => this.startNew('daily', run), { fill: PALETTE.lavender });
     y += 56;
     button(this, WIDTH / 2, y, 300, 40, 'Records', () => this.showRecords(), { fill: PALETTE.indigo, color: PALETTE.cream });
 
@@ -50,9 +52,28 @@ export class Menu extends Phaser.Scene {
   }
 
   startNew(mode, existing) {
-    if (!existing) { go(this, 'HeroSelect', { mode }); return; }
+    const begin = () => (mode === 'daily' ? this.startDaily() : go(this, 'HeroSelect', { mode }));
+    if (!existing) { begin(); return; }
     const m = modal(this, 'Start a new run?', 'Your current run will end and count as a loss.', [
-      ['Start new run', () => { m.destroy(); recordRun(existing); go(this, 'HeroSelect', { mode }); }, PALETTE.red, PALETTE.cream],
+      ['Start new run', () => { m.destroy(); recordRun(existing); begin(); }, PALETTE.red, PALETTE.cream],
+      ['Cancel', () => m.destroy()],
+    ]);
+  }
+
+  /** Daily Climb: today's seed picks the hero and builds the spire, the same for everyone. */
+  startDaily() {
+    const seed = todaySeed();
+    const heroes = Object.keys(HEROES);
+    const hero = heroes[seed % heroes.length];
+    const m = modal(this, 'Daily Climb', `Today everyone climbs the same spire as the ${HEROES[hero].name}.\nOne Normal run; your best score today counts.`, [
+      ['Begin', () => {
+        m.destroy();
+        sfx('power');
+        const r = newRun({ hero, mode: 'normal', seed });
+        r.daily = today();
+        saveRun(r);
+        route(this, r);
+      }, PALETTE.gold],
       ['Cancel', () => m.destroy()],
     ]);
   }

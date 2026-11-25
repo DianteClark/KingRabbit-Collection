@@ -4,6 +4,7 @@ import { ROWS, NODE_TYPES } from '../logic/map.js';
 import { availableNodes, travel, actInfo, HEROES } from '../logic/run.js';
 import { ENEMIES } from '../logic/enemies.js';
 import { recordRun, saveRun } from '../save.js';
+import { earn } from '../trophies.js';
 
 export const ACT_COLORS = [
   { bg: '#24311f', ground: '#2e3d27', tint: 0xffffff, dots: '#3c4f33' },
@@ -29,6 +30,8 @@ export class MapScene extends Phaser.Scene {
 
   create() {
     const run = this.run;
+    if (run.gold >= 300) earn('gold-300');
+    if (run.relics.length >= 10) earn('relics-10');
     const colors = ACT_COLORS[(run.act - 1) % 3];
     setBackground(this, colors.bg);
     this.content = this.add.container(0, 0);

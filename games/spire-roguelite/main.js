@@ -12,6 +12,9 @@ import * as R from './logic/run.js';
 import * as B from './logic/bot.js';
 import { saveRun, loadRun } from './save.js';
 import { DEBUG } from './debug.js';
+import { initTrophies } from './trophies.js';
+
+initTrophies();
 import * as C from './logic/cards.js';
 import { handCard, wideCard } from './scenes/cardview.js';
 

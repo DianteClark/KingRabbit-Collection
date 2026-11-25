@@ -3,6 +3,7 @@ import { PALETTE, hex, text, button, WIDTH, HEIGHT, go, setBackground, unit, sfx
 import { HEROES } from '../logic/run.js';
 import { ENEMIES } from '../logic/enemies.js';
 import { recordRun, getRecords } from '../save.js';
+import { earn, stat, daily } from '../trophies.js';
 
 export class RunEnd extends Phaser.Scene {
   constructor() { super('RunEnd'); }
@@ -16,6 +17,7 @@ export class RunEnd extends Phaser.Scene {
     // Record once (the run is cleared from the save, so a reload goes to the menu).
     const res = recordRun(run);
     const rec = getRecords();
+    this.trophies(run, res, rec, won);
     const title = won ? 'VICTORY!' : run.abandoned ? 'Run abandoned' : 'DEFEATED';
     text(this, WIDTH / 2, 58 + 4, title, { size: 32, color: won ? PALETTE.leaf : PALETTE.wine });
     text(this, WIDTH / 2, 58, title, { size: 32, color: won ? PALETTE.gold : PALETTE.orange });
@@ -28,7 +30,7 @@ export class RunEnd extends Phaser.Scene {
 
     const s = res.summary;
     const lines = [
-      `${h.name} - ${run.mode === 'endless' ? 'Endless' : 'Normal'} mode`,
+      `${h.name} - ${run.daily ? 'Daily Climb' : run.mode === 'endless' ? 'Endless' : 'Normal'} mode`,
       won ? 'You conquered the Spire!' : `Fell on floor ${run.floor} (Act ${run.act}${run.loop ? `, loop ${run.loop + 1}` : ''})`,
       '',
       `Floors climbed: ${run.stats.floors}`,
@@ -46,5 +48,21 @@ export class RunEnd extends Phaser.Scene {
     button(this, WIDTH / 2, 540, 280, 44, 'View final deck', () => showCards(this, run.deck, 'Final deck'), { fill: PALETTE.lavender });
     button(this, WIDTH / 2, 596, 280, 46, 'Main menu', () => go(this, 'Menu'), { fill: PALETTE.gold });
     void ENEMIES;
+  }
+
+  trophies(run, res, rec, won) {
+    stat('runs');
+    stat('floors climbed', run.stats.floors);
+    if (won) {
+      stat('wins');
+      earn('win');
+      if (rec.wins.knight && rec.wins.mage && rec.wins.ranger) earn('all-heroes');
+      if (run.deck.length <= 15) earn('lean-win');
+    }
+    if (run.daily) {
+      if (!run.abandoned) earn('daily');
+      if (won) earn('daily-win');
+      daily(res.summary.score, run.daily);
+    }
   }
 }
