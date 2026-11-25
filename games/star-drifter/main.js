@@ -13,10 +13,11 @@ import * as D from './logic/data.js';
 import { save, saveRun, loadRun } from './save.js';
 import { DEBUG } from './debug.js';
 import { initTrophies } from './trophies.js';
+import { installPad } from './padkit.js';
 
 initTrophies();
 
-startGame({ scenes: [Boot, Menu, MapScene, Combat, RunEnd], background: '#1c1618' });
+startGame({ scenes: [Boot, Menu, MapScene, Combat, RunEnd], background: '#1c1618' }).then(installPad);
 
 // Test hooks for the automated browser checks: only in dev, or with ?debug in the address.
 if (DEBUG) window.__sd = { R, C, S, B, D, save, saveRun, loadRun };

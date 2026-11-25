@@ -11,6 +11,7 @@ import { STAGES } from '../logic/stages.js';
 import { save } from '../save.js';
 import { skillLabel } from '../adaptive.js';
 import { openHelp } from './common.js';
+import { down, hit, stick, hideWhilePad } from '../padkit.js';
 import { musicOn, setMusicOn } from '../music.js';
 
 const { WIDTH, HEIGHT } = LANDSCAPE;
@@ -52,6 +53,10 @@ export class Hud extends Phaser.Scene {
     this.tweens.add({ targets: this.stageName, alpha: 0, delay: 1400, duration: 500 });
 
     this.setupInput();
+    // Controller: the menu frame only works in the pause menu; Start opens / closes it.
+    this.padNav = 'modal';
+    this.padStart = () => (this.modal ? this.modal.close() : this.pauseMenu());
+    hideWhilePad(this, [this.ctl, this.jumpLabel, this.shootLabel, this.swapIcon, this.swapLabel]);
     this.ready = true;
     this.refresh();
     // once you own a second weapon, point at the weapon button
@@ -144,6 +149,18 @@ export class Hud extends Phaser.Scene {
       out.d = out.d || k.DOWN.isDown || k.S.isDown;
       out.jump = out.jump || k.Z.isDown || k.K.isDown || k.SPACE.isDown;
       out.shoot = out.shoot || k.X.isDown || k.J.isDown;
+    }
+    // Controller: d-pad or stick, A jumps, B or X shoots (hold to charge), L / R swap weapons.
+    const s = stick();
+    out.l = out.l || s.x < -0.5; out.r = out.r || s.x > 0.5;
+    out.u = out.u || s.y < -0.5; out.d = out.d || s.y > 0.5;
+    out.jump = out.jump || down('a');
+    out.shoot = out.shoot || down('b') || down('x2');
+    const frame = this.game.loop.frame;
+    if (this.padFrame !== frame) {
+      this.padFrame = frame;
+      if (hit('l')) this.swapPress--;
+      if (hit('r')) this.swapPress++;
     }
     if (out.l && out.r) { out.l = false; out.r = false; }
     out.swap = Math.sign(this.swapPress);

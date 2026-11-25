@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { PALETTE, hex } from '../../../shared/core/palette.js';
 import { text } from '../../../shared/core/ui.js';
 import { WIDTH } from '../../../shared/core/boot.js';
-import { header, go, setBackground, toast, modal, holdButton, fitLine } from './common.js';
+import { header, go, setBackground, toast, modal, holdButton, fitLine, arcadePad } from './common.js';
 import { getBest, submitBest } from '../save.js';
 import { sfx } from '../../../shared/core/sfx.js';
 import { getSkill, tune, reportResult } from '../adaptive.js';
@@ -43,10 +43,12 @@ export class SpaceRocks extends Phaser.Scene {
     this.add.rectangle(WIDTH / 2, F.y + F.h + 1, WIDTH, 2, hex(PALETTE.indigo));
 
     const by = 584;
-    this.btnL = holdButton(this, 50, by, 76, 72, '<', { size: 32 });
-    this.btnR = holdButton(this, 134, by, 76, 72, '>', { size: 32 });
-    this.btnThrust = holdButton(this, 226, by, 76, 72, 'Go');
-    this.btnFire = holdButton(this, 310, by, 76, 72, 'Fire', { fill: PALETTE.gold });
+    // Controller: left / right turn, up or B thrusts, A or X fires.
+    this.btnL = holdButton(this, 50, by, 76, 72, '<', { size: 32, pad: ['left'] });
+    this.btnR = holdButton(this, 134, by, 76, 72, '>', { size: 32, pad: ['right'] });
+    this.btnThrust = holdButton(this, 226, by, 76, 72, 'Go', { pad: ['up', 'b'] });
+    this.btnFire = holdButton(this, 310, by, 76, 72, 'Fire', { fill: PALETTE.gold, pad: ['a', 'x2'] });
+    arcadePad(this);
 
     this.ship = { x: WIDTH / 2, y: F.y + F.h / 2, vx: 0, vy: 0, a: -Math.PI / 2, img: this.add.image(0, 0, 'rocks', 'player').setScale(3).setDepth(10), invuln: 2, alive: true };
     this.flame = this.add.image(0, 0, 'rocks', 'flame1').setScale(3).setDepth(9).setVisible(false);

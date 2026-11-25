@@ -9,6 +9,7 @@ import { dirToPitch } from '../logic/view.js';
 import { W, L } from '../logic/constants.js';
 import { applyResult, needsPens, matchData, QUIT_SCORE, isFriendly } from '../flow.js';
 import { save } from '../save.js';
+import { down, stick, hideWhilePad } from '../padkit.js';
 
 // Landscape layout (640x360): scoreboard bar with the mini-map inside it across the top, the
 // floating stick on the left edge, Shoot and Pass on the right edge.
@@ -57,6 +58,10 @@ export class Hud extends Phaser.Scene {
     this.hintBg = null;
 
     this.setupInput();
+    // Controller: the menu frame only works inside popups here; Start pauses; touch controls hide.
+    this.padNav = 'modal';
+    this.padStart = () => this.pause();
+    hideWhilePad(this, [this.controls, this.passLabel, this.shootLabel]);
     if (!this.resumeHooked) { this.resumeHooked = true; this.events.on('resume', () => this.resetTouches()); }
     this.refresh();
     if (!save.get('seenHelp')) {
@@ -124,6 +129,11 @@ export class Hud extends Phaser.Scene {
       pass = pass || k.X.isDown || k.J.isDown;
       shoot = shoot || k.SPACE.isDown || k.K.isDown;
     }
+    // Controller: stick or d-pad moves, A passes / tackles, B or X shoots (hold to charge).
+    const s = stick();
+    if (s.x || s.y) { const d = Math.hypot(s.x, s.y); const k = Math.min(1, d) / d; mx = s.x * k; my = s.y * k; }
+    pass = pass || down('a');
+    shoot = shoot || down('b') || down('x2');
     // Screen directions -> pitch directions (the pitch is drawn turned on its side).
     const d = dirToPitch(mx, my);
     return { mx: d.x, my: d.y, pass, shoot };

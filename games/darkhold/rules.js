@@ -12,6 +12,7 @@ export const RULES = {
         'Tap a monster that is further away to see what it is (and to shoot it).',
         'Everything takes turns: monsters only move when you do. The Wait button in the middle of the pad lets one turn pass. Rest waits until you are healed (it stops if a monster shows up).',
         'Find the stairs on each floor, step on them and tap Descend.',
+        'Controller: the d-pad steps (hold it to keep walking; it stops when something shows up). A picks up or descends where you stand, otherwise waits a turn. B searches, X fires, Y opens the bag, L rests, R shows your hero, Select the map and Start the pause menu. In menus the d-pad moves a gold frame, A picks and B goes back. The arrow pad hides while you use the controller.',
       ],
     },
     {

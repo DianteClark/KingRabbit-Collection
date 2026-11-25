@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { PALETTE, hex } from '../../../shared/core/palette.js';
 import { text } from '../../../shared/core/ui.js';
 import { WIDTH } from '../../../shared/core/boot.js';
-import { header, go, setBackground, toast, modal, holdButton, fitLine } from './common.js';
+import { header, go, setBackground, toast, modal, holdButton, fitLine, arcadePad } from './common.js';
 import { getBest, submitBest } from '../save.js';
 import { sfx } from '../../../shared/core/sfx.js';
 import { earn } from '../trophies.js';
@@ -58,12 +58,13 @@ export class Tanks extends Phaser.Scene {
 
     const cy = 548;
     this.pad = {
-      up: holdButton(this, 100, cy - 52, 60, 48, '^', { size: 32 }),
-      down: holdButton(this, 100, cy + 52, 60, 48, 'v', { size: 32 }),
-      left: holdButton(this, 36, cy, 60, 48, '<', { size: 32 }),
-      right: holdButton(this, 164, cy, 60, 48, '>', { size: 32 }),
+      up: holdButton(this, 100, cy - 52, 60, 48, '^', { size: 32, pad: ['up'] }),
+      down: holdButton(this, 100, cy + 52, 60, 48, 'v', { size: 32, pad: ['down'] }),
+      left: holdButton(this, 36, cy, 60, 48, '<', { size: 32, pad: ['left'] }),
+      right: holdButton(this, 164, cy, 60, 48, '>', { size: 32, pad: ['right'] }),
     };
-    this.fireBtn = holdButton(this, 286, cy, 112, 96, 'FIRE', { fill: PALETTE.red, color: PALETTE.cream });
+    this.fireBtn = holdButton(this, 286, cy, 112, 96, 'FIRE', { fill: PALETTE.red, color: PALETTE.cream, pad: ['a', 'b', 'x2'] });
+    arcadePad(this); // controller: d-pad drives, A / B / X fire
 
     this.score = 0; this.lives = 3; this.stage = 0; this.over = false; this.star = 0;
     this.loadStage(0);

@@ -10,6 +10,7 @@ import * as DATA from '../logic/data.js';
 import { SPECIES, ITEMS, STARTERS } from '../logic/data.js';
 import { TYPE_INFO } from '../logic/types.js';
 import { petName } from '../logic/pet.js';
+import { hit, stick, hideWhilePad } from '../padkit.js';
 import { partyPanel, bagPanel, dexPanel, shopPanel, boxPanel, blocking, closeAll } from './panels.js';
 
 const T = 32; // tile size on screen
@@ -72,6 +73,10 @@ export class World extends Phaser.Scene {
     this.input.on('gameout', () => { this.held = null; this.padFaces?.forEach((f) => f()); });
     this.input.keyboard?.on('keydown', (e) => this.onKey(e, true));
     this.input.keyboard?.on('keyup', (e) => this.onKey(e, false));
+    // Controller: the gold menu frame only works in popups (panels are HTML and always work).
+    this.padNav = 'modal';
+    this.padModalDepth = 7500;
+    this.padStart = () => this.openParty();
     window.__pets = { scene: this, G, state: st, tapTile: (x, y) => this.tapTile(x, y), say: () => this.advanceDialog(), data: { ...DATA, MAPS, LEADERS } };
 
     persist();
@@ -163,7 +168,7 @@ export class World extends Phaser.Scene {
     // off the arrows doesn't stop you. Lifting that finger (anywhere) stops walking.
     const PX = 72; const PY = 574;
     const pad = [['up', PX, PY - 44, '^'], ['left', PX - 46, PY, '<'], ['right', PX + 46, PY, '>'], ['down', PX, PY + 44, 'v']];
-    this.add.rectangle(PX, PY, 40, 40, hex(PALETTE.indigo)).setScrollFactor(0).setDepth(D);
+    const touchPad = [this.add.rectangle(PX, PY, 40, 40, hex(PALETTE.indigo)).setScrollFactor(0).setDepth(D)];
     const faces = {};
     for (const [dir, x, y, label] of pad) {
       const c = this.add.container(x, y).setScrollFactor(0).setDepth(D + 1);
@@ -172,6 +177,7 @@ export class World extends Phaser.Scene {
       const t = text(this, 0, -2, label, { size: 32, color: PALETTE.night });
       c.add([sh, face, t]);
       pin(c);
+      touchPad.push(c);
       faces[dir] = (on) => { face.y = on ? 2 : 0; t.y = on ? 0 : -2; face.setFillStyle(hex(on ? PALETTE.gold : PALETTE.lavender)); };
     }
     const showDir = (dir) => Object.entries(faces).forEach(([d, f]) => f(d === dir));
@@ -196,6 +202,9 @@ export class World extends Phaser.Scene {
       if (dir && dir !== this.held) { this.held = dir; showDir(dir); }
     });
     this.aBtn = fix(button(this, 178, 574, 56, 52, 'A', () => this.pressA(), { size: 32, fill: PALETTE.gold }));
+    this.aBtn.padSkip = true;
+    // The arrow pad and the A button hide while a controller is in use.
+    hideWhilePad(this, [...touchPad, this.aBtn]);
     fix(button(this, 296, 530, 116, 38, 'Pets', () => this.openParty(), { fill: PALETTE.cream }));
     fix(button(this, 296, 576, 116, 38, 'Bag', () => this.openBag(), { fill: PALETTE.cream }));
     fix(button(this, 296, 622, 116, 38, 'PetDex', () => { if (!this.canMenu()) return; dexPanel(this.state); }, { fill: PALETTE.cream }));
@@ -319,7 +328,20 @@ export class World extends Phaser.Scene {
 
   // ------------------------------------------------------------ movement
 
+  /** Controller: d-pad / stick walks, A talks or moves the dialogue on, X = bag, Select = PetDex. */
+  padInput() {
+    const s = stick();
+    const dir = Math.abs(s.x) > 0.5 || Math.abs(s.y) > 0.5 ? (Math.abs(s.x) > Math.abs(s.y) ? (s.x > 0 ? 'right' : 'left') : (s.y > 0 ? 'down' : 'up')) : null;
+    if (this.tamerWalk) { if (hit('a')) this.skipWalk = true; return; }
+    if (blocking() || modalOpen(this)) { if (this.padHeld) { this.held = null; this.padHeld = false; } return; }
+    if (dir && !this.dialog) { if (this.held !== dir) { this.held = dir; this.path = null; this.pending = null; } this.padHeld = true; } else if (this.padHeld) { this.held = null; this.padHeld = false; }
+    if (hit('a')) this.pressA();
+    else if (hit('x2')) this.openBag();
+    else if (hit('select')) { if (this.canMenu()) dexPanel(this.state); }
+  }
+
   update() {
+    this.padInput();
     if (this.player) this.cameraTo(false);
     if (this.busy || this.moving || this.dialog || blocking() || modalOpen(this)) return;
     if (this.path && this.path.length) {

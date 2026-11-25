@@ -8,7 +8,8 @@ import { MatchScene } from './scenes/MatchScene.js';
 import { Hud } from './scenes/Hud.js';
 import { Penalties } from './scenes/Penalties.js';
 import { initTrophies } from './trophies.js';
+import { installPad } from './padkit.js';
 
 initTrophies();
 
-startGame({ scenes: [Boot, Menu, Pick, Cup, Endless, MatchScene, Hud, Penalties], orientation: 'landscape' });
+startGame({ scenes: [Boot, Menu, Pick, Cup, Endless, MatchScene, Hud, Penalties], orientation: 'landscape' }).then(installPad);

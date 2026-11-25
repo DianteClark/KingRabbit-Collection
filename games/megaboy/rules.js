@@ -12,6 +12,7 @@ export const RULES = {
         'WPN (above JUMP) switches to your next weapon. The pause menu (<) lets you pick one directly.',
         'You can run, jump and shoot at the same time with two thumbs.',
         'Keyboard: arrows or WASD to move, Z, K or Space to jump, X or J to shoot, Q or E to change weapon, Esc to pause.',
+        'Controller: d-pad or stick to move, A to jump, B or X to shoot (hold to charge), L and R to change weapon, Start to pause. In menus the d-pad moves a gold frame, A picks and B goes back. The touch controls hide while you use the controller and come back when you touch the screen.',
       ],
     },
     {

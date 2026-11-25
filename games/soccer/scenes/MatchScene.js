@@ -46,6 +46,7 @@ export class MatchScene extends Phaser.Scene {
   }
 
   create() {
+    this.padNav = 'off'; // the Hud reads the controller
     document.body.style.background = '#3c8a2c';
     const cam = this.cameras.main;
     cam.setBackgroundColor('#4aa33a');

@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { PALETTE, hex } from '../../../shared/core/palette.js';
 import { text, button } from '../../../shared/core/ui.js';
 import { WIDTH } from '../../../shared/core/boot.js';
-import { header, go, setBackground, modal, swipeArea, toast, holdButton } from './common.js';
+import { header, go, setBackground, modal, swipeArea, toast, holdButton, arcadePad, hit, hideWhilePad } from './common.js';
 import { sfx } from '../../../shared/core/sfx.js';
 import { getBest, submitBest } from '../save.js';
 import { W, H, newGame, spawn, move, cycle, fall, hardDrop, lock, resolveOnce, fallDelay } from '../logic/columns.js';
@@ -45,11 +45,14 @@ export class SixBall extends Phaser.Scene {
     // Controls
     const by = 580;
     // Hold < or > to keep sliding (after a short pause, like a keyboard).
-    this.holdL = holdButton(this, 52, by, 76, 56, '<', { size: 32 });
-    this.holdR = holdButton(this, 220, by, 76, 56, '>', { size: 32 });
+    this.holdL = holdButton(this, 52, by, 76, 56, '<', { size: 32, pad: ['left'] });
+    this.holdR = holdButton(this, 220, by, 76, 56, '>', { size: 32, pad: ['right'] });
+    arcadePad(this); // controller: left / right slide, A or up turns, B or down drops
     this.repeat = 0;
-    button(this, 136, by, 76, 56, 'Turn', () => this.act('cycle'));
-    button(this, 306, by, 76, 56, 'Drop', () => this.act('drop'), { fill: PALETTE.gold });
+    hideWhilePad(this, [
+      button(this, 136, by, 76, 56, 'Turn', () => this.act('cycle')),
+      button(this, 306, by, 76, 56, 'Drop', () => this.act('drop'), { fill: PALETTE.gold }),
+    ]);
     swipeArea(this, { x: LEFT, y: TOP, w: W * CELL, h: H * CELL }, {
       onSwipe: (d) => this.act(d === 'down' ? 'drop' : d === 'up' ? 'cycle' : d),
       onTap: () => this.act('cycle'),
@@ -79,6 +82,8 @@ export class SixBall extends Phaser.Scene {
 
   update(_, ms) {
     if (!this.g || this.g.over || this.resolving) return;
+    if (hit('a') || hit('up') || hit('y2')) this.act('cycle');
+    else if (hit('b') || hit('down') || hit('x2')) this.act('drop');
     for (const [btn, dir] of [[this.holdL, 'left'], [this.holdR, 'right']]) {
       if (btn.wasPressed()) { this.act(dir); this.repeat = -170; continue; }
       if (btn.isDown) {

@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { PALETTE, hex } from '../../../shared/core/palette.js';
 import { text } from '../../../shared/core/ui.js';
 import { WIDTH } from '../../../shared/core/boot.js';
-import { header, go, setBackground, toast } from './common.js';
+import { header, go, setBackground, toast, arcadePad, stick } from './common.js';
 import { endGame } from './boardkit.js';
 import { sfx } from '../../../shared/core/sfx.js';
 import { earn } from '../trophies.js';
@@ -46,6 +46,7 @@ export class AirHockey extends Phaser.Scene {
     this.input.on('pointerdown', (p, over) => { if (!over.length) this.target = { x: p.x, y: p.y - 30 }; });
     this.input.on('pointermove', (p) => { if (p.isDown) this.target = { x: p.x, y: p.y - 30 }; });
 
+    arcadePad(this); // controller: the stick (or d-pad) slides your mallet
     this.scores = [0, 0];
     this.over = false;
     this.stuckT = 0;       // how long the puck has sat still against a wall on the CPU side
@@ -195,6 +196,14 @@ export class AirHockey extends Phaser.Scene {
   update(_, deltaMs) {
     if (this.over) return;
     const dt = Math.min(deltaMs / 1000, 1 / 30);
+    const s = stick();
+    if (s.x || s.y) {
+      // The stick pushes the mallet's target around your half of the rink.
+      this.target = {
+        x: Phaser.Math.Clamp(this.me.x + s.x * 90, R.x + MALLET_R, R.x + R.w - MALLET_R),
+        y: Phaser.Math.Clamp(this.me.y + s.y * 90, MID_Y + MALLET_R, R.y + R.h - MALLET_R),
+      };
+    }
     this.moveMallet(this.me, this.target.x, this.target.y, 1600, dt, MID_Y + MALLET_R, R.y + R.h - MALLET_R);
     this.cpuThink(dt);
     this.unstick(dt);

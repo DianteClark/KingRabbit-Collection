@@ -8,6 +8,7 @@ export const RULES = {
       heading: 'Getting around',
       items: [
         'Use the arrow pad, or tap any spot on the map to walk there.',
+        'Controller: d-pad or stick to walk, A to talk, read, open doors and move messages on, X for the Bag, Start for your Pets, Select for the PetDex. In menus and battles the d-pad moves a gold frame (or highlight), A picks and B goes back. The arrow pad hides while you use the controller.',
         'Tap a person, a sign or a door (or face it and press A) to talk, read or go inside.',
         'Wild pets hide in tall grass and on the gravel in caves.',
         'Tamers challenge you when you walk into their line of sight: they walk up to you (tap to hurry them).',
