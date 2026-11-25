@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { PALETTE, hex } from '../../../shared/core/palette.js';
 import { text, button, panel } from '../../../shared/core/ui.js';
-import { sfx } from '../../../shared/core/sfx.js';
+import { sfx, isMuted, setMuted } from '../../../shared/core/sfx.js';
 import { reportDaily } from '../../../shared/core/trophies.js';
 import {
   WIDTH, HEIGHT, store, go, modal, toast, setBackground, openHowTo, fit, money, tapZone, howToOpen, drawStar,
@@ -125,6 +125,7 @@ export class Play extends Phaser.Scene {
     this.pausingModal('Paused', [{ text: 'Your game is saved as you play.', color: PALETTE.lavender }], [
       ['Resume', null],
       ['Restart map', () => this.confirmRestart()],
+      [`Sound: ${isMuted() ? 'off' : 'on'}`, () => { setMuted(!isMuted()); sfx('tap'); this.pauseMenu(); }],
       [`Tips: ${tipsOn ? 'on' : 'off'}`, () => { save.set('tips', !tipsOn); if (tipsOn) this.endCoach(); toast(this, `Tips ${tipsOn ? 'off' : 'on'}`, TOP + 60); }],
       ['Quit to menu', () => { this.saveNow(); go(this, 'Menu'); }],
     ]);
@@ -520,7 +521,7 @@ export class Play extends Phaser.Scene {
     this.coachT = text(this, WIDTH / 2, TOP + 30, '', { wrap: WIDTH - 24, color: PALETTE.sand }).setDepth(31).setVisible(false);
     // Bouncing arrow: the container is moved to the target, the triangle inside bobs.
     this.coachArrow = this.add.container(0, 0).setDepth(31).setVisible(false);
-    const tri = this.add.triangle(0, 0, 0, 0, 16, 0, 8, 12, hex(PALETTE.gold)).setOrigin(0.5, 1).setStrokeStyle(2, hex(PALETTE.ink));
+    const tri = this.add.triangle(0, 0, 0, 0, 24, 0, 12, 18, hex(PALETTE.gold)).setOrigin(0.5, 1).setStrokeStyle(2, hex(PALETTE.ink));
     this.coachArrow.add(tri);
     this.tweens.add({ targets: tri, y: -6, yoyo: true, repeat: -1, duration: 300 });
   }
@@ -598,9 +599,9 @@ export class Play extends Phaser.Scene {
     this.tName = text(this, 12, BOTTOM + 20, '', { origin: [0, 0.5], color: PALETTE.gold });
     this.tKills = text(this, WIDTH - 12, BOTTOM + 20, '', { origin: [1, 0.5], color: PALETTE.lavender });
     this.tStats = text(this, 12, BOTTOM + 46, '', { origin: [0, 0.5], color: PALETTE.cream });
-    this.upBtn = button(this, 4 + 62, cy, 124, 44, 'Upgrade', () => this.tapUpgrade(), { fill: PALETTE.gold, silent: true });
-    this.aimBtn = button(this, 4 + 124 + 6 + 44, cy, 88, 44, 'First', () => this.tapAim(), { fill: PALETTE.lavender });
-    this.sellBtn = button(this, 4 + 124 + 6 + 88 + 6 + 42, cy, 84, 44, 'Sell', () => this.tapSell(), { fill: PALETTE.orange, silent: true });
+    this.upBtn = button(this, 4 + 58, cy, 116, 44, 'Upgrade', () => this.tapUpgrade(), { fill: PALETTE.gold, silent: true });
+    this.aimBtn = button(this, 4 + 116 + 4 + 48, cy, 96, 44, 'Aim First', () => this.tapAim(), { fill: PALETTE.lavender });
+    this.sellBtn = button(this, 4 + 116 + 4 + 96 + 4 + 42, cy, 84, 44, 'Sell', () => this.tapSell(), { fill: PALETTE.orange, silent: true });
     this.closeBtn = button(this, WIDTH - 26, cy, 44, 44, 'X', () => this.setMode('build'), { fill: PALETTE.cream });
     this.towerC.add([this.tName, this.tKills, this.tStats, this.upBtn, this.aimBtn, this.sellBtn, this.closeBtn]);
   }
@@ -675,7 +676,13 @@ export class Play extends Phaser.Scene {
       if (!p.ok) info = p.reason;
       else if (s.funds < cost) info = `Need ${cost - s.funds} more funds`;
     } else info = s.funds < cost ? `${d.name}: need ${cost - s.funds} more funds` : `${d.name}: tap a sand tile`;
-    if (this.placeInfo.text !== info) this.placeInfo.setText(info);
+    if (this.placeInfo.text !== info && this.placeInfoSrc !== info) {
+      // Two lines at most: drop the tower's name, then the description, until it fits.
+      this.placeInfoSrc = info;
+      this.placeInfo.setText(info);
+      if (this.placeInfo.height > 44 && info.startsWith(`${d.name}: `)) this.placeInfo.setText(info.slice(d.name.length + 2));
+      if (this.placeInfo.height > 44) this.placeInfo.setText(d.name);
+    }
     const ok = this.ghostCell && S.canPlace(s, ...this.ghostCell).ok && s.funds >= cost;
     const lbl = `Build ${cost}`;
     if (this.buildBtn.label.text !== lbl) this.buildBtn.setLabel(lbl);
@@ -759,15 +766,18 @@ export class Play extends Phaser.Scene {
     if (price == null) ul = 'Maxed';
     else if (t.level === 2) ul = 'Specialize';
     else ul = `Upgrade ${price}`;
-    if (this.upBtn.label.text !== ul) { this.upBtn.setLabel(ul); fit(this.upBtn.label, 114); }
+    if (this.upBtn.label.text !== ul) { this.upBtn.setLabel(ul); fit(this.upBtn.label, 106); }
     const cheapest = t.level === 2 ? Math.min(S.upgradePrice(s, t, 0), S.upgradePrice(s, t, 1)) : price;
     // Stays tappable when you can't afford it, so a tap can say how much more you need.
     this.upBtn.setEnabled(price != null);
     if (price != null) this.upBtn.setAlpha(s.funds >= cheapest ? 1 : 0.6);
-    const aim = TOWERS[t.type].money || st.pulse ? '-' : TARGET_NAMES[t.prio];
+    const aim = TOWERS[t.type].money || st.pulse ? '-' : `Aim ${TARGET_NAMES[t.prio]}`;
     if (this.aimBtn.label.text !== aim) this.aimBtn.setLabel(aim);
     this.aimBtn.setEnabled(aim !== '-');
-    const sl = `Sell ${S.sellValue(s, t)}`;
+    const armed = this.sellArmed && this.sellArmed.id === t.id && this.time.now < this.sellArmed.until;
+    const sl = armed ? `Sure? ${S.sellValue(s, t)}` : `Sell ${S.sellValue(s, t)}`;
+    this.sellBtn.body.setFillStyle(hex(armed ? PALETTE.red : PALETTE.orange));
+    this.sellBtn.label.setColor(armed ? PALETTE.cream : PALETTE.night);
     if (this.sellBtn.label.text !== sl) { this.sellBtn.setLabel(sl); fit(this.sellBtn.label, 76); }
   }
 
@@ -818,6 +828,14 @@ export class Play extends Phaser.Scene {
     const s = this.s;
     const t = S.towerById(s, this.selected);
     if (!t) return;
+    // Two taps to sell, so a stray tap never throws a tower away.
+    if (!this.sellArmed || this.sellArmed.id !== t.id || this.time.now > this.sellArmed.until) {
+      this.sellArmed = { id: t.id, until: this.time.now + 2500 };
+      sfx('select');
+      this.refreshTower();
+      return;
+    }
+    this.sellArmed = null;
     const value = S.sellValue(s, t);
     const r = S.sell(s, t.id);
     if (!r.ok) { sfx('error'); if (r.reason) toast(this, r.reason, BOTTOM - 30); return; }
@@ -925,28 +943,37 @@ export class Play extends Phaser.Scene {
   coach() {
     if (this.coachStep < 0) return;
     const s = this.s;
-    let msg = null; let arrow = null;
     const mg = this.palBtns.mg;
-    if (s.wave === 0) {
-      if (!s.towers.length) {
-        if (this.mode !== 'place') { msg = 'Welcome, commander! Tap the Machine Gun at the bottom.'; arrow = [mg.bg.x + 24, mg.bg.y - 10]; } else if (!this.ghostCell) msg = 'Tap a sand tile next to the road. The circle shows how far it shoots.';
-        else msg = 'Tap Build (or the same tile again) to build it there.';
-      } else if (s.towers.length < 3 && s.funds >= 50) msg = 'Nice! Build a couple more along the road.';
-      else { msg = 'Ready? Tap Send Wave.'; if (this.mode === 'build') arrow = [this.waveBtn.x, this.waveBtn.y - 22]; }
-    } else if (s.wave === 1 && s.nextIn == null) {
-      if (s.t < 14) msg = 'They follow the road to your base. Each one that gets in costs a life.';
-      else if (!this.coachSeen.selected) msg = 'Kills pay funds. Tap one of your towers to upgrade it.';
-      else if (this.mode === 'tower') msg = 'Upgrade makes it stronger. The aim button picks who it shoots first.';
-      else msg = 'Keep building and upgrading as funds come in.';
-    } else if (s.wave === 1 && s.nextIn != null) {
-      msg = s.enemies.length ? 'Next wave when the button timer ends. Send it early for bonus funds.' : 'Wave cleared! Send the next one early for bonus funds.';
-      if (this.mode === 'build') arrow = [this.waveBtn.x, this.waveBtn.y - 22];
-    } else { this.endCoach(); return; }
-    this.coachBg.setVisible(!!msg);
-    this.coachT.setVisible(!!msg);
-    if (msg && this.coachT.text !== msg) this.coachT.setText(msg);
-    this.coachArrow.setVisible(!!arrow);
-    if (arrow) this.coachArrow.setPosition(arrow[0], arrow[1]);
+    const waveArrow = this.mode === 'build' ? [this.waveBtn.x, this.waveBtn.y - 22] : null;
+    // Steps move forward as you do each thing; a step never goes back.
+    const steps = [
+      { msg: 'Welcome, commander! Tap the Machine Gun at the bottom.', arrow: [mg.bg.x + 24, mg.bg.y - 4], done: () => this.mode === 'place' || s.towers.length },
+      { msg: 'Tap a sand tile next to the road. The circle shows how far it shoots.', done: () => this.ghostCell || s.towers.length },
+      { msg: 'Tap Build (or the same tile again) to build it there.', done: () => s.towers.length },
+      { msg: 'Nice! Build a couple more along the road.', done: () => s.towers.length >= 3 || s.funds < 50 || s.wave > 0 },
+      { msg: 'Ready? Tap Send Wave.', arrow: waveArrow, done: () => s.wave > 0 },
+      { msg: 'They follow the road to your base. Each one that gets in costs a life.', done: () => s.t - (this.coachAt || 0) > 6 },
+      { msg: 'Kills pay funds. Tap one of your towers to upgrade it.', done: () => this.mode === 'tower' },
+      { msg: 'Upgrade makes it stronger. The aim button picks who it shoots first.', done: () => this.mode !== 'tower' || s.towers.some((t) => t.level > 0) },
+      { msg: 'After each wave a timer runs on the button. Send the next wave early for bonus funds!', arrow: S.canCall(s) ? waveArrow : null, done: () => s.wave >= 2 },
+    ];
+    while (this.coachStep < steps.length && steps[this.coachStep].done()) {
+      this.coachStep++;
+      this.coachAt = s.t;
+    }
+    if (this.coachStep >= steps.length) { this.endCoach(); return; }
+    const st = steps[this.coachStep];
+    this.coachBg.setVisible(true);
+    this.coachT.setVisible(true);
+    if (this.coachT.text !== st.msg) {
+      this.coachT.setText(st.msg);
+      const h = this.coachT.height + 14;
+      this.coachBg.height = h;
+      this.coachBg.setSize(WIDTH - 8, h);
+      this.coachT.setY(TOP + 4 + h / 2);
+    }
+    this.coachArrow.setVisible(!!st.arrow);
+    if (st.arrow) this.coachArrow.setPosition(st.arrow[0], st.arrow[1]);
   }
 
   endCoach() {
@@ -1013,6 +1040,9 @@ export class Play extends Phaser.Scene {
       c = campaign();
     }
     if (s.mode === 'campaign' && !s.hard) reportResult(win ? 1 : 0, win ? s.lives / s.maxLives : 1 - s.wave / s.totalWaves);
+    // Record daily and endless results straight away (the result card shows a moment later).
+    if (s.mode === 'daily') this.dailyResult = { score: S.dailyScore(s), ...reportDaily(GAME_ID, S.dailyScore(s)) };
+    if (s.mode === 'endless') this.endlessBest = recordEndless(s.mapId, S.wavesCleared(s));
     checkEnd(s, c.stars);
     this.time.delayedCall(win ? 700 : 900, () => this.resultModal(c));
     sfx(win ? 'win' : 'lose');
@@ -1025,15 +1055,15 @@ export class Play extends Phaser.Scene {
     const lines = [];
     let buttons;
     if (s.mode === 'daily') {
-      const score = S.dailyScore(s);
-      const r = reportDaily(GAME_ID, score);
+      const r = this.dailyResult;
+      const { score } = r;
       lines.push(win ? `You held all ${s.totalWaves} waves with ${s.lives} lives left.` : `The base fell on wave ${s.wave}.`);
       lines.push({ text: `Score ${score}${r.isBest ? '  (best today!)' : `  (best ${r.best})`}`, color: PALETTE.gold });
       lines.push({ text: `Daily streak: ${r.streak} day${r.streak === 1 ? '' : 's'}. New map tomorrow.`, color: PALETTE.lavender });
       buttons = [['Try again', () => this.restart()], ['Menu', () => go(this, 'Menu')]];
     } else if (s.mode === 'endless') {
       const held = S.wavesCleared(s);
-      const best = recordEndless(s.mapId, held);
+      const best = this.endlessBest;
       lines.push(`You held ${held} wave${held === 1 ? '' : 's'}.`);
       lines.push({ text: best ? 'A new best for this map!' : `Best: ${campaign().endless[s.mapId] || held}`, color: PALETTE.gold });
       buttons = [['Again', () => this.restart()], ['Menu', () => go(this, 'Menu', { view: 'campaign' })]];
