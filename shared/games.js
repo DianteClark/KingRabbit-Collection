@@ -30,8 +30,8 @@ export const GAMES = [
   { id: 'town-builder', title: 'Tiny Town Builder', tagline: 'Zone, build and grow a little city', cat: 'sim', status: 'playable' },
   { id: 'mini-golf', title: 'Mini Golf', tagline: '27 holes, one thumb', cat: 'classic', status: 'playable' },
   { id: 'hearth-valley', title: 'Hearth Valley', tagline: 'Farm, fish and make friends', cat: 'sim', status: 'playable' },
+  { id: 'sand-siege', title: 'Sand Siege', tagline: 'Desert tower defense', cat: 'strategy', status: 'playable' },
   // In development
-  { id: 'sand-siege', title: 'Sand Siege', tagline: 'Desert tower defense', cat: 'strategy', status: 'soon' },
   { id: 'racers', title: 'Tiny Town Racers', tagline: 'Drift through the city streets', cat: 'action', status: 'soon', landscape: true },
   { id: 'gem-quest', title: 'Gem Quest', tagline: 'Match gems, power your hero', cat: 'classic', status: 'soon' },
   { id: 'pixel-quest', title: 'Pixel Quest', tagline: 'A classic party RPG', cat: 'adventure', status: 'soon' },

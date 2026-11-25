@@ -52,6 +52,8 @@ export function button(scene, x, y, w, h, label, onTap, {
   });
   c.setLabel = (s) => { lbl.setText(s); return c; };
   c.setEnabled = (on) => { enabled = on; c.setAlpha(on ? 1 : 0.45); return c; };
+  // Looks disabled but still takes taps, so the game can say why the action isn't available.
+  c.setDim = (on) => { enabled = true; c.setAlpha(on ? 0.45 : 1); return c; };
   return c;
 }
 

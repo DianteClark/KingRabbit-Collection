@@ -22,6 +22,7 @@ Aleksandr Makarov's (iknowkingrabbit) pixel-art packs.
 | Tiny Town Builder: calm city builder (see docs/games/town-builder.md) | Playable | [/town-builder/](https://dianteclark.github.io/KingRabbit-Collection/town-builder/) |
 | Mini Golf: one-thumb mini golf (see docs/games/mini-golf.md) | Playable | [/mini-golf/](https://dianteclark.github.io/KingRabbit-Collection/mini-golf/) |
 | Hearth Valley: farming and life sim (see docs/games/hearth-valley.md) | Playable | [/hearth-valley/](https://dianteclark.github.io/KingRabbit-Collection/hearth-valley/) |
+| Sand Siege: desert tower defense (see docs/games/sand-siege.md) | Playable | [/sand-siege/](https://dianteclark.github.io/KingRabbit-Collection/sand-siege/) |
 | City Chief: run the police force of Tiny Town (see docs/games/city-chief.md) | Playable | [/city-chief/](https://dianteclark.github.io/KingRabbit-Collection/city-chief/) |
 | Pocket Soccer: 5-a-side arcade football (see docs/games/soccer.md) | Playable | [/soccer/](https://dianteclark.github.io/KingRabbit-Collection/soccer/) |
 
