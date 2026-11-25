@@ -503,6 +503,13 @@ export class Battle extends Phaser.Scene {
     const res = B.finish(b);
     st.battles++;
     const s = this.setup;
+    if (b.over === 'win' && !b.defeated.length) {
+      // Everything ran away (a Gold Ooze, say): no victory fanfare.
+      await this.waitTap(this.b.foes.length === 1 ? `The ${this.b.foes[0].d.name} got away...` : 'The monsters got away...');
+      persist();
+      go(this, 'World', { after: {} });
+      return;
+    }
     if (b.over === 'win') {
       playMusic(null);
       jingle('victory');
@@ -531,7 +538,8 @@ export class Battle extends Phaser.Scene {
     await this.waitTap('The party has fallen...');
     const { lost } = G.applyWipe(st);
     persist();
-    const lines = [lost ? `You wake up at the inn. You lost ${lost} gold.` : 'You wake up at the inn, safe and sound.'];
+    const where = G.MAPS[st.lastInn.map]?.name || 'town';
+    const lines = [lost ? `You wake up in ${where}. You lost ${lost} gold.` : `You wake up in ${where}, safe and sound.`];
     if (s.boss) lines.push('Train a little, buy better gear, then try again!');
     modal(this, 'Defeat', [lines[0]], [['Wake up', () => go(this, 'World', { after: { lines, wiped: true } })]]);
   }
