@@ -12,6 +12,7 @@ export const RULES = {
         'Your shield is always up: face a thrown rock and it bounces off (not while swinging).',
         'Walk into a block for a moment to push it. Walk into a locked door with a key to open it.',
         'Keyboard: arrows or WASD to walk, Space or J for the sword, K or X for the item, Q to swap.',
+        'Controller: stick or d-pad to walk, A for the sword (and to talk, read, open and move conversations on), B or X for the item, Y, L or R to swap, Start to pause. In menus the d-pad moves a gold frame, A picks and B goes back. The stick and buttons hide while you use the controller and come back when you touch the screen.',
       ],
     },
     {
