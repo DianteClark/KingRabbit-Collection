@@ -9,6 +9,7 @@ import * as D from '../logic/data.js';
 import { MAPS, tileAt, buildingAt, doorOf } from '../logic/maps.js';
 import { TUTORIAL } from '../logic/game.js';
 import { playMusic, jingle, swish } from '../music.js';
+import { hit, stick, hideWhilePad } from '../../../shared/core/padkit.js';
 import {
   blocking, closeAll, usePanelScene, bagPanel, shipPanel, shopPanel, craftPanel, boardPanel, letterPanel,
   friendsPanel, pickItemPanel, menuPanel, summaryPanel, animalPanel, weatherText,
@@ -70,6 +71,9 @@ export class World extends Phaser.Scene {
     this.input.on('gameout', () => { this.held = null; this.showDir?.(null); });
     this.input.keyboard?.on('keydown', (e) => this.onKey(e, true));
     this.input.keyboard?.on('keyup', (e) => this.onKey(e, false));
+    // Controller: the gold menu frame only works in popups (the panels are HTML and always work).
+    this.padNav = 'modal';
+    this.padStart = () => this.openMenu();
 
     const away = () => { if (document.visibilityState === 'hidden') persist(); };
     document.addEventListener('visibilitychange', away);
@@ -370,7 +374,7 @@ export class World extends Phaser.Scene {
 
     // thumb pad (one big zone, direction from the thumb's position), like Pocket Pets
     const pad = [['up', PAD.x, PAD.y - 44, '^'], ['left', PAD.x - 46, PAD.y, '<'], ['right', PAD.x + 46, PAD.y, '>'], ['down', PAD.x, PAD.y + 44, 'v']];
-    this.add.rectangle(PAD.x, PAD.y, 40, 40, hex(PALETTE.indigo)).setScrollFactor(0).setDepth(D0);
+    const touchPad = [this.add.rectangle(PAD.x, PAD.y, 40, 40, hex(PALETTE.indigo)).setScrollFactor(0).setDepth(D0)];
     const faces = {};
     for (const [dir, x, y, label] of pad) {
       const c = this.add.container(x, y).setScrollFactor(0).setDepth(D0 + 1);
@@ -379,6 +383,7 @@ export class World extends Phaser.Scene {
       const t = text(this, 0, -2, label, { size: 32, color: PALETTE.night });
       c.add([sh, face, t]);
       pin(c);
+      touchPad.push(c);
       faces[dir] = (on) => { face.y = on ? 2 : 0; t.y = on ? 0 : -2; face.setFillStyle(hex(on ? PALETTE.gold : PALETTE.lavender)); };
     }
     this.showDir = (dir) => Object.entries(faces).forEach(([d, f]) => f(d === dir));
@@ -403,6 +408,8 @@ export class World extends Phaser.Scene {
     });
 
     this.aBtn = fix(button(this, 182, 556, 64, 54, 'A', () => this.pressA(), { size: 32, fill: PALETTE.gold, silent: true }));
+    // The thumb pad and the A button hide while a controller is in use (back on the next touch).
+    hideWhilePad(this, [...touchPad, this.aBtn]);
     // energy and health
     this.energyBar = fix(this.add.graphics());
     this.eLabel = fix(text(this, 148, 604, 'E', { color: PALETTE.cream }));
@@ -615,8 +622,36 @@ export class World extends Phaser.Scene {
 
   // ------------------------------------------------------------ movement and the clock
 
+  /**
+   * Controller: d-pad / stick walks, A uses the tool or talks (and moves messages on), B stops a
+   * walk, L / R cycle the tool bar, X opens the Bag, Y opens Craft, Start opens the Menu.
+   */
+  padInput() {
+    const ps = stick();
+    const dir = Math.abs(ps.x) > 0.5 || Math.abs(ps.y) > 0.5 ? (Math.abs(ps.x) > Math.abs(ps.y) ? (ps.x > 0 ? 'right' : 'left') : (ps.y > 0 ? 'down' : 'up')) : null;
+    if (blocking() || modalOpen(this)) { if (this.padHeld) { this.held = null; this.padHeld = false; } return; }
+    if (this.dialog) { if (hit('a') || hit('b')) this.advanceDialog(); return; }
+    if (dir && !this.busy) { if (this.held !== dir) { this.held = dir; this.path = null; this.pending = null; } this.padHeld = true; } else if (this.padHeld) { this.held = null; this.padHeld = false; }
+    if (hit('a')) this.pressA();
+    else if (hit('b')) { this.path = null; this.pending = null; }
+    else if (hit('l') || hit('r')) this.cycleSlot(hit('r') ? 1 : -1);
+    else if (hit('x2')) this.openBag();
+    else if (hit('y2')) this.openCraft();
+  }
+
+  /** Next / previous tool-bar slot, skipping empty hand slots. */
+  cycleSlot(d) {
+    const s = this.s;
+    let i = s.slot;
+    for (let k = 0; k < 8; k++) {
+      i = (i + d + 8) % 8;
+      if (i < 6 || (s.hand[i - 6] && s.inv[s.hand[i - 6]])) { this.selectSlot(i); return; }
+    }
+  }
+
   update(time, delta) {
     if (!this.s || !this.player) return;
+    this.padInput();
     this.cameraTo(false);
     this.animate(delta);
     const paused = this.busy || this.dialog || blocking() || modalOpen(this) || !!document.getElementById('howto');
