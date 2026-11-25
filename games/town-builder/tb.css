@@ -4,7 +4,7 @@
   position: fixed; inset: 0; z-index: 80;
   background: rgba(4, 3, 3, 0.55);
   display: flex; align-items: flex-end; justify-content: center;
-  padding: max(10px, env(safe-area-inset-top)) 8px max(10px, env(safe-area-inset-bottom));
+  padding: max(10px, env(safe-area-inset-top)) 8px max(55px, env(safe-area-inset-bottom));
   touch-action: auto;
 }
 .tb-wrap.center { align-items: center; }

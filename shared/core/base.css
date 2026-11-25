@@ -40,7 +40,27 @@ html, body {
 
 /* Game pages: the canvas fills the screen and never scrolls. */
 body.game { overflow: hidden; touch-action: none; }
-#game { position: fixed; inset: 0; }
+/* The game area stays inside the iPhone's safe area (notch / Dynamic Island, rounded corners and
+   home bar). --app-h is the height the phone really shows, measured in boot.js, because iOS
+   Home Screen apps can report a viewport taller than the screen. */
+:root {
+  --safe-t: env(safe-area-inset-top, 0px);
+  --safe-r: env(safe-area-inset-right, 0px);
+  --safe-b: env(safe-area-inset-bottom, 0px);
+  --safe-l: env(safe-area-inset-left, 0px);
+  --app-h: 100dvh;
+}
+/* Portrait: keep about 55px clear above the bottom edge (home bar and its swipe zone). */
+body.game { --gap-t: var(--safe-t); --gap-b: max(var(--safe-b), 55px); }
+/* Landscape: the home bar is shorter, but leave thumb room beyond it. */
+body.game.landscape { --gap-t: max(var(--safe-t), 4px); --gap-b: max(calc(var(--safe-b) + 6px), 14px); }
+#game {
+  position: fixed;
+  top: var(--gap-t);
+  left: var(--safe-l);
+  right: var(--safe-r);
+  height: calc(var(--app-h) - var(--gap-t) - var(--gap-b));
+}
 #game canvas { image-rendering: pixelated; }
 
 /* Shown whenever a phone is held sideways. */
@@ -88,7 +108,7 @@ body.landscape #rotate .phone { animation-name: tilt-side; }
   position: fixed; inset: 0; z-index: 90;
   background: rgba(4, 3, 3, 0.75);
   display: flex; align-items: center; justify-content: center;
-  padding: max(16px, env(safe-area-inset-top)) 12px max(16px, env(safe-area-inset-bottom));
+  padding: max(16px, env(safe-area-inset-top)) 12px max(55px, env(safe-area-inset-bottom));
   touch-action: auto;
 }
 #howto .sheet {

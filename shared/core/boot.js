@@ -48,11 +48,37 @@ export async function startGame({ scenes, background = PALETTE.night, orientatio
   game.events.once('ready', sync);
   sync();
 
+  trackViewport(game);
   watchFirstScreen(game);
   registerOffline();
   tryOrientationLock(land ? 'landscape' : 'portrait');
   window.__game = game; // handy for debugging in the browser console
   return game;
+}
+
+/**
+ * Size the game area to the height the phone really shows and re-fit the canvas whenever it
+ * changes. iOS reports sizes late after a rotation, so check again a few times.
+ */
+function trackViewport(game) {
+  const root = document.documentElement;
+  const measure = () => {
+    const vv = window.visualViewport;
+    const h = Math.round(Math.min(window.innerHeight, vv ? vv.height : Infinity, root.clientHeight || Infinity));
+    if (h > 0) root.style.setProperty('--app-h', `${h}px`);
+    game.scale?.refresh();
+  };
+  let timers = [];
+  const soon = () => {
+    timers.forEach(clearTimeout);
+    measure();
+    timers = [100, 300, 700, 1500].map((ms) => setTimeout(measure, ms));
+  };
+  ['resize', 'orientationchange', 'pageshow'].forEach((e) => window.addEventListener(e, soon));
+  window.visualViewport?.addEventListener('resize', soon);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) soon(); });
+  game.events.once('ready', soon);
+  soon();
 }
 
 function addRotateOverlay(land) {
