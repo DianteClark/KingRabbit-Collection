@@ -346,6 +346,8 @@ export function useTool(s, tool, x, y) {
   if (!m || !inBounds(m, x, y)) return { ok: false };
   const o = objAt(s, s.map, x, y);
   const t = s.map === 'mine' ? m.tiles[y][x] : tileAt(m, x, y);
+  const dead = soilAt(s, s.map, x, y);
+  if (dead?.crop?.dead && tool !== 'can' && tool !== 'rod') { dead.crop = null; return { ok: true, fx: 'cut' }; }
 
   if (tool === 'can') {
     if (t === '~') {
@@ -441,7 +443,7 @@ export function useItem(s, id, x, y) {
   const so = soilAt(s, s.map, x, y);
   if (it.kind === 'seed') {
     if (!so) return { ok: false, msg: s.map === 'farm' ? 'Till the soil with the Hoe first.' : 'Plant seeds on your farm.' };
-    if (so.crop) return { ok: false, msg: 'Something is already growing here.' };
+    if (so.crop) return { ok: false, msg: so.crop.dead ? 'Clear the dead plant with a tool first.' : 'Something is already growing here.' };
     const c = CROPS[it.crop];
     if (!c.seasons.includes(s.season)) return { ok: false, msg: `${c.name} only grows in ${c.seasons.map((q) => D.SEASONS[q]).join(' and ')}.` };
     take(s, id);
@@ -1180,6 +1182,24 @@ export function starExchange(s, item) {
 }
 
 // ---------------------------------------------------------------- summaries for the UI
+
+/** A short, useful nudge for the task line once the tutorial is done (or null). */
+export function hint(s) {
+  if (s.map === 'farm') {
+    const dry = Object.values(s.soil).filter((so) => so.crop && !so.crop.dead && !so.wet && cropStage(so.crop) !== 'ready').length;
+    const ripe = Object.values(s.soil).filter((so) => so.crop && cropStage(so.crop) === 'ready').length;
+    if (ripe) return `${ripe} crop${ripe > 1 ? 's are' : ' is'} ready to harvest`;
+    if (dry && s.time < 20 * 60) return `${dry} crop${dry > 1 ? 's need' : ' needs'} water today`;
+    if (unread(s)) return 'You have mail!';
+    const hungry = s.animals.filter((a) => s.troughs[D.ANIMALS[a.kind].home] < s.animals.filter((b) => b.kind === a.kind).length).length;
+    if (hungry) return 'Put hay in the trough for your animals';
+    const pat = s.animals.filter((a) => !a.petted || a.product).length;
+    if (pat) return 'Your animals would love a pat';
+  }
+  if (mineUnlocked(s) && !s.mineDeepest && dayIndex(s) < 14) return 'The old mine in Whisperwood is open';
+  if (dayIndex(s) < 3 && s.map === 'farm') return 'Goal: fill the bundles on the town board';
+  return null;
+}
 
 export function goalText(s) {
   if (s.hallRestored) return 'The town hall is restored!';

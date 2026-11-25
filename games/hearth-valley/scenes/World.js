@@ -407,9 +407,9 @@ export class World extends Phaser.Scene {
     this.energyBar = fix(this.add.graphics());
     this.eLabel = fix(text(this, 148, 604, 'E', { color: PALETTE.cream }));
     this.hpLabel = fix(text(this, 148, 624, 'HP', { color: PALETTE.cream })).setVisible(false);
-    fix(button(this, 298, 526, 112, 42, 'Bag', () => this.openBag(), { fill: PALETTE.cream }));
-    fix(button(this, 298, 574, 112, 42, 'Craft', () => this.openCraft(), { fill: PALETTE.cream }));
-    this.menuBtn = fix(button(this, 298, 622, 112, 36, 'Menu', () => this.openMenu(), { fill: PALETTE.lavender }));
+    fix(button(this, 298, 526, 112, 40, 'Bag', () => this.openBag(), { fill: PALETTE.cream }));
+    fix(button(this, 298, 573, 112, 40, 'Craft', () => this.openCraft(), { fill: PALETTE.cream }));
+    this.menuBtn = fix(button(this, 298, 618, 112, 38, 'Menu', () => this.openMenu(), { fill: PALETTE.lavender }));
     this.refreshHud();
   }
 
@@ -457,6 +457,8 @@ export class World extends Phaser.Scene {
     if (this.hunt) msg = `Eggs: ${this.hunt.got}/${this.hunt.total}   Time: ${Math.ceil(this.hunt.left)}s`;
     else if (!msg && G.festivalOpen(s) && s.map !== 'town') msg = `${G.festivalToday(s).name} in town until 2pm!`;
     else if (!msg && s.map === 'mine') msg = s.mine.ladderOpen ? 'The ladder down is open!' : 'Find the ladder under a rock';
+    else if (!msg && G.festivalOpen(s) && s.map === 'town') msg = `${G.festivalToday(s).name}: talk to Mayor Alder to join`;
+    else if (!msg) msg = G.hint(s) || '';
     this.taskText.setText(msg);
     fit(this.taskText, WIDTH - 16);
     this.taskBg.setVisible(!!msg && !this.dialog);
@@ -672,6 +674,7 @@ export class World extends Phaser.Scene {
     // machines finishing
     if (s.map === 'farm') for (const [k, o] of Object.entries(s.objs.farm)) if (o.job && G.absMin(s) >= o.job.ready && !o.shown) { o.shown = true; this.drawTile(k); }
     if (wasFest && !G.festivalOpen(s) && s.map === 'town') toast(this, 'The festival is over for today.');
+    if (!wasFest && G.festivalOpen(s) && s.map === 'town') this.festivalPrompt();
     if (r.midnight) toast(this, "It's midnight! Head home to bed.", { color: PALETTE.gold, ms: 2500 });
     if (s.time === 23 * 60) toast(this, "It's getting late...", { ms: 2000 });
     if (r.passOut) this.passOut();
@@ -1163,6 +1166,7 @@ export class World extends Phaser.Scene {
 
   talkTo(id) {
     const s = this.s;
+    if (id === 'alder' && G.festivalOpen(s) && s.map === 'town') { this.festivalPrompt(); return; }
     const spr = this.npcSprites.get(id);
     const v = D.VILLAGERS[id];
     const before = G.hearts(s, id);
@@ -1265,7 +1269,7 @@ export class World extends Phaser.Scene {
     this.music();
     modal(this, f.name, [f.blurb, 'Joining ends your day after the festival.'], [
       ['Join in!', () => this.startFestival(f)],
-      ['Not yet', () => toast(this, 'Come back before 2pm to join.')],
+      ['Not yet', () => toast(this, 'Talk to Mayor Alder before 2pm to join.', { ms: 2400 })],
     ]);
   }
 

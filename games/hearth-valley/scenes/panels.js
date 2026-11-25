@@ -149,7 +149,7 @@ export function shopPanel(s, shopId, { onChange, onAnimal } = {}) {
       html = sh.stock(s).map((l) => {
         const it = D.ITEMS[l.id];
         const crop = it.kind === 'seed' ? D.CROPS[it.crop] : null;
-        const note = crop ? `${crop.days} days${crop.regrow ? `, fruits every ${crop.regrow}` : ''}. Sells ${D.ITEMS[it.crop].price}g` : it.energy ? `+${it.energy} energy` : it.kind === 'fertilizer' ? 'Crops grow faster' : '';
+        const note = crop ? `${crop.days} days${crop.regrow ? `, regrows ${crop.regrow}` : ''}. Sells ${D.ITEMS[it.crop].price}g` : it.energy ? `+${it.energy} energy` : it.kind === 'fertilizer' ? 'Crops grow faster' : '';
         return `<div class="hv-row">${itemIcon(l.id)}<div class="grow"><div class="line"><span class="name">${esc(it.name)}</span><span class="meta">${l.price}g</span></div><div class="note">${esc(note)}${s.inv[l.id] ? ` (have ${s.inv[l.id]})` : ''}</div></div>
           <button class="hv-btn small" data-act="buy" data-id="${l.id}" data-n="1" ${s.gold < l.price ? 'disabled' : ''}>Buy</button>
           <button class="hv-btn small gold" data-act="buy" data-id="${l.id}" data-n="5" ${s.gold < l.price * 5 ? 'disabled' : ''}>x5</button></div>`;
