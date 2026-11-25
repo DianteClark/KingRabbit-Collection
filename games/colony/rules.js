@@ -15,7 +15,7 @@ export const RULES = {
       heading: 'Giving orders',
       items: [
         'Settlers decide what to do on their own. You mark the work and they get to it.',
-        'Orders: Chop trees for wood, Mine rock for stone and ore for metal, Harvest berry bushes and herbs, Hunt animals for meat and leather. Cancel removes orders and unbuilt blueprints.',
+        'Orders: Chop trees for wood, Mine rock for stone and ore for metal, Pick berry bushes and herbs (they regrow), Hunt animals for meat and leather. Cancel removes orders and unbuilt blueprints.',
         'Zones: a Stockpile is where settlers bring things. Farm plots grow corn from spring to fall.',
         'Build: walls, doors, beds, a campfire (then a stove), a workbench, storage crates and the radio. Settlers fetch the materials themselves.',
         'Craft: at a workbench, queue tools (work faster), spears and bows (fight better), parkas (stay warm) and medicine.',
