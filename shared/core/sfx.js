@@ -107,6 +107,7 @@ const SOUNDS = {
   strike: () => { noise(0.4, { vol: 0.18, lowpass: 2500 }); SOUNDS.win(); },
   pins: () => noise(0.3, { vol: 0.14, lowpass: 2000 }),
   thud: () => tone([160, 60], 0.12, { type: 'sine', vol: 0.15 }),
+  levelup: () => [523, 784, 1047, 1568].forEach((f, k) => tone(f, 0.1, { vol: 0.06, delay: k * 0.07, type: 'triangle' })),
 };
 
 export function sfx(name) {
