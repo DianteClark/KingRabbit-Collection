@@ -13,6 +13,10 @@ import { store } from '../store.js';
 import { CARS } from './Boot.js';
 import * as P from './panels.js';
 import { createBot, botStep } from '../logic/bot.js';
+import { earn, stat } from '../trophies.js';
+
+const MILESTONE_TROPHY = [null, 'village', 'town', 'city', 'metropolis'];
+const LANDMARKS = Object.keys(PLACE).filter((k) => PLACE[k].landmark);
 
 const VIEW = { y: 72, h: 468 };
 const INFO_Y = 540;
@@ -355,6 +359,12 @@ export class Game extends Phaser.Scene {
       this.ghost.setVisible(false); this.preview.clear();
       if (res.ok) {
         sfx('place');
+        stat('buildings placed');
+        if (PLACE[this.tool].landmark) {
+          earn('landmark');
+          if (this.tool === 'airport') earn('airport');
+          if (LANDMARKS.every((k) => S.landmarkBuilt(this.s, k))) earn('all-landmarks');
+        }
         this.puff(x, y, w, h);
         this.afterChange(`${PLACE[this.tool].name} built for ${P.money(res.cost)}`);
         if (PLACE[this.tool].landmark && !['university'].includes(this.tool)) this.selectTool('look', 'look');
@@ -878,13 +888,18 @@ export class Game extends Phaser.Scene {
           if (e.kind === 'grow' && this.time.now - this.lastGrowSfx > 4000) { this.lastGrowSfx = this.time.now; sfx('bounce'); }
           break;
         case 'wreck': changed = true; this.dust(e); break;
-        case 'month': this.saveDue = true; changed = true; break;
-        case 'milestone': this.save(); P.showMilestone(this, e); this.refreshTrayIfOpen(); break;
+        case 'month':
+          this.saveDue = true; changed = true;
+          stat('months played');
+          if (this.s.happy >= 85 && this.s.pop >= 1000) earn('cheerful');
+          if (this.s.money >= 100000) earn('rich');
+          break;
+        case 'milestone': if (MILESTONE_TROPHY[e.ms]) earn(MILESTONE_TROPHY[e.ms]); this.save(); P.showMilestone(this, e); this.refreshTrayIfOpen(); break;
         case 'advice': break;
         case 'disaster': this.onDisaster(e); break;
         case 'impact': sfx('boom'); this.cameras.main.shake(300, 0.01); this.impactFx(e); changed = true; break;
-        case 'fireOut': sfx('coin'); changed = true; break;
-        case 'ufoDown': sfx('hit'); this.toast(e.text); this.ufoDownFx(e); break;
+        case 'fireOut': sfx('coin'); earn('firefighter'); stat('fires put out'); changed = true; break;
+        case 'ufoDown': earn('ufo'); sfx('hit'); this.toast(e.text); this.ufoDownFx(e); break;
         case 'disasterOver': break;
         case 'win': case 'lose': this.onResult(e); break;
         default: break;
@@ -903,6 +918,7 @@ export class Game extends Phaser.Scene {
   onResult(e) {
     const s = this.s;
     if (e.kind === 'win') {
+      if (['first', 'debtfree', 'clean'].includes(s.mode)) earn(s.mode);
       const best = store.get('best') || {};
       const months = Math.floor(s.t);
       if (!best[s.mode] || best[s.mode].months > months) { best[s.mode] = { months, pop: s.pop }; store.set('best', best); }
