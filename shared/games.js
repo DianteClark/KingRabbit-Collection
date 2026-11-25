@@ -35,6 +35,6 @@ export const GAMES = [
   { id: 'pixel-quest', title: 'Pixel Quest', tagline: 'A classic party RPG', cat: 'adventure', status: 'playable' },
   { id: 'colony', title: 'Colony', tagline: 'Keep your settlers alive', cat: 'sim', status: 'playable' },
   { id: 'racers', title: 'Tiny Town Racers', tagline: 'Drift through the city streets', cat: 'action', status: 'playable', landscape: true },
+  { id: 'survivors', title: 'Rabbit Survivors', tagline: 'Outlast the endless horde', cat: 'action', status: 'playable', landscape: true },
   // In development
-  { id: 'survivors', title: 'Rabbit Survivors', tagline: 'Outlast the endless horde', cat: 'action', status: 'soon', landscape: true },
 ];
