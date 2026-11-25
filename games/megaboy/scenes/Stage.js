@@ -31,6 +31,7 @@ export class Stage extends Phaser.Scene {
   }
 
   create() {
+    this.padNav = 'off'; // the Hud reads the controller
     const def = STAGES[this.stageId];
     this.def = def;
     this.prog = loadProgress();
