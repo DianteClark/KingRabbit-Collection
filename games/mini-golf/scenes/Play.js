@@ -8,7 +8,8 @@ import {
   compileHole, newBall, shoot, step, simulate, zoneAt, validSpot, sliderRect, bladeAngle, inPoly, contains,
   DT, BALL_R, CUP_R, TELE_R,
 } from '../logic/physics.js';
-import { grabs, aimFromDrag } from '../logic/aim.js';
+import { grabs, aimFromDrag, CANCEL_R, FULL_DRAG } from '../logic/aim.js';
+import { hit, down, stick, usingPad } from '../../../shared/core/padkit.js';
 import { COURSES, holeById, holesOf, strokeCap, starsFor, scoreName, coursePar, dailyHole } from '../logic/holes.js';
 import { THEMES, SHADE, BALL_COLORS, decorSheet } from '../art.js';
 import { play } from '../sounds.js';
@@ -60,6 +61,9 @@ export class Play extends Phaser.Scene {
     this.input.on('pointermove', (p) => this.onMove(p));
     this.input.on('pointerup', (p) => this.onUp(p));
     this.input.on('pointerupoutside', (p) => this.onUp(p));
+    // Controller: the gold menu frame only works in popups; the stick aims and A putts (below).
+    this.padNav = 'modal';
+    this.padAngle = null; this.padCharge = null;
     const drop = () => this.dropTouches();
     this.events.on('pause', drop);
     this.events.on('resume', drop);
@@ -618,8 +622,42 @@ export class Play extends Phaser.Scene {
     if (!save.get('coached') && r.strokes === 1) this.time.delayedCall(700, () => { if (this.scene.isActive()) toast(this, 'Nice putt! Get it in the cup by the flag.', BOTTOM - 40, PALETTE.gold, 2000); });
   }
 
+  /**
+   * Controller putting: the stick (or d-pad) points where the ball should go, hold A to build
+   * power, let go to putt. B cancels a putt you're charging. It uses the same aim line and power
+   * bar as a finger drag.
+   */
+  padPutt(delta) {
+    const mine = this.aiming?.id === 'pad';
+    const drop = () => { if (mine) { this.aiming = null; this.aimW.clear(); this.aimS.clear(); this.powerG.clear(); this.state = 'ready'; } this.padCharge = null; };
+    if (!usingPad() || this.blocked()) { drop(); return; }
+    if (this.state === 'intro') { if (hit('a')) this.beginPlay(); return; }
+    if ((this.state !== 'ready' && this.state !== 'aiming') || (this.aiming && !mine)) return;
+    const s = stick();
+    if (Math.hypot(s.x, s.y) > 0.5) this.padAngle = Math.atan2(s.y, s.x);
+    if (this.padAngle == null) { if (!hit('a')) return; this.padAngle = -Math.PI / 2; }
+    if (hit('b') && this.padCharge != null) { drop(); this.readyStatus(); return; }
+    if (hit('a')) this.padCharge = 0;
+    if (this.padCharge != null && down('a')) this.padCharge = Math.min(1, this.padCharge + delta / 1400);
+    const power = this.padCharge ?? 0.12;
+    const dist = CANCEL_R + 2 + power * (FULL_DRAG - CANCEL_R);
+    const bs = this.toScreen(this.ball.x, this.ball.y);
+    this.aiming = { id: 'pad', fx: bs.x - Math.cos(this.padAngle) * dist, fy: bs.y - Math.sin(this.padAngle) * dist, max: 999 };
+    this.state = 'aiming';
+    this.drawAim();
+    if (this.padCharge != null && !down('a')) {
+      // Like a finger, a quick tap of A never putts.
+      if (this.padCharge < 0.08) { drop(); this.readyStatus(); return; }
+      const shot = aimFromDrag(bs.x, bs.y, this.aiming.fx, this.aiming.fy, 999);
+      drop();
+      this.coachHand?.destroy(); this.coachHand = null;
+      this.putt(shot.angle, shot.power);
+    }
+  }
+
   update(_, delta) {
     if (!this.W) return;
+    this.padPutt(delta);
     const dt = Math.min(delta, 50) / 1000;
     this.acc += dt;
     let loops = 0;
