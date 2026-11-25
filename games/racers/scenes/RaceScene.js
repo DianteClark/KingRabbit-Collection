@@ -122,6 +122,7 @@ export class RaceScene extends Phaser.Scene {
     if (n >= 6 * turbo) this.acc = 0;
     this.draw();
     const p = race.player;
+    if (p.bumped) { if (p.bumped > 30 && this.time.now - (this.lastBump || 0) > 200) { sound('bump'); this.lastBump = this.time.now; } p.bumped = 0; }
     engineUpdate(Math.min(1.3, speedOf(p) / p.p.top), p.drifting, p.boostT > 0 || p.padT > 0, true);
     if (this.finishedAt != null && this.time.now - this.finishedAt > 2200) this.toResults();
   }
