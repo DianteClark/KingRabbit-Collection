@@ -72,5 +72,6 @@ export const RULES = {
     { heading: 'Daily Climb', text: 'One Normal run a day that is the same for everyone: today\'s seed picks the hero and builds the spire. Your best score today shows on the Daily page of the home screen.' },
     { heading: 'Saving', text: 'Your run is saved after every step. Close the page any time and tap Continue to carry on.' },
     { heading: 'Art', text: 'Pixel art: HAS Heroic Fantasy by Aleksandr Makarov (iknowkingrabbit). Font: BoldPixels.' },
+    { heading: 'Controller', text: 'On the title screen, in menus, panels and popups the d-pad moves a gold frame over the buttons, A taps it and B goes back. Playing on the map and with your cards is still done by touch.' },
   ],
 };

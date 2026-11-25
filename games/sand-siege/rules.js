@@ -55,5 +55,6 @@ export const RULES = {
     },
     { heading: 'Saving', text: 'The game saves as you play, even in the middle of a wave. Close the page any time and tap Continue.' },
     { heading: 'Credits', text: 'Art: Battle of the Sands by Aleksandr Makarov (iknowkingrabbit). Font: BoldPixels by YukiPixels.' },
+    { heading: 'Controller', text: 'In menus and popups the d-pad moves a gold frame over the buttons, A taps it and B goes back. Building on the map is still done by touch.' },
   ],
 };

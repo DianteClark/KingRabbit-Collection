@@ -53,5 +53,6 @@ export const RULES = {
       ],
     },
     { heading: 'Credits', text: 'Art by Aleksandr Makarov (BAS Town). Font BoldPixels by YukiPixels (CC BY-SA 4.0).' },
+    { heading: 'Controller', text: 'On the title screen, in menus, panels and popups the d-pad moves a gold frame over the buttons, A taps it and B goes back. Playing on the city map is still done by touch.' },
   ],
 };

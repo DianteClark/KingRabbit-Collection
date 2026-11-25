@@ -63,5 +63,6 @@ export const RULES = {
       ],
     },
     { heading: 'Credits', text: 'Art: Tiny Tile Town and BAS Town by Aleksandr Makarov (iknowkingrabbit). Font: BoldPixels.' },
+    { heading: 'Controller', text: 'On the title screen, in menus, panels and popups the d-pad moves a gold frame over the buttons, A taps it and B goes back. Playing on the map is still done by touch.' },
   ],
 };
