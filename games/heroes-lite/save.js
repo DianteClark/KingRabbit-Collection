@@ -3,7 +3,7 @@ import { createSave } from '../../shared/core/save.js';
 // game:    the adventure in progress (JSON string), so you can close the tab and carry on
 // records: { scenarioId: { w, l, bestDays } }   best: { endless: days survived }
 export const save = createSave('heroes-lite', {
-  game: null, records: {}, best: { endless: 0 }, skill: {}, skillGames: {}, faction: 'castle', fast: false,
+  game: null, records: {}, best: { endless: 0 }, skill: {}, skillGames: {}, faction: 'castle', fast: false, factionWins: {},
 });
 
 export function getRecord(id) { return { w: 0, l: 0, bestDays: 0, ...(save.get('records')[id] || {}) }; }

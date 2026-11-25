@@ -4,5 +4,8 @@ import { Menu } from './scenes/Menu.js';
 import { Adventure } from './scenes/Adventure.js';
 import { Town } from './scenes/Town.js';
 import { Battle } from './scenes/Battle.js';
+import { initTrophies } from './trophies.js';
+
+initTrophies();
 
 startGame({ scenes: [Boot, Menu, Adventure, Town, Battle] });
