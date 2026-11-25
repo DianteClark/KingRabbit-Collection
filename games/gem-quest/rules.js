@@ -8,6 +8,7 @@ export const RULES = {
       heading: 'Moving gems',
       items: [
         'Swipe a gem toward a neighbour to swap them, or tap one gem and then a neighbour.',
+        'Controller: the d-pad moves a cursor on the board, A picks the gem under it and a direction then swaps it (B drops it). Y switches to the buttons around the board, where a gold frame moves with the d-pad, A taps and B goes back; Y again returns to the board. Menus work the same way.',
         'A swap only counts if it lines up 3 or more gems of one kind (across or down). Otherwise the gems slide back.',
         'Matched gems vanish, the gems above fall, and new ones drop in. Falling gems can match again: a cascade.',
         'If the board runs out of moves it is shuffled for you.',
