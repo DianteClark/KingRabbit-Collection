@@ -12,8 +12,9 @@ import {
   SLOTS, SLOT_NAMES, FAIL, DIRS, OPS,
 } from '../logic/engine.js';
 import {
-  save, recordWin, saveProgram, loadProgram, bestFor, starsOf,
+  save, recordWin, saveProgram, loadProgram, bestFor, starsOf, isSolved, totalStars,
 } from '../save.js';
+import { earn, stat, daily, today } from '../trophies.js';
 
 // Screen layout (portrait 360x640).
 const GRID_TOP = 52;
@@ -32,7 +33,10 @@ const SPEEDS = [1, 2, 4];
 export class Play extends Phaser.Scene {
   constructor() { super('Play'); }
 
-  init(data) { this.index = Math.max(0, Math.min(LEVELS.length - 1, data?.index ?? 0)); }
+  init(data) {
+    this.index = Math.max(0, Math.min(LEVELS.length - 1, data?.index ?? 0));
+    this.daily = data?.daily || null; // the day, when this is the Daily Level
+  }
 
   create() {
     setBackground(this, PALETTE.night);
@@ -54,7 +58,7 @@ export class Play extends Phaser.Scene {
 
     const hd = header(this, '', () => go(this, 'Levels', { world: this.level.world }));
     this.backBtn = hd.back;
-    fit(text(this, WIDTH / 2, 16, `${this.level.id}  ${this.level.name}`, { color: PALETTE.cream }), WIDTH - 130);
+    fit(text(this, WIDTH / 2, 16, `${this.daily ? 'Daily: ' : ''}${this.level.id}  ${this.level.name}`, { color: PALETTE.cream }), WIDTH - 130);
     this.targetText = text(this, WIDTH / 2, 38, '', { color: PALETTE.gold });
 
     this.slotTop = this.measureSlots();
@@ -611,6 +615,7 @@ export class Play extends Phaser.Scene {
     this.run = createRun(this.lv, this.program);
     this.runLength = programLength(this.program);
     this.state = this.run.state;
+    stat('programs run');
   }
 
   runPressed() {
@@ -818,10 +823,28 @@ export class Play extends Phaser.Scene {
     this.drawHighlight();
     sfx('win');
     const res = recordWin(this.level, this.runLength);
+    this.winTrophies(res);
     this.updateStatus();
     // Celebrate: every lamp flashes.
     Object.values(this.lampImg).forEach((img, k) => this.tweens.add({ targets: img, scale: this.scaleArt * 1.25, yoyo: true, duration: 160, delay: k * 50 }));
     this.time.delayedCall(700, () => this.winModal(res));
+  }
+
+  winTrophies(res) {
+    stat('levels cleared');
+    earn('first-solve');
+    if (res.runStars >= 3) earn('three-stars');
+    if (this.runLength < this.level.target) earn('code-golf');
+    for (let w = 1; w <= 4; w++) if (LEVELS.filter((l) => l.world === w).every((l) => isSolved(l))) earn(`world-${w}`);
+    if (LEVELS.every((l) => isSolved(l))) earn('world-5');
+    const stars = totalStars();
+    if (stars >= 60) earn('stars-60');
+    if (stars >= LEVELS.length * 3) earn('all-stars');
+    if (this.daily) {
+      earn('daily');
+      if (res.runStars >= 3) earn('daily-3');
+      daily(this.runLength, this.daily, { lower: true });
+    }
   }
 
   winModal(res) {
@@ -847,6 +870,8 @@ export class Play extends Phaser.Scene {
     this.mode = 'done';
     this.syncControls();
     sfx(reason === 'ended' ? 'error' : 'lose');
+    if (reason === 'long') earn('forever');
+    if (reason === 'fell') earn('fell');
     const g = goalCounts(this.lv, this.state);
     let msg = FAIL[reason] || 'Stopped.';
     if (reason === 'ended' && this.state.carrying && g.lamps === g.lampsTotal) msg = 'Out of moves: still carrying a crate.';

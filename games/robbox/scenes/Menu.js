@@ -6,6 +6,7 @@ import { WIDTH, go, shadowTitle, setBackground, openHowTo, fit } from './common.
 import { sprite, setRef, robotRef, ART, convRef } from '../frames.js';
 import { LEVELS } from '../logic/levels.js';
 import { totalStars, nextLevelIndex, isSolved } from '../save.js';
+import { todaySeed, today } from '../trophies.js';
 
 export class Menu extends Phaser.Scene {
   constructor() { super('Menu'); }
@@ -31,7 +32,11 @@ export class Menu extends Phaser.Scene {
     const solved = LEVELS.filter((l) => isSolved(l)).length;
     text(this, WIDTH / 2, 448, `Solved ${solved} of ${LEVELS.length}    Stars ${stars} of ${LEVELS.length * 3}`, { color: PALETTE.cream });
 
-    button(this, WIDTH / 2, 500, 200, 44, 'How to play', () => openHowTo(this), { fill: PALETTE.indigo, color: PALETTE.cream });
+    // Daily Level: today's seed picks one lab level for everyone (any level, even one not reached yet).
+    const dl = LEVELS[todaySeed() % LEVELS.length];
+    const day = button(this, WIDTH / 2 - 78, 500, 148, 44, `Daily ${dl.id}`, () => { sfx('select'); go(this, 'Play', { index: dl.index, daily: today() }); }, { fill: PALETTE.lavender });
+    fit(day.label, 136);
+    button(this, WIDTH / 2 + 78, 500, 148, 44, 'How to play', () => openHowTo(this), { fill: PALETTE.indigo, color: PALETTE.cream });
     text(this, WIDTH / 2, 560, 'Art: Aleksandr Makarov', { color: PALETTE.lavender });
     button(this, 96, 608, 168, 44, '< All Games', () => { window.location.href = '../'; }, { fill: PALETTE.indigo, color: PALETTE.cream });
     this.soundBtn = button(this, 270, 608, 140, 44, '', () => { setMuted(!isMuted()); this.syncSound(); sfx('tap'); });
