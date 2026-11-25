@@ -10,6 +10,7 @@ import { BUILDINGS } from '../logic/buildings.js';
 import { RULES } from '../rules.js';
 import { store } from '../store.js';
 import * as P from './panels.js';
+import { earn, stat } from '../trophies.js';
 
 const VIEW = { y: 78, h: 456 };
 const MW = W * TILE; const MH = H * TILE;
@@ -474,12 +475,17 @@ export class City extends Phaser.Scene {
       if (inc) this.toast(`New call: ${inc.name} (${S.districtName(inc.district)})`);
     } else if (e.kind === 'major') { this.save(); P.showMajor(this); }
     else if (e.kind === 'chase') { sfx('power'); this.toast('Car chase! Tap to watch'); }
-    else if (e.kind === 'chaseEnd') sfx(e.caught ? 'coin' : 'error');
+    else if (e.kind === 'chaseEnd') { sfx(e.caught ? 'coin' : 'error'); if (e.caught) { earn('chase'); stat('chases won'); } }
     else if (e.kind === 'death') { sfx('lose'); this.cameras.main.flash(300, 160, 40, 40); }
     else if (e.kind === 'fire') sfx('smallBoom');
     else if (e.kind === 'ambulance') this.sendAmbulance(e.door);
     else if (e.kind === 'dayOver') this.endDay();
     else if (e.kind === 'solved' || e.kind === 'failed') {
+      if (e.kind === 'solved') {
+        earn('first-solve');
+        stat('calls solved');
+        if (this.s.stats.solved >= 100) earn('solves-100');
+      }
       // Let the chief know how the calls they handled turned out.
       const inc = this.s.incidents.find((i) => i.id === e.inc);
       if (inc && (inc.chief || inc.d >= 3) && !inc.special) {
@@ -490,6 +496,7 @@ export class City extends Phaser.Scene {
   }
 
   afterMajor() {
+    this.stateTrophies();
     if (this.s.over) P.showGameOver(this);
     else if (this.s.pendingMajor) P.showMajor(this);
   }
@@ -497,8 +504,35 @@ export class City extends Phaser.Scene {
   endDay() {
     if (this.holds.has('dayend')) return;
     const result = S.endDay(this.s);
+    this.dayTrophies(result);
     this.save();
     P.showDayEnd(this, result);
+  }
+
+  // ------------------------------------------------------------ trophies
+
+  /** After a day closes: the paper's numbers, milestones and the end of a career. */
+  dayTrophies(result) {
+    const s = this.s;
+    stat('days served');
+    const st = result.paper.stats;
+    if (st.calls >= 10 && !st.failed) earn('clean-shift');
+    if (s.day > 7) earn('week');
+    if (s.mode === 'career' && s.won) {
+      earn('career');
+      if (!s.stats.deaths) earn('everyone-home');
+    }
+    if (s.mode === 'endless' && s.day > 60) earn('endless-60');
+    this.stateTrophies();
+  }
+
+  /** Trust, safety, raids and being fired (checked after days and big events). */
+  stateTrophies() {
+    const s = this.s;
+    if (s.trust >= 90) earn('trust-90');
+    if (s.safety >= 90) earn('safety-90');
+    if (s.stats.groupsBusted > 0) earn('gang');
+    if (s.over) earn('fired');
   }
 
   // ------------------------------------------------------------ units and markers
