@@ -10,7 +10,7 @@ import * as S from '../logic/sim.js';
 import {
   TOWERS, TOWER_ORDER, ENEMIES, POWERS, POWER_ORDER, towerStats, TARGETS, TARGET_NAMES, starsFor, AIRSTRIKE_RADIUS,
 } from '../logic/data.js';
-import { COLS, ROWS, CAMPAIGN, mapById, waveSummary } from '../logic/maps.js';
+import { COLS, ROWS, CAMPAIGN, mapById, waveSummary, DAILY_MODS } from '../logic/maps.js';
 import { img, footFrame, vehFrame, isFoot, BIG, TILE, tile } from '../frames.js';
 import {
   save, saveGame, loadGame, clearGame, recordWin, recordEndless, campaign, powersUnlocked,
@@ -99,7 +99,21 @@ export class Play extends Phaser.Scene {
     this.refreshHud();
     if (s.over) { this.finish(); return; }
     if (!this.fresh) this.welcomeBack();
-    else if (this.coachStep < 0) this.time.delayedCall(250, () => toast(this, s.kind === 'maze' ? 'Build your maze, then Send Wave' : 'Build towers, then tap Send Wave', TOP + 60, PALETTE.gold, 1800));
+    else if (this.coachStep < 0) this.time.delayedCall(250, () => toast(this, this.startLine(), TOP + 60, PALETTE.gold, 2400));
+  }
+
+  /** What this game is about, for the start toast and the pause card. */
+  modeLine() {
+    const s = this.s;
+    if (s.mode === 'daily') return `Today: ${s.mods.map((m) => DAILY_MODS.find((d) => d.id === m)?.name).join(' + ')}`;
+    if (s.mode === 'endless') return `${s.name}, Endless: hold as long as you can`;
+    if (s.hard) return `${s.name}, Hard: tougher enemies, ${s.maxLives} lives`;
+    return `${s.name}: hold ${s.totalWaves} waves`;
+  }
+
+  startLine() {
+    const build = this.s.kind === 'maze' ? 'Build your maze, then Send Wave' : 'Build towers, then tap Send Wave';
+    return `${this.modeLine()}\n${build}`;
   }
 
   // ---------------------------------------------------------------- pausing
@@ -122,7 +136,7 @@ export class Play extends Phaser.Scene {
   pauseMenu() {
     if (this.modalOpen() || this.finished) return;
     const tipsOn = save.get('tips') !== false;
-    this.pausingModal('Paused', [{ text: 'Your game is saved as you play.', color: PALETTE.lavender }], [
+    this.pausingModal('Paused', [this.modeLine(), { text: 'Your game is saved as you play.', color: PALETTE.lavender }], [
       ['Resume', null],
       ['Restart map', () => this.confirmRestart()],
       [`Sound: ${isMuted() ? 'off' : 'on'}`, () => { setMuted(!isMuted()); sfx('tap'); this.pauseMenu(); }],
@@ -642,7 +656,9 @@ export class Play extends Phaser.Scene {
     else if (!S.moreWaves(s)) label = 'Last wave';
     else label = `Wave ${s.wave}...`;
     if (this.waveBtn.label.text !== label) { this.waveBtn.setLabel(label); fit(this.waveBtn.label, 126); }
-    this.waveBtn.setEnabled(on);
+    // Still tappable when it can't send (it explains why), just dimmed.
+    this.waveBtn.setEnabled(!s.over);
+    if (!s.over) this.waveBtn.setAlpha(on ? 1 : 0.5);
     this.speedBtn.setLabel(s.fast ? '2x' : '1x');
     this.speedBtn.body.setFillStyle(hex(s.fast ? PALETTE.gold : PALETTE.cream));
     for (const p of POWER_ORDER) {
@@ -852,7 +868,11 @@ export class Play extends Phaser.Scene {
   tapWave() {
     if (this.modalOpen()) return;
     const r = S.callWave(this.s);
-    if (!r.ok) { sfx('error'); return; }
+    if (!r.ok) {
+      sfx('error');
+      if (!this.s.over) toast(this, S.moreWaves(this.s) ? 'This wave is still marching in' : 'That was the last wave: clear the field!', BOTTOM - 30, PALETTE.gold, 1200);
+      return;
+    }
     if (r.bonus) { this.snd('coin'); this.floatText(this.waveBtn.x, this.waveBtn.y - 30, `+${r.bonus}`); }
     this.handleEvents(S.drain(this.s));
     this.afterChange();

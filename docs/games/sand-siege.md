@@ -17,8 +17,8 @@ and the enemy takes the shortest way around them.
 | Play | Top bar (pause, lives, funds, wave counter: tap for the next wave's line-up, ?), 11x15 map (32px cells), bottom panel |
 
 Play input: tap a tower in the palette -> tap a sand tile (ghost + range circle, green/red, reason shown) -> tap
-**Build** or the same tile again. Tap a built tower for Upgrade / Aim (First, Last, Strong, Close) / Sell; the third
-upgrade opens a two-specialty choice. Bottom row: Send Wave / "Next 12s +24" (call early for 2 funds a second),
+**Build** or the same tile again. Tap a built tower for Upgrade / Aim (First, Last, Strong, Close) / Sell (two taps:
+"Sure?"); the third upgrade opens a two-specialty choice. Bottom row: Send Wave / "Next 12s +24" (call early for 2 funds a second),
 1x/2x, and the three support powers (Air = tap the map to aim). Taps are read where the finger went down and must
 not move more than 16px; nothing on the map reacts while a popup or How to Play is open.
 
@@ -94,10 +94,19 @@ towers / waves.
 - `tests/sand-siege.test.mjs`: map shapes, roads that never touch themselves, path-finding, maze blocking (every
   cell tried in random order on every maze map; the gates always keep a route), trapping, combat (armour, shields,
   piercing), ground/air, target priorities, slow / heal / jam / splash, economy and selling, early-call bonus,
-  powers, mid-wave save/resume determinism, wave curves and bosses, daily maps (200 seeds), trophies, adaptive range.
+  powers, mid-wave save/resume determinism, wave curves and bosses, daily maps (200 seeds, roads never self-touch),
+  trophies, adaptive range.
 - `tests/sand-siege-bot.test.mjs`: `logic/bot.js` (coverage-scored placement, serpentine walls on maze maps,
   upgrades, Anti-Air when flyers are coming) wins all 15 maps at 100% and at 112% enemy health, and survives daily maps.
 
 Balance measured with the bot (lives left, X = lost) across enemy health 88% / 100% / 112% / 125% / 140% / 160%:
 maps 1-7 are won at every level; maps 8-15 are lost by the bot somewhere between 125% and 160%, Sandstorm Maze and
 Scorpion's Den (where the bot's simple maze is weakest) at 112-125%.
+
+## Browser checks
+
+Playwright (390x844, mobile, touch) against `vite preview`: every screen and popup is checked for text inside the
+screen and inside its button, and 16/32px fonts only; 45 towers placed on a maze map by alternating
+`page.touchscreen.tap` and raw CDP `Input.dispatchTouchEvent` taps with up to 9px of finger jitter all landed; taps
+under a popup or How to Play reach nothing and the game pauses under both; a double tap on Send Wave sends one wave;
+map 1 was won by touch alone at 2x; a reload mid-wave resumes to the same wave via Continue. No console errors.

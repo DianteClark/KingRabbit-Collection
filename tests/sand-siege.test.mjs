@@ -301,6 +301,11 @@ test('daily: the same seed gives the same map; every day is playable', () => {
     assert.notEqual(d.mods[0], d.mods[1]);
     const s = S.newGame(d, { mode: 'daily' });
     for (const sp of S.spawns(s)) assert.ok(S.distAt(s, ...sp) > 0, `seed ${seed}: gate reaches base`);
+    if (d.kind === 'path') {
+      // The road never touches itself, so the walked route is the whole road.
+      const road = d.rows.join('').split('').filter((c) => '#SB'.includes(c)).length;
+      assert.equal(S.route(s, S.spawns(s)[0]).length, road, `seed ${seed}: road has no shortcuts`);
+    }
     assert.equal(d.rows.length, M.ROWS);
   }
   const s = S.newGame(M.dailyMap(5), { mode: 'daily' });
