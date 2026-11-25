@@ -1,6 +1,7 @@
 // HTML panels for City Chief: incidents, big events, the force, cases, budget, newspaper, day end.
 import { sfx } from '../../../shared/core/sfx.js';
 import * as S from '../logic/sim.js';
+import { earn } from '../trophies.js';
 import { DISTRICTS } from '../logic/city.js';
 import { RANKS, GROUP_TYPES, MAYOR } from '../logic/data.js';
 
@@ -361,7 +362,7 @@ export function showDayEnd(g, result) {
           pro: ({ i, r }) => {
             const b = result.briefing[+i];
             const o = s.officers.find((x) => x.id === b.officer);
-            if (r) { S.promote(s, b.officer, r); b.done = `${o.name} is now a ${RANKS[r].title.toLowerCase()}.`; sfx('coin'); } else b.done = `${o.name} stays on patrol for now.`;
+            if (r) { S.promote(s, b.officer, r); earn('promote'); b.done = `${o.name} is now a ${RANKS[r].title.toLowerCase()}.`; sfx('coin'); } else b.done = `${o.name} stays on patrol for now.`;
             p.set('scroll', render());
           },
           next: () => { p.close(true); next(); },

@@ -13,6 +13,7 @@ import { saveRun, save, setSkill, tipSeen, markTip } from '../save.js';
 import { drawHull, drawRooms, roomRect, colorsFor } from './shipview.js';
 import { ART } from '../frames.js';
 import * as P from './panels.js';
+import { earn, stat } from '../trophies.js';
 
 const CELL = 22;
 const ENEMY_Y = 104;
@@ -896,11 +897,24 @@ export class Combat extends Phaser.Scene {
     this.tweens.add({ targets: t, scale: 1, duration: 300, ease: 'Back.easeOut' });
     this.time.delayedCall(1700, () => {
       const run = this.run;
+      const how = c.result.how;
       R.finishCombat(run);
-      setSkill(run.mode, run.skill);
+      this.trophies(out, how);
+      // The Daily Run plays at a fixed enemy skill, so it never moves your own setting.
+      if (!run.daily) setSkill(run.mode, run.skill);
       saveRun(run);
       route(this, run);
     });
+  }
+
+  /** Trophies for a fight that just ended (the run is judged on the RunEnd screen). */
+  trophies(out, how) {
+    if (out === 'fled') earn('fled');
+    if (out !== 'win') return;
+    stat('ships defeated');
+    earn('first-kill');
+    if (how === 'crew') earn('crew-win');
+    if (this.run.ship.hull === 1) earn('one-hull');
   }
 
   explode(i) {

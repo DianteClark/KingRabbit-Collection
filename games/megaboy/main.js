@@ -8,6 +8,9 @@ import { Hud } from './scenes/Hud.js';
 import { Result } from './scenes/Result.js';
 import { GameOver } from './scenes/GameOver.js';
 import { Ending } from './scenes/Ending.js';
+import { initTrophies } from './trophies.js';
+
+initTrophies();
 
 // Landscape: the stage fills the screen at 3x, the controls sit over the bottom corners.
 startGame({ scenes: [Boot, Title, Intro, Select, Stage, Hud, Result, GameOver, Ending], orientation: 'landscape', background: '#000000' });

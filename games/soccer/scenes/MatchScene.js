@@ -10,6 +10,7 @@ import { kitTexture, dirIndex, ANIM } from '../sprites.js';
 import { markStarted } from '../flow.js';
 import { OX, OY, toScreen, dirToScreen, goalScreenX } from '../logic/view.js';
 import { sound } from '../sound.js';
+import { earn } from '../trophies.js';
 
 // Landscape: the pitch runs horizontally (see logic/view.js for the mapping). World pixels are
 // drawn at 2x, so the camera sees 320x180 of the 512x312 world.
@@ -195,6 +196,7 @@ export class MatchScene extends Phaser.Scene {
 
   onGoal(e) {
     const mine = e.side === 0;
+    if (mine) earn('first-goal');
     sfx(mine ? 'goal' : 'lose');
     this.cameras.main.shake(260, 0.008);
     this.cameras.main.flash(200, mine ? 255 : 160, mine ? 230 : 60, mine ? 120 : 60);

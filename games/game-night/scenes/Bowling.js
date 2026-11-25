@@ -5,6 +5,7 @@ import { WIDTH } from '../../../shared/core/boot.js';
 import { header, go, setBackground, toast, modal } from './common.js';
 import { getBest, submitBest } from '../save.js';
 import { sfx } from '../../../shared/core/sfx.js';
+import { earn, stat } from '../trophies.js';
 import { frames, totalScore, position, marks } from '../logic/bowling.js';
 
 const LANE = { x: 112, w: 136, top: 150, bottom: 600 };
@@ -223,7 +224,7 @@ export class Bowling extends Phaser.Scene {
     if (knocked === standingBefore && prev.freshRack) msg = 'STRIKE!';
     else if (knocked === standingBefore && knocked > 0) msg = 'Spare!';
     toast(this, msg, 380);
-    if (msg === 'STRIKE!') { sfx('strike'); this.cameras.main.shake(180, 0.006); } else if (msg === 'Spare!') sfx('win');
+    if (msg === 'STRIKE!') { earn('bowl-strike'); stat('strikes'); sfx('strike'); this.cameras.main.shake(180, 0.006); } else if (msg === 'Spare!') sfx('win');
     this.drawCard();
     this.ball.gutter = false; this.ball.gone = false;
     if (pos.over) { this.time.delayedCall(900, () => this.gameOver()); return; }

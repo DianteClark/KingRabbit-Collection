@@ -6,12 +6,14 @@ import { WIDTH, header, go, store, persist, petImage, setPetFrame, drawBar, hpCo
 import { getSkill, reportResult, SKILL_ID } from '../adaptive.js';
 import { petFrames, PET_MOOD } from '../art.js';
 import * as G from '../logic/game.js';
+import { BADGES } from '../logic/world.js';
 import * as B from '../logic/battle.js';
 import { makeAI, botAction } from '../logic/ai.js';
 import { MOVES, SPECIES, STATUS_INFO } from '../logic/data.js';
 import { TYPE_INFO, typeMult } from '../logic/types.js';
 import { maxHp, petName, petType, xpForLevel, MAX_LEVEL, learnMove, canEvolve } from '../logic/pet.js';
 import { partyPanel, bagPanel, learnPanel, nicknamePanel, tipPanel, closeAll, blocking } from './panels.js';
+import { earn, stat } from '../trophies.js';
 
 const SCREEN = { x: 8, y: 60, w: 344, h: 266 };
 const POS = [{ x: 96, y: 258 }, { x: 262, y: 148 }];
@@ -512,11 +514,12 @@ export class Battle extends Phaser.Scene {
     const caught = result === 'caught' ? B.active(b, 1) : null;
     const wasNew = caught && !this.dexBefore[caught.sp];
     const out = G.afterBattle(st, setup, result, caught);
+    this.trophies(st, setup, result, out);
     if (result === 'win' || result === 'caught') {
       if (wasNew) { sfx('coin'); await this.say(`${petName(caught)} was added to your PetDex!`); }
       if (out.caught) {
         const name = await new Promise((res) => nicknamePanel(out.caught, res));
-        if (name !== SPECIES[out.caught.sp].name) await this.say(`Say hello to ${name}!`, 800);
+        if (name !== SPECIES[out.caught.sp].name) { earn('nickname'); await this.say(`Say hello to ${name}!`, 800); }
       }
       if (out.caughtTo === 'party') await this.say(`${petName(out.caught)} joined your team!`);
       for (const l of out.lines) { if (out.badge && l.includes('Badge')) sfx('strike'); else if (l.includes('coins')) sfx('coin'); await this.say(l); }
@@ -527,6 +530,30 @@ export class Battle extends Phaser.Scene {
     if (result === 'lose' && !out.blackout) after.lines = out.lines;
     if (result === 'lose') { sfx('lose'); await this.say(out.blackout ? 'All your pets have fainted...' : 'You lost the battle.'); }
     go(this, 'World', { after });
+  }
+
+  /** Trophies and stats for a battle that just ended. */
+  trophies(st, setup, result, out) {
+    if (result === 'win') {
+      stat('battles won');
+      earn('first-win');
+      if (out.badge) earn('badge');
+      if (st.badges.length >= BADGES.length) earn('badges-4');
+      if (setup.champion) earn('champion');
+      if (setup.rematch) earn('rematch');
+    } else if (result === 'caught') {
+      stat('pets caught');
+      earn('first-catch');
+      this.dexTrophies(st);
+    } else if (out.blackout) earn('blackout');
+    if (st.party.length >= 6) earn('full-party');
+    if (st.party.some((p) => p.lv >= 30)) earn('level-30');
+  }
+
+  dexTrophies(st) {
+    const c = G.dexCounts(st);
+    if (c.caught * 2 >= c.total) earn('dex-half');
+    if (c.caught >= c.total) earn('dex-full');
   }
 
   async evolutions() {
@@ -550,6 +577,8 @@ export class Battle extends Phaser.Scene {
       }
       const name = petName(pet);
       G.evolvePet(st, pet);
+      earn('evolve'); stat('evolutions');
+      this.dexTrophies(st);
       img.clearTint().setTexture(`pet_${to}`, Math.min(1, petFrames(to) - 1));
       this.cameras.main.flash(300, 249, 245, 239);
       sfx('win');

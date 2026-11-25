@@ -3,10 +3,11 @@ import { PALETTE, hex } from '../../../shared/core/palette.js';
 import { text, button } from '../../../shared/core/ui.js';
 import { WIDTH } from '../../../shared/core/boot.js';
 import { go, modal, shadowTitle, setBackground } from './common.js';
-import { save, getRecord, getBest } from '../save.js';
+import { save, getRecord, getBest, visitTable } from '../save.js';
 import { skillLabel, resetSkill } from '../adaptive.js';
 import { isMuted, setMuted } from '../../../shared/core/sfx.js';
 import { CATEGORIES, TABLES } from '../tables.js';
+import { today, playedDailyDeal } from '../trophies.js';
 import { frameRef } from './Boot.js';
 
 const TILE_W = 156;
@@ -94,10 +95,11 @@ export class Menu extends Phaser.Scene {
 
   open(t) {
     if (!t.scene) return;
+    if (t.id === 'solitaire') { this.openSolitaire(t); return; }
     const label = { solo: 'Solo', cpu: 'vs Computer', pvp: '2 Players' };
-    if (!t.levels && t.modes.length === 1) { go(this, t.scene, { mode: t.modes[0] }); return; }
+    if (!t.levels && t.modes.length === 1) { visitTable(t.id); go(this, t.scene, { mode: t.modes[0] }); return; }
     const lines = t.levels ? [`CPU level ${skillLabel(t.id)}/10`, 'It adapts as you win or lose'] : [];
-    const buttons = t.modes.map((mode) => [t.modes.length === 1 ? 'Play' : label[mode], () => { m.destroy(); go(this, t.scene, { mode }); }]);
+    const buttons = t.modes.map((mode) => [t.modes.length === 1 ? 'Play' : label[mode], () => { m.destroy(); visitTable(t.id); go(this, t.scene, { mode }); }]);
     if (t.levels) {
       buttons.push(['Reset CPU level', () => {
         m.destroy(); resetSkill(t.id); this.showTab(this.tab);
@@ -106,5 +108,15 @@ export class Menu extends Phaser.Scene {
     }
     buttons.push(['Cancel', () => m.destroy()]);
     const m = modal(this, t.name, lines, buttons);
+  }
+
+  /** Solitaire: a fresh deal, or today's Daily Deal (the same cards for everyone). */
+  openSolitaire(t) {
+    const day = playedDailyDeal();
+    const m = modal(this, t.name, [day ? `Daily Deal today: best ${day} moves` : 'Daily Deal: same cards for all'], [
+      ['New deal', () => { m.destroy(); visitTable(t.id); go(this, t.scene, { mode: 'solo' }); }],
+      ['Daily Deal', () => { m.destroy(); visitTable(t.id); go(this, t.scene, { mode: 'solo', daily: today() }); }],
+      ['Cancel', () => m.destroy()],
+    ]);
   }
 }

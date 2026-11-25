@@ -6,6 +6,7 @@ import { header, go, setBackground, toast, modal } from './common.js';
 import { record, save } from '../save.js';
 import { deal, drawStock, bestMove, move, canMove, won, canAutoFinish, autoStep, hint, SUITS, RANKS, isRed } from '../logic/solitaire.js';
 import { sfx } from '../../../shared/core/sfx.js';
+import { earn, stat, daily, todaySeed, seededRandom } from '../trophies.js';
 
 const CW = 44;
 const CH = 60;
@@ -19,11 +20,11 @@ const MAX_Y = 584;
 export class Solitaire extends Phaser.Scene {
   constructor() { super('Solitaire'); }
 
-  init() { this.mode = 'solo'; }
+  init(data) { this.mode = 'solo'; this.daily = data?.daily || null; }
 
   create() {
     setBackground(this, PALETTE.leaf);
-    header(this, 'Solitaire', () => go(this, 'Menu'));
+    this.titleText = header(this, this.daily ? 'Daily Deal' : 'Solitaire', () => go(this, 'Menu'));
     this.layer = this.add.container(0, 0);
     this.movesText = text(this, colX(2) + CW / 2 + 2, TOP_ROW + 30, '', { color: PALETTE.cream, align: 'center' }).setDepth(5);
     this.hintG = this.add.graphics().setDepth(40);
@@ -37,14 +38,15 @@ export class Solitaire extends Phaser.Scene {
   }
 
   askDeal() {
-    const m = modal(this, 'New deal', [`Now: draw ${this.drawCount()}`], [
-      ['Draw 1', () => { m.destroy(); save.set('solitaireDraw', 1); this.newDeal(); }],
-      ['Draw 3', () => { m.destroy(); save.set('solitaireDraw', 3); this.newDeal(); }],
+    const m = modal(this, 'New deal', [this.daily ? 'Leaves the Daily Deal' : `Now: draw ${this.drawCount()}`], [
+      ['Draw 1', () => { m.destroy(); save.set('solitaireDraw', 1); this.leaveDaily(); this.newDeal(); }],
+      ['Draw 3', () => { m.destroy(); save.set('solitaireDraw', 3); this.leaveDaily(); this.newDeal(); }],
       ['Cancel', () => m.destroy()],
     ]);
   }
 
-  drawCount() { return save.get('solitaireDraw') === 3 ? 3 : 1; }
+  // The Daily Deal always draws one, so everyone plays the same game.
+  drawCount() { return !this.daily && save.get('solitaireDraw') === 3 ? 3 : 1; }
 
   updateClock() {
     if (this.done || !this.g) return;
@@ -84,11 +86,17 @@ export class Solitaire extends Phaser.Scene {
     this.elapsed = 0;
     this.finishing = false;
     this.dealId = (this.dealId || 0) + 1;
-    this.g = deal();
+    this.g = this.daily ? deal(seededRandom(todaySeed())) : deal();
     this.history = [];
     this.done = false;
     this.sel = null;
     this.draw();
+  }
+
+  leaveDaily() {
+    if (!this.daily) return;
+    this.daily = null;
+    this.titleText?.setText('Solitaire');
   }
 
   push(next) {
@@ -260,13 +268,22 @@ export class Solitaire extends Phaser.Scene {
     if (this.done) return;
     this.done = true;
     record('solitaire', 'w');
+    stat('solitaire wins');
+    if (this.elapsed < 3 * 60 * 1000) earn('solitaire-fast');
+    let dayLine = null;
+    if (this.daily) {
+      earn('solitaire-daily');
+      const r = daily(this.g.moves, this.daily, { lower: true });
+      if (r && r.streak >= 3) earn('solitaire-streak');
+      if (r) dayLine = r.isBest ? 'Your best Daily Deal today!' : `Today's best: ${r.best} moves`;
+    }
     sfx('win');
     // Bounce the foundation kings for a little celebration.
     this.cameras.main.flash(250, 240, 210, 110);
     toast(this, 'All four suits complete!', 300);
     this.time.delayedCall(900, () => {
-      const m = modal(this, 'You win!', [`Finished in ${this.g.moves} moves`], [
-        ['New deal', () => { m.destroy(); this.newDeal(); }],
+      const m = modal(this, 'You win!', [`Finished in ${this.g.moves} moves`, ...(dayLine ? [dayLine] : [])], [
+        ['New deal', () => { m.destroy(); this.leaveDaily(); this.newDeal(); }],
         ['Menu', () => go(this, 'Menu')],
       ]);
     });

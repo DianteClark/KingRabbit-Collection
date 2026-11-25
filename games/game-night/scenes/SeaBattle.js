@@ -6,6 +6,7 @@ import { header, go, setBackground, toast } from './common.js';
 import { endGame } from './boardkit.js';
 import { sfx } from '../../../shared/core/sfx.js';
 import { N, randomFleet, fire, allSunk, cpuTarget, shipCells, fits, LEVELS } from '../logic/seabattle.js';
+import { earn } from '../trophies.js';
 import { getSkill, tune } from '../adaptive.js';
 
 
@@ -184,6 +185,7 @@ export class SeaBattle extends Phaser.Scene {
     this.drawGrid(BIG_LEFT, BIG_TOP, BIG, this.enemyFleet, this.myShots, true, 'red');
     this.drawGrid(SMALL_LEFT, SMALL_TOP, SMALL, this.myFleet, this.cpuShots, true, 'grey');
     if (won) toast(this, 'Enemy fleet destroyed!', 440);
+    if (won && this.myShots.size <= 45) earn('seabattle-fast');
     sfx(won ? 'win' : 'lose');
     endGame(this, {
       id: 'seabattle', mode: 'cpu', title: won ? 'Victory!' : 'Fleet lost',

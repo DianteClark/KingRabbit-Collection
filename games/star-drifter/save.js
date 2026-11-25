@@ -63,7 +63,7 @@ export function recordRun(run) {
   r.ships += s.wins;
   r.last = s;
   save.set('records', r);
-  setSkill(run.mode, run.skill);
+  if (!run.daily) setSkill(run.mode, run.skill);
   let unlocked = null;
   if (s.won && !isUnlocked('corvid')) { save.set('unlocked', { ...(save.get('unlocked') || {}), corvid: true }); unlocked = 'corvid'; }
   clearRun();

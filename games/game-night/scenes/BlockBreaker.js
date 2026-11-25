@@ -4,6 +4,7 @@ import { text } from '../../../shared/core/ui.js';
 import { WIDTH } from '../../../shared/core/boot.js';
 import { header, go, setBackground, toast, modal, fitLine } from './common.js';
 import { getBest, submitBest } from '../save.js';
+import { earn } from '../trophies.js';
 import { sfx } from '../../../shared/core/sfx.js';
 
 const F = { x: 20, y: 96, w: WIDTH - 40, h: 500 };
@@ -192,6 +193,7 @@ export class BlockBreaker extends Phaser.Scene {
       // Freeze play for the fanfare so a ball can't drain after the last brick.
       this.clearing = true;
       toast(this, `Level ${this.level + 1} clear!`, 360);
+      earn('bb-clear');
       sfx('win');
       this.time.delayedCall(900, () => { if (!this.over) this.loadLevel(this.level + 1); });
     }

@@ -4,6 +4,7 @@ import {
   INGREDIENTS, POTIONS, RECIPE_ORDER, MARKET, UPGRADES, UPGRADE_ORDER, AREAS, AREA_ORDER, EL_INFO, ELEMENTS, FESTIVAL,
 } from '../logic/data.js';
 import * as G from '../logic/game.js';
+import { earn } from '../trophies.js';
 import { IMG } from './common.js';
 
 const esc = (v) => String(v).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -289,8 +290,8 @@ export function showUpgrades(s, onChange) {
   const p = sheet({
     title: 'Upgrades', sub: sub(), html: render(),
     handlers: {
-      up: ({ k }) => { if (G.buyUpgrade(s, k).ok) { sfx('power'); onChange?.('up', k); } else sfx('error'); p.set('sub', sub()); p.set('scroll', render()); },
-      area: ({ a }) => { if (G.unlockArea(s, a).ok) { sfx('power'); onChange?.('area', a); } else sfx('error'); p.set('sub', sub()); p.set('scroll', render()); },
+      up: ({ k }) => { if (G.buyUpgrade(s, k).ok) { sfx('power'); if (k === 'apprentice') earn('apprentice'); onChange?.('up', k); } else sfx('error'); p.set('sub', sub()); p.set('scroll', render()); },
+      area: ({ a }) => { if (G.unlockArea(s, a).ok) { sfx('power'); earn(a); onChange?.('area', a); } else sfx('error'); p.set('sub', sub()); p.set('scroll', render()); },
     },
   });
   return p;

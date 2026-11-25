@@ -5,6 +5,7 @@ import { WIDTH } from '../../../shared/core/boot.js';
 import { header, go, setBackground, toast, modal, holdButton, fitLine } from './common.js';
 import { getBest, submitBest } from '../save.js';
 import { sfx } from '../../../shared/core/sfx.js';
+import { earn } from '../trophies.js';
 import { getSkill, tune, reportResult } from '../adaptive.js';
 
 // 13x13 maps.  . empty  B brick  S steel  G bush (drawn over tanks)  W water  E your flag
@@ -386,6 +387,7 @@ export class Tanks extends Phaser.Scene {
     this.updateHud();
     if (!this.enemies.length && this.enemiesLeft === 0) {
       this.score += 500;
+      earn('tanks-stage');
       sfx('win');
       this.time.delayedCall(1400, () => { if (!this.over) this.loadStage(this.stage + 1); });
     }

@@ -18,6 +18,7 @@ import {
 } from '../frames.js';
 import { save, saveGame, clearGame, recordResult, submitEndless } from '../save.js';
 import { getSkill, reportResult, SKILL_ID } from '../adaptive.js';
+import { earn, stat } from '../trophies.js';
 
 const T = 32;              // tile size on screen (16px art at 2x)
 const MAP_TOP = 80;
@@ -623,6 +624,7 @@ export class Adventure extends Phaser.Scene {
       if (setup.kind === 'capture') {
         const out = G.applyBattle(s, setup, { winner: 0, sides: [{ survivors: [], killedHp: 0, killedLiving: 0, mana: h.mana }, { survivors: [], killedHp: 0, killedLiving: 0, mana: 0 }] });
         sfx('win');
+        earn('town'); stat('towns captured');
         this.refreshObjects(); this.refreshHeroes(); this.drawFog();
         await this.say('Town captured!', [out.msgs.filter((m) => !m.includes('gains 0')).pop() || 'The town is yours.']);
         break;
@@ -687,8 +689,17 @@ export class Adventure extends Phaser.Scene {
     const attacker = G.getHero(s, setup.attacker);
     const humanAttacks = attacker && attacker.owner === 0;
     const vsAi = G.defenderOwner(s, setup) !== null || !humanAttacks;
+    const odds = humanAttacks ? G.setupValues(s, setup) : null; // before the survivors are written back
     const out = G.applyBattle(s, setup, res);
     const humanWon = humanAttacks ? out.won : !out.won;
+    if (humanWon) {
+      stat('battles won');
+      earn('first-battle');
+      if (!res.sides[humanAttacks ? 0 : 1].lost.length) earn('flawless');
+      if (odds && odds.dv >= odds.av * 2) earn('underdog');
+      if (humanAttacks && setup.kind === 'garrison') { earn('town'); stat('towns captured'); }
+    }
+    if (humanAttacks && (out.raised || 0) >= 50) earn('bones');
     if (vsAi) {
       const mine = res.sides[humanAttacks ? 0 : 1];
       const left = mine.survivors.reduce((a, x) => a + armyValue([x]), 0);
@@ -718,6 +729,8 @@ export class Adventure extends Phaser.Scene {
     const s = this.s;
     for (const h of G.heroesOf(s, 0)) if (h.pendingLevels > 0) await levelUpFlow(this, h);
     if (this.selected && !G.getHero(s, this.selected)) this.selected = G.heroesOf(s, 0)[0]?.id ?? null;
+    if (G.heroesOf(s, 0).some((h) => h.level >= 10)) earn('veteran');
+    if (G.townsOf(s, 0).some((t) => t.built.hall3)) earn('city-hall');
     this.refreshObjects(); this.refreshHeroes(); this.drawFog(); this.drawPath(); this.refreshUi();
     saveGame(s);
     this.busy = false;
@@ -883,6 +896,7 @@ export class Adventure extends Phaser.Scene {
     } else res = await this.playBattle(setup);
     // Report and show the result (applyBattle itself is done by the AI generator).
     const humanWon = res.winner === 1;
+    if (humanWon) { earn('defender'); stat('battles won'); }
     const mine = res.sides[1];
     const lost = mine.lost.map((l) => `${l.lost} ${CREATURES[l.type].name}`);
     reportResult(SKILL_ID, humanWon ? 1 : 0, 0.5, 0.25);
@@ -905,6 +919,7 @@ export class Adventure extends Phaser.Scene {
     clearGame();
     const won = over.winner === 'human';
     let lines;
+    this.overTrophies(s, won);
     if (s.mode === 'endless') {
       const best = submitEndless(s.day);
       lines = [`You held out for ${s.day} days and ${s.endless.wave} wave${s.endless.wave === 1 ? '' : 's'}.`, best ? { text: 'New best!', color: PALETTE.gold } : over.reason];
@@ -918,5 +933,21 @@ export class Adventure extends Phaser.Scene {
       ['Main menu', () => go(this, 'Menu')],
     ]));
     return true;
+  }
+
+  /** Trophies for a finished map (or the end of a Last Stand). */
+  overTrophies(s, won) {
+    if (s.mode === 'endless') {
+      if (s.day >= 30) earn('endless-30');
+      if (s.day >= 60) earn('endless-60');
+      return;
+    }
+    if (!won) return;
+    stat('maps conquered');
+    if (['valley', 'desert', 'frontier'].includes(s.scenario)) earn(s.scenario);
+    if (s.day <= 28) earn('swift');
+    const f = { ...(save.get('factionWins') || {}), [s.players[0].faction]: true };
+    save.set('factionWins', f);
+    if (f.castle && f.necro) earn('both-factions');
   }
 }

@@ -60,6 +60,7 @@ export const RULES = {
         'Campaign: 8 missions with rising difficulty. Win one to unlock the next.',
         'Skirmish: you (Blue) against the computer on a fair map.',
         '2 Players: pass the phone between turns. Blue moves first.',
+        'Daily Skirmish: the same map, dice and CPU level for everyone today. Win in as few days as you can.',
         'In Skirmish and 2 Players, moving first is an edge, so Blue gets no income on day 1 and Red starts with 1000 extra funds.',
       ],
     },

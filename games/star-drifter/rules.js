@@ -57,6 +57,7 @@ export const RULES = {
         'Normal: the full challenge. Cruise: more hull, scrap and fuel, gentler enemies, a slower fleet and cheaper stores.',
         'Enemy captains adapt to you: if you win easily they aim and time their shots better; if fights go badly they ease off. Their ships and weapons never change.',
         'Win once to unlock a second ship, the Corvid.',
+        'Daily Run: the same galaxy for everyone today, flying the Wayfarer in Normal mode with enemy captains at a fixed level.',
       ],
     },
     { heading: 'Saving', text: 'Your run is saved after every action, even in the middle of a fight. Close the game any time and tap Continue.' },

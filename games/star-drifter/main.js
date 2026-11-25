@@ -12,6 +12,9 @@ import * as B from './logic/bot.js';
 import * as D from './logic/data.js';
 import { save, saveRun, loadRun } from './save.js';
 import { DEBUG } from './debug.js';
+import { initTrophies } from './trophies.js';
+
+initTrophies();
 
 startGame({ scenes: [Boot, Menu, MapScene, Combat, RunEnd], background: '#1c1618' });
 

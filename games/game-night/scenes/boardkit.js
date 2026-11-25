@@ -2,7 +2,7 @@
 import { PALETTE, hex } from '../../../shared/core/palette.js';
 import { text } from '../../../shared/core/ui.js';
 import { modal, go } from './common.js';
-import { record } from '../save.js';
+import { record, finishedPvp } from '../save.js';
 
 /** Draw a framed checkerboard. Returns { cell, left, top, center(i), indexAt(x,y) }. */
 export function checkerboard(scene, { left, top, size = 8, cell = 40, light = PALETTE.cream, dark = PALETTE.lavender, frame = PALETTE.indigo, labels = false }) {
@@ -63,6 +63,7 @@ export function highlighter(scene, g) {
 /** Standard end-of-game popup + record keeping. outcome from the human's view: 'w'|'d'|'l' (cpu mode). */
 export function endGame(scene, { id, mode, title, lines = [], outcome, onAgain, margin }) {
   if (mode === 'cpu' && outcome) record(id, outcome, margin);
+  if (mode === 'pvp') finishedPvp();
   scene.time.delayedCall(700, () => {
     const m = modal(scene, title, lines, [
       ['Play again', () => { m.destroy(); onAgain(); }],

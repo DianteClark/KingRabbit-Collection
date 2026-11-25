@@ -69,6 +69,7 @@ export const RULES = {
       heading: 'Endless mode',
       text: 'A slightly easier start (+6 Max HP, a healing potion, slightly weaker enemies), but the acts keep looping. Every loop enemies get much tougher: more HP and damage, extra Strength, Ritual (they grow stronger every turn) and, for elites and bosses, Artifact. How high can you climb? Your best floor and score are saved.',
     },
+    { heading: 'Daily Climb', text: 'One Normal run a day that is the same for everyone: today\'s seed picks the hero and builds the spire. Your best score today shows on the Daily page of the home screen.' },
     { heading: 'Saving', text: 'Your run is saved after every step. Close the page any time and tap Continue to carry on.' },
     { heading: 'Art', text: 'Pixel art: HAS Heroic Fantasy by Aleksandr Makarov (iknowkingrabbit). Font: BoldPixels.' },
   ],

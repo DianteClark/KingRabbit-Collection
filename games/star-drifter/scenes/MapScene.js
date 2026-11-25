@@ -4,6 +4,8 @@ import { overrun, distance, exitBeacon } from '../logic/sector.js';
 import { SECTOR_COUNT } from '../logic/data.js';
 import { saveRun, tipSeen, markTip, recordRun } from '../save.js';
 import * as P from './panels.js';
+import { aliveCrew } from '../logic/ship.js';
+import { earn } from '../trophies.js';
 import { ART } from '../frames.js';
 
 const MAP_TOP = 126;
@@ -35,6 +37,11 @@ export class MapScene extends Phaser.Scene {
 
   create() {
     const run = this.run;
+    if (run.sector >= 4) earn('sector-4');
+    if (run.sector >= 8) earn('sector-8');
+    if (run.daily && run.sector >= 5) earn('daily-sector-5');
+    if (run.scrap >= 300) earn('scrap-300');
+    if (aliveCrew(run.ship).length >= 6) earn('full-crew');
     setBackground(this, '#120e14');
     P.closeAll();
     this.drawSpace();

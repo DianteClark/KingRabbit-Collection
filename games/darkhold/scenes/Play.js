@@ -12,6 +12,7 @@ import { playMusic, fx, musicOn, setMusicOn, syncVolume } from '../music.js';
 import { isMuted, setMuted } from '../../../shared/core/sfx.js';
 import { bagPanel, shopPanel, heroPanel, mapPanel, perkPanel, logPanel } from './panels.js';
 import { DEBUG } from '../debug.js';
+import { earn, stat, daily } from '../trophies.js';
 
 const T = 32;             // tile size on screen (16px art at 2x)
 const TOP = 52;           // top bar
@@ -543,6 +544,7 @@ export class Play extends Phaser.Scene {
     this.cameras.main.fadeOut(220, 8, 7, 13);
     this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
       const ev = G.act(st, { type: 'descend' });
+      this.trophies(ev, new Map());
       for (const s of this.monSprites.values()) s.destroy();
       this.monSprites.clear();
       this.bake();
@@ -614,7 +616,9 @@ export class Play extends Phaser.Scene {
     const st = this.st;
     const turnBefore = st.turn;
     const hpBefore = st.p.hp;
+    const kinds = new Map(st.mons.map((m) => [m.id, m.kind]));
     const ev = G.act(st, a);
+    this.trophies(ev, kinds);
     const happened = st.turn !== turnBefore || ev.some((e) => ['shop', 'buy', 'sell'].includes(e.t)) || a.type === 'perk';
     this.animate(ev, quiet);
     if (st.turn !== turnBefore || a.type === 'buy' || a.type === 'sell' || a.type === 'perk') saveRun(st);
@@ -806,10 +810,54 @@ export class Play extends Phaser.Scene {
     if (st.over === 'won') report(modeKey(st), 'win');
     else if (!st.abandoned) report(modeKey(st), 'death', st.depth);
     const result = recordRun(st);
+    this.runTrophies(st, result);
     playMusic(null);
     fx(st.over === 'won' ? 'win' : 'lose');
     if (st.over !== 'won') this.tweens.add({ targets: this.player, alpha: 0.2, angle: 90, duration: 500 });
     this.time.delayedCall(st.abandoned ? 100 : 1300, () => go(this, 'End', { run: st, result }));
+  }
+
+  // ------------------------------------------------------------------ trophies
+
+  /** Trophies and stats for one action's events. kinds: monster id -> kind from before the action. */
+  trophies(ev, kinds) {
+    const st = this.st;
+    let kills = 0;
+    for (const e of ev) {
+      if (e.t === 'die') {
+        kills++;
+        earn('first-blood');
+        if (kinds.get(e.id) === 'mimic') earn('mimic');
+      } else if (e.t === 'floor') {
+        stat('floors descended');
+        if (e.depth >= 5) earn('floor-5');
+        if (e.depth >= 10) earn('floor-10');
+        if (e.depth >= G.BOSS_DEPTH) earn('great-hall');
+      } else if (e.t === 'snuff') earn('snuffed');
+    }
+    stat('monsters slain', kills);
+    if (st.p.lvl >= 8) earn('level-8');
+    if (st.stats.secrets >= 3) earn('secrets-3');
+    if (st.p.gold >= 300) earn('rich');
+  }
+
+  /** Trophies for a finished run (after it is recorded). Also feeds the shared Daily page. */
+  runTrophies(st, result) {
+    const won = st.over === 'won';
+    stat('runs');
+    if (won) {
+      stat('wins');
+      earn('dawn');
+      if (st.mode === 'lantern') earn('lantern-win'); else earn('normal-win');
+      const w = result.records.winsBy;
+      if (w.knight && w.rogue && w.mage) earn('all-heroes');
+    }
+    if (result.score >= 5000) earn('score-5k');
+    if (st.daily && !st.abandoned) {
+      earn('daily');
+      if (won) earn('daily-win');
+    }
+    if (st.daily) daily(result.score, st.daily);
   }
 
   // ------------------------------------------------------------------ first-time tips

@@ -8,6 +8,7 @@ import * as G from '../logic/game.js';
 import { POTIONS, INGREDIENTS, STORY_DAYS } from '../logic/data.js';
 import { reportDay, getSkill } from '../adaptive.js';
 import { noteBest } from '../save.js';
+import { earn, stat } from '../trophies.js';
 import { playMusic, jingle } from '../music.js';
 
 const ROOM_TOP = 86;
@@ -286,6 +287,9 @@ export class Shop extends Phaser.Scene {
     let line; let result;
     if (r.outcome === 'sold') {
       jingle('sale'); sfx('coin');
+      stat('potions sold'); stat('coins earned', r.price);
+      earn('first-sale');
+      if (r.potion === 'sludge') earn('sold-sludge');
       line = r.line || (r.grumpy ? 'Fine. Daylight robbery, but fine.' : r.weak ? 'A bit weak... but it will do, I suppose.' : r.rep >= 2 ? 'Wonderful! Thank you so much!' : 'Thanks. That will do nicely.');
       result = `Sold for ${r.price} coins. Reputation ${fmt(r.rep)}.`;
       if (r.gift) result += r.gift.coins ? ` Gift: ${r.gift.coins} coins!` : ` Gift: ${r.gift.n} ${INGREDIENTS[r.gift.ing].name}!`;
@@ -345,6 +349,9 @@ export class Shop extends Phaser.Scene {
     if (!r) return;
     reportDay(r.satisfaction, r.customers);
     noteBest(s);
+    if (r.income >= 150) earn('big-day');
+    if (r.customers >= 5 && r.happy >= r.customers) earn('happy-day');
+    if (!r.closed && s.day >= 60) earn('day-60');
     persist();
     this.customerSprite?.destroy();
     playMusic('night');

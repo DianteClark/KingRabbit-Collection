@@ -8,12 +8,16 @@ import {
 import * as G from '../logic/game.js';
 import { UNITS, UNIT_ORDER, TERRAIN, SIDES, displayHp, isRanged } from '../logic/data.js';
 import { aiStep, aiParams } from '../logic/ai.js';
-import { mapById, CAMPAIGN } from '../logic/maps.js';
+import { mapById, CAMPAIGN, SKIRMISH } from '../logic/maps.js';
 import {
   frame, sprite, setRef, unitRef, isFoot, isSmallVehicle, buildingRef, BOOM, SHOT, DEATH, CURSOR, TILE,
 } from '../frames.js';
-import { save, saveBattle, loadBattle, clearBattle, missionWon, recordSkirmish } from '../save.js';
-import { getSkill, reportResult, SKILL_ID } from '../adaptive.js';
+import { save, saveBattle, loadBattle, clearBattle, missionWon, recordSkirmish, getRecord } from '../save.js';
+import { getSkill, reportResult, SKILL_ID, skillLabel } from '../adaptive.js';
+import { earn, stat, daily } from '../trophies.js';
+
+// The Daily Skirmish plays a fixed CPU level so it is the same battle for everyone.
+export const DAILY_SKILL = 0.5;
 
 const T = 32; // one map cell on screen (16px art at 2x)
 const TOP = 48;
@@ -848,7 +852,7 @@ export class Battle extends Phaser.Scene {
   async runCpu() {
     const s = this.s;
     const side = s.turn;
-    const P = aiParams(Math.min(getSkill(), s.cpuCap ?? 1));
+    const P = aiParams(Math.min(s.daily ? DAILY_SKILL : getSkill(), s.cpuCap ?? 1));
     this.busy = true;
     this.skipping = false;
     this.cpuRunning = true;
@@ -1198,7 +1202,8 @@ export class Battle extends Phaser.Scene {
     }[s.reason] || '';
     const st = s.stats[human];
     const lines = [];
-    if (vsCpu) {
+    this.trophies(s, vsCpu, won, human);
+    if (vsCpu && !s.daily) {
       // The adaptive level moves by how decisive the result was.
       const mine = G.armyValue(s, human) + 1; const theirs = G.armyValue(s, 1 - human) + 1;
       const margin = Math.min(1, Math.abs(Math.log(mine / theirs)) / 2);
@@ -1246,9 +1251,37 @@ export class Battle extends Phaser.Scene {
     this.time.delayedCall(400, () => modal(this, title, lines, buttons));
   }
 
+  /** Trophies and lifetime stats for a finished battle (shown once, before the result modal). */
+  trophies(s, vsCpu, won, human) {
+    stat('battles');
+    if (!vsCpu) { earn('versus'); return; }
+    const st = s.stats[human] || {};
+    stat('units destroyed', st.kills || 0);
+    stat('buildings captured', st.captured || 0);
+    if ((st.captured || 0) >= 10) earn('captor');
+    if (!won || s.reason === 'resign') return;
+    if (s.reason === 'hq') earn('hq');
+    if (s.reason === 'rout') earn('rout');
+    if (s.day <= 8) earn('blitz');
+    if (!st.lost && (st.kills || 0) >= 5) earn('no-losses');
+    if (!s.daily && skillLabel() >= 8) earn('worthy-foe');
+    if (s.mode === 'campaign') {
+      const i = CAMPAIGN.findIndex((m) => m.id === s.mapId);
+      earn('first-mission');
+      if (i >= 3) earn('mission-4');
+      if (i === CAMPAIGN.length - 1) earn('campaign');
+    } else if (s.mode === 'skirmish') {
+      earn('skirmish');
+      // recordSkirmish runs after this, so count this map as won already.
+      if (SKIRMISH.every((m) => m.id === s.mapId || getRecord(m.id).w > 0)) earn('all-maps');
+      if (s.daily) { earn('daily'); daily(s.day, s.daily, { lower: true }); }
+    }
+  }
+
   restart() {
     const s = this.s;
     const def = mapById(s.mapId);
+    if (s.daily) { go(this, 'Menu', { view: 'daily' }); return; }
     const state = G.newGame(def, { seed: (Date.now() & 0xffffff) >>> 0, controllers: s.controllers, mode: s.mode, missionId: s.missionId });
     saveBattle(state);
     store.start = { state, fresh: true };

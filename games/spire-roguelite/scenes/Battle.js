@@ -14,6 +14,7 @@ import { RELICS } from '../logic/relics.js';
 import { HEROES, finishCombat, discardPotion } from '../logic/run.js';
 import { saveRun, save } from '../save.js';
 import { DEBUG } from '../debug.js';
+import { earn, stat } from '../trophies.js';
 
 const FEET_Y = 246;
 const PLAYER = { x: 60, y: 384 };
@@ -789,6 +790,7 @@ export class Battle extends Phaser.Scene {
     for (const v of this.handViews) v.destroy();
     this.handViews = [];
     if (s.over === 'win') {
+      this.winTrophies(s);
       sfx('win');
       this.banner('Victory!');
       this.time.delayedCall(1000, () => { finishCombat(this.run); route(this, this.run); });
@@ -797,6 +799,24 @@ export class Battle extends Phaser.Scene {
       playOnce(this.player, 'death');
       this.banner('Defeated...');
       this.time.delayedCall(1500, () => { finishCombat(this.run); route(this, this.run); });
+    }
+  }
+
+  /** Trophies for a won fight (the run itself is judged on the RunEnd screen). */
+  winTrophies(s) {
+    const run = this.run;
+    const kind = run.combatKind;
+    stat('enemies defeated', s.enemies.length);
+    earn('first-fight');
+    if (s.player.hp === 1) earn('close-shave');
+    if (kind === 'elite') earn('elite');
+    if (kind !== 'boss') return;
+    earn('boss');
+    if (!s.stats.taken) earn('flawless-boss');
+    if (run.act === 2) earn('act-3');
+    if (run.mode === 'endless' && run.act === 3) {
+      earn('endless-loop');
+      if (run.loop >= 1) earn('endless-2');
     }
   }
 

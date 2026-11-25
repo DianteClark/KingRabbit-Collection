@@ -7,6 +7,7 @@ import { creatureInfo } from './heroPanel.js';
 import * as G from '../logic/game.js';
 import { BUILDINGS, CREATURES, FACTIONS, SPELLS, buildingName, buildingDesc } from '../logic/data.js';
 import { sprite, townFrame, dwellingFrame, groundFrame, BUILDING_ICON, unitFrame, spellFrame, heroFrame, RES_ICON } from '../frames.js';
+import { earn } from '../trophies.js';
 import { saveGame } from '../save.js';
 
 const GRID = ['hall1', 'hall2', 'hall3', 'fort', 'tavern', 'market', 'guild1', 'guild2', 'guild3', 'dw0', 'dw1', 'dw2', 'dw3', 'dw4', 'dw5'];
@@ -110,7 +111,7 @@ export class Town extends Phaser.Scene {
     if (st.reason === 'Built today') lines.push({ text: 'You can build once per day.', color: PALETTE.orange });
     if (st.reason === 'Cost') lines.push({ text: 'Not enough resources.', color: PALETTE.orange });
     if (st.reason === 'Built') lines.push({ text: 'Already built.', color: PALETTE.leaf });
-    const btns = st.ok ? [['Build', () => { G.build(this.s, t, bid); sfx('place'); saveGame(this.s); this.refresh(); toast(this, `${buildingName(bid, t.faction)} built!`, 150); }], ['Cancel', null]] : [['OK', null]];
+    const btns = st.ok ? [['Build', () => { G.build(this.s, t, bid); if (bid === 'hall3') earn('city-hall'); sfx('place'); saveGame(this.s); this.refresh(); toast(this, `${buildingName(bid, t.faction)} built!`, 150); }], ['Cancel', null]] : [['OK', null]];
     modal(this, buildingName(bid, t.faction), lines, btns);
   }
 

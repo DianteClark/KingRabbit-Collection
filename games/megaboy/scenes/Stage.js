@@ -1,9 +1,9 @@
 import Phaser from 'phaser';
 import { World } from '../logic/game.js';
-import { STAGES } from '../logic/stages.js';
+import { STAGES, ROBOT_STAGES } from '../logic/stages.js';
 import { BOSSES } from '../logic/bosses.js';
 import { TILE, VIEW_W, VIEW_H, ZOOM, DT, P, T, WEAPONS } from '../logic/constants.js';
-import { winStage, absorbRun, afterGameOver, noteWeak } from '../logic/progress.js';
+import { winStage, absorbRun, afterGameOver, noteWeak, robotsBeaten } from '../logic/progress.js';
 import { THEMES, PICKUP_FRAMES } from '../art.js';
 import { paintChunk, paintBackground, darkenedTiles, pieceFor } from './painter.js';
 import { loadProgress, storeProgress } from './common.js';
@@ -11,6 +11,7 @@ import { getSkill, report } from '../adaptive.js';
 import { tuneFor } from '../logic/tune.js';
 import { save } from '../save.js';
 import { playMusic, stopMusic, jingle, fx } from '../music.js';
+import { earn, stat } from '../trophies.js';
 
 const CHUNK = 64;
 // which way each enemy's art looks before flipping
@@ -25,6 +26,8 @@ export class Stage extends Phaser.Scene {
     this.stageId = STAGES[data?.stage] ? data.stage : 'foundry';
     this.startCp = data?.cp ?? -1;
     this._leaving = false;
+    this.kills = 0;          // enemies blasted this visit (added to the lifetime stat on leaving)
+    this.special = false;    // fired anything but the buster this visit
   }
 
   create() {
@@ -388,6 +391,7 @@ export class Stage extends Phaser.Scene {
     for (const ev of w.events.splice(0)) {
       switch (ev.type) {
         case 'shoot':
+          if (ev.weapon !== 'buster') this.special = true;
           if (ev.weapon === 'buster') fx(ev.kind === 'pellet' ? 'buster' : 'chargeShot');
           else fx({ ember: 'buster', ice: 'ice', thorn: 'swap', volt: 'zap', drill: 'dig', gale: 'buster' }[ev.weapon] || 'buster');
           break;
@@ -395,7 +399,7 @@ export class Stage extends Phaser.Scene {
         case 'land': fx('land'); break;
         case 'hurt': fx('hurt'); this.hud.flashHurt(); break;
         case 'ehit': fx('ehit'); break;
-        case 'ekill': this.boom(ev.x, ev.y, ev.big ? 1.2 : 0.8); fx('enemyDie'); break;
+        case 'ekill': this.kills++; this.boom(ev.x, ev.y, ev.big ? 1.2 : 0.8); fx('enemyDie'); break;
         case 'deflect': this.spark(ev.x, ev.y); fx('deflect'); break;
         case 'fizzle': case 'pop': this.dot(ev.x, ev.y); break;
         case 'blast': fx('blast'); break;
@@ -418,7 +422,7 @@ export class Stage extends Phaser.Scene {
         case 'phase2': this.cameras.main.flash(200, 255, 80, 80); break;
         case 'bhit':
           fx(ev.weak ? 'weak' : 'bossHit');
-          if (ev.weak) { this.hud.popText(ev.x, ev.y - 6, 'WEAK!'); this.prog = noteWeak(this.prog, ev.kind); storeProgress({ ...loadProgress(), weakSeen: this.prog.weakSeen }); }
+          if (ev.weak) { earn('weak'); this.hud.popText(ev.x, ev.y - 6, 'WEAK!'); this.prog = noteWeak(this.prog, ev.kind); storeProgress({ ...loadProgress(), weakSeen: this.prog.weakSeen }); }
           break;
         case 'bossDown': this.bossBurst(ev.x, ev.y); stopMusic(); fx('bossDie'); this.time.delayedCall(1200, () => jingle('clear')); break;
         case 'death': this.deathBurst(ev.x, ev.y); stopMusic(); fx('death'); report('death'); w.tune = tuneNow(w); break;
@@ -431,7 +435,7 @@ export class Stage extends Phaser.Scene {
   }
 
   onPickup(ev) {
-    if (ev.kind === 'etank') { fx('pickup'); this.saveFinds(); this.hud.toast('Energy Tank! Use it from the pause menu.'); }
+    if (ev.kind === 'etank') { earn('etank'); fx('pickup'); this.saveFinds(); this.hud.toast('Energy Tank! Use it from the pause menu.'); }
     else if (ev.kind === 'life') { fx('pickup'); jingle('checkpoint'); }
     else fx('fill');
   }
@@ -493,6 +497,7 @@ export class Stage extends Phaser.Scene {
     const before = loadProgress();
     const p = winStage(before, this.stageId, w);
     storeProgress(p);
+    this.winTrophies(p, w);
     report('boss', w.p.hp / P.maxHp);
     report('clear', w.deaths);
     this._leaving = true;
@@ -506,8 +511,34 @@ export class Stage extends Phaser.Scene {
     this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => this.scene.start(next, { stage: this.stageId, first: !before.beaten.includes(this.def.boss) }));
   }
 
+  /** Lifetime stats for this visit to the stage, once, however it ends. */
+  flushStats() {
+    stat('enemies blasted', this.kills);
+    stat('lives lost', this.w?.deaths || 0);
+    this.kills = 0;
+  }
+
+  winTrophies(p, w) {
+    this.flushStats();
+    stat('bosses beaten');
+    const robots = robotsBeaten(p);
+    if (robots >= 1) earn('first-boss');
+    if (robots >= 3) earn('bosses-3');
+    if (robots >= 6) earn('bosses-6');
+    if (this.stageId === 'fort1') earn('gate');
+    if (!w.deaths) earn('no-death');
+    if (w.p.hp >= P.maxHp) earn('full-hp');
+    if (ROBOT_STAGES.includes(this.stageId) && !this.special) earn('buster-only');
+    if (this.stageId === 'fort2') {
+      earn('null');
+      if (p.time < 30 * 60) earn('speed');
+      if ((save.get('finishes') || 0) + 1 >= 2) earn('twice');
+    }
+  }
+
   gameOver() {
     if (this._leaving) return;
+    this.flushStats();
     const w = this.w;
     storeProgress(afterGameOver(absorbRun(loadProgress(), w)));
     report('gameover');
@@ -519,6 +550,7 @@ export class Stage extends Phaser.Scene {
   /** Pause menu: leave the stage, keeping what was found. */
   quit(to) {
     if (this._leaving) return;
+    this.flushStats();
     storeProgress(absorbRun(loadProgress(), this.w));
     this._leaving = true;
     stopMusic();
