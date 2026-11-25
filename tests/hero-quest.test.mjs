@@ -123,7 +123,7 @@ test('every switch puzzle is solvable from every doorway, and blocks can never w
   const puzzles = rooms.filter((r) => r.on.switch);
   assert.ok(puzzles.length >= 3);
   for (const r of puzzles) {
-    const res = S.solvePuzzle(r);
+    const res = S.solvePuzzle(r, {}, { traps: true });
     assert.ok(res.ok, `${r.id} puzzle unsolvable: ${JSON.stringify(res.results)}`);
     assert.deepEqual(res.traps, [], `${r.id}: blocks can wall you in`);
   }

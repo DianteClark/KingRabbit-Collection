@@ -197,7 +197,7 @@ export function allChests() {
  * Sokoban search for a switch room: from every open doorway, can blocks be pushed so that every
  * switch is covered, with the reward (door or chest) then within reach?
  */
-export function solvePuzzle(r, flags = {}) {
+export function solvePuzzle(r, flags = {}, opts = {}) {
   const switches = []; const blocks0 = []; const starts = [];
   for (let y = 0; y < ROWS; y++) {
     for (let x = 0; x < COLS; x++) {
@@ -216,9 +216,11 @@ export function solvePuzzle(r, flags = {}) {
   const blockFloor = (x, y) => floor(x, y) && !sideOf(x, y);
   const results = [];
   for (const s of starts) results.push(search(s));
-  return { ok: results.length > 0 && results.every((x) => x.ok), results, traps: starts.length ? search(starts[0], true).traps : [] };
+  const out = { ok: results.length > 0 && results.every((x) => x.ok), results };
+  if (opts.traps) out.traps = starts.length ? trapSearch(starts[0]) : [];
+  return out;
 
-  function search(start, all = false) {
+  function grid(start) {
     // Cells are numbered y * COLS + x; a state is the sorted block cells plus the lowest cell the
     // player can reach (the player's whole region is equivalent).
     const N = COLS * ROWS;
@@ -241,8 +243,58 @@ export function solvePuzzle(r, flags = {}) {
       }
       return out;
     };
-    const exitCells = starts.map(([x, y]) => y * COLS + x);
-    const graph = new Map();
+    return { N, isFloor, isBlockFloor, swc, region };
+  }
+
+  /**
+   * Every block arrangement you can reach; returns those from which no sequence of pushes lets
+   * you walk out of a doorway again (they would wall you in). Kept lean: one number per state.
+   */
+  function trapSearch(start) {
+    const { N, isBlockFloor, region } = grid(start);
+    const exits = new Set(starts.map(([x, y]) => y * COLS + x));
+    const ids = new Map(); const good = []; const rev = []; const keyOf = [];
+    const raw = new Map();
+    const q = [{ bs: blocks0.map(([x, y]) => y * COLS + x).sort((m, n) => m - n), p: start[1] * COLS + start[0], from: -1 }];
+    for (let head = 0; head < q.length; head++) {
+      const st = q[head]; q[head] = null;
+      const rk = `${st.bs.join(',')}|${st.p}`;
+      const known = raw.get(rk);
+      if (known !== undefined) { if (st.from >= 0) rev[known].push(st.from); continue; }
+      const reg = region(st.bs, st.p);
+      let low = N; let out = false;
+      for (const c of reg) { if (c < low) low = c; if (exits.has(c)) out = true; }
+      const k = `${st.bs.join(',')}|${low}`;
+      let id = ids.get(k);
+      const fresh = id === undefined;
+      if (fresh) { id = ids.size; ids.set(k, id); good.push(out); rev.push([]); keyOf.push(st.bs); }
+      raw.set(rk, id);
+      if (st.from >= 0) rev[id].push(st.from);
+      if (!fresh) continue;
+      const inReg = new Set(reg);
+      st.bs.forEach((b, i) => {
+        const bx = b % COLS; const by = Math.floor(b / COLS);
+        for (const [dx, dy] of [[0, 1], [0, -1], [1, 0], [-1, 0]]) {
+          const px = bx - dx; const py = by - dy; const tx = bx + dx; const ty = by + dy;
+          if (px < 0 || py < 0 || px >= COLS || py >= ROWS || tx < 0 || ty < 0 || tx >= COLS || ty >= ROWS) continue;
+          if (!inReg.has(py * COLS + px)) continue;
+          const t = ty * COLS + tx;
+          if (!isBlockFloor[t] || st.bs.includes(t)) continue;
+          q.push({ bs: st.bs.map((o, j) => (j === i ? t : o)).sort((m, n) => m - n), p: b, from: id });
+        }
+      });
+    }
+    // walk backwards from every state with a way out
+    const ok = new Uint8Array(good.length); const stack = [];
+    good.forEach((g, i) => { if (g) { ok[i] = 1; stack.push(i); } });
+    while (stack.length) { const i = stack.pop(); for (const j of rev[i]) if (!ok[j]) { ok[j] = 1; stack.push(j); } }
+    const traps = [];
+    ok.forEach((v, i) => { if (!v) traps.push(keyOf[i].map((c) => [c % COLS, Math.floor(c / COLS)])); });
+    return traps;
+  }
+
+  function search(start) {
+    const { N, isBlockFloor, swc, region } = grid(start);
     const startState = { bs: blocks0.map(([x, y]) => y * COLS + x).sort((m, n) => m - n), p: start[1] * COLS + start[0], prev: null, push: null };
     const visited = new Set();
     const q = [startState];
@@ -252,15 +304,10 @@ export function solvePuzzle(r, flags = {}) {
       const reg = region(st.bs, st.p);
       let low = N; for (const c of reg) if (c < low) low = c;
       const k = `${st.bs.join(',')}|${low}`;
-      if (all && visited.has(k) && st.prev) graph.get(st.prev.key)?.succ.push(k);
       if (visited.has(k)) continue;
       visited.add(k);
       const inReg = new Set(reg);
-      if (all) {
-        st.key = k; st.reg = inReg;
-        graph.set(k, { st, succ: [] });
-        if (st.prev) graph.get(st.prev.key)?.succ.push(k);
-      } else if (swc.every((c) => st.bs.includes(c)) && rewardReachable(new Set(reg.map((c) => `${c % COLS},${Math.floor(c / COLS)}`)))) {
+      if (swc.every((c) => st.bs.includes(c)) && rewardReachable(new Set(reg.map((c) => `${c % COLS},${Math.floor(c / COLS)}`)))) {
         const plan = [];
         for (let n = st; n.push; n = n.prev) plan.unshift(n.push);
         return { ok: true, states: visited.size, start, plan };
@@ -278,15 +325,7 @@ export function solvePuzzle(r, flags = {}) {
         }
       });
     }
-    if (!all) return { ok: false, states: visited.size };
-    // States from which no sequence of pushes ever lets you reach a doorway again.
-    const good = new Set([...graph].filter(([, v]) => exitCells.some((c) => v.st.reg.has(c))).map(([k]) => k));
-    for (let changed = true; changed;) {
-      changed = false;
-      for (const [k, v] of graph) if (!good.has(k) && v.succ.some((n) => good.has(n))) { good.add(k); changed = true; }
-    }
-    const traps = [...graph].filter(([k]) => !good.has(k)).map(([, v]) => v.st.bs.map((c) => [c % COLS, Math.floor(c / COLS)]));
-    return { ok: false, states: visited.size, traps };
+    return { ok: false, states: visited.size };
   }
 
   function rewardReachable(region) {

@@ -27,7 +27,7 @@ A short top-down sword-and-dungeon adventure for a phone held in one hand. The G
 | Interiors | 3 | Elder's house (start), Odo's shop, hidden cave by the lake (heart container, needs bombs) |
 | Mossy Hollow | 7 | Key from a cleared room, push-block switch opens a shutter, boomerang, crystal across water lowers a bridge to the Boss Key. Boss: Slime King |
 | Ember Lab | 7 | Two-block switch puzzle, clear-shutter room with the bombs, bombable wall, island chest via crystal, Stone Brute mini-boss. Boss: Golem King |
-| Hollow Keep | 7 | Three-block puzzle (13 pushes, with a trick: the left switch can only be reached through a gap in a pillar line), bomb wall, crystal bridge, twin golem mini-boss, optional bomb pocket. Boss: Hollow King |
+| Hollow Keep | 7 | Two-block puzzle (13 pushes, with a trick: the top switch can only be reached by a detour through a gap in a pillar line), bomb wall, crystal bridge, twin golem mini-boss, optional bomb pocket. Boss: Hollow King |
 
 Progression gates: the boomerang lowers the Ember River bridge (crystal on the far bank); bombs break the rock sealing Hollow Keep and the lake cave.
 
