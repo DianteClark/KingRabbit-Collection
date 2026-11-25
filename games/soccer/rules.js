@@ -34,6 +34,7 @@ export const RULES = {
         'Quick Match: pick any opponent. Harder teams have more stars.',
         'Cup: eight teams, knockout. Quarter-final, semi-final, final. A draw goes to a penalty shoot-out; lose once and the run is over. Your progress is saved between rounds. Leaving a Cup or Endless match before the end (pause menu, closing the app) counts as a 3-0 defeat.',
         'Endless: a slightly easier ladder of matches against gradually stronger teams. Your score is your wins in a row; a draw goes to penalties, a defeat ends the run.',
+        'Daily Match: one opponent a day, the same for everyone, at a fixed CPU level and normal length. Your best goal difference today counts. Play it as often as you like.',
       ],
     },
     {

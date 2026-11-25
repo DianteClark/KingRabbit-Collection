@@ -1263,7 +1263,7 @@ export class Battle extends Phaser.Scene {
     if (s.reason === 'hq') earn('hq');
     if (s.reason === 'rout') earn('rout');
     if (s.day <= 8) earn('blitz');
-    if (!st.lost) earn('no-losses');
+    if (!st.lost && (st.kills || 0) >= 5) earn('no-losses');
     if (!s.daily && skillLabel() >= 8) earn('worthy-foe');
     if (s.mode === 'campaign') {
       const i = CAMPAIGN.findIndex((m) => m.id === s.mapId);

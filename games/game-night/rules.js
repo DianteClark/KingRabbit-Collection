@@ -89,6 +89,7 @@ export const RULES = {
       { heading: 'The table', items: ['Seven columns, with the top card of each face up.', 'In a column, stack cards down in alternating colours (a red 6 on a black 7).', 'You can move a face-up card together with everything on top of it.', 'Only a King (or a stack starting with one) may go in an empty column.', 'When you move away the last face-up card in a column, the card under it turns up.'] },
       { heading: 'Stock and waste', items: ['Tap the deck at the top left to turn cards (one at a time, or three with Draw 3).', 'Only the top waste card can be played. When the deck runs out, tap it to turn the waste back over.'] },
       { heading: 'Controls', items: ['Tap a card to pick it up, then tap where it should go.', 'Tap the same card twice to send it to its best spot.', 'Undo takes back moves. New deal lets you choose Draw 1 or Draw 3. Finish plays out a solved game.'] },
+      { heading: 'Daily Deal', text: 'Pick Daily Deal from the Solitaire tile: the same Draw 1 deal for everyone today. Win it in as few moves as you can.' },
     ],
   },
   WildCards: {
