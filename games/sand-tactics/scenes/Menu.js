@@ -10,6 +10,7 @@ import { skillLabel, resetSkill } from '../adaptive.js';
 import { CAMPAIGN, SKIRMISH } from '../logic/maps.js';
 import { parseMap, newGame } from '../logic/game.js';
 import { frame, sprite, unitRef, buildingRef, TILE, setRef } from '../frames.js';
+import { todaySeed, today } from '../trophies.js';
 
 const MINI = {
   sand: 0xd88038, dunes: 0xf0b050, oasis: 0x6c8c50, mesa: 0x6b3a35, water: 0x2a8a8a, road: 0x777777,
@@ -26,6 +27,7 @@ export class Menu extends Phaser.Scene {
     window.__sandMenu = this;
     if (this.view === 'campaign') this.campaignView();
     else if (this.view === 'skirmish' || this.view === 'versus') this.mapsView(this.view);
+    else if (this.view === 'daily') { this.mainView(); this.dailyBrief(); }
     else this.mainView();
   }
 
@@ -49,6 +51,7 @@ export class Menu extends Phaser.Scene {
     button(this, WIDTH / 2, y, 300, 46, `Campaign  (${done}/${CAMPAIGN.length})`, () => go(this, 'Menu', { view: 'campaign' }), { fill: saved ? PALETTE.lavender : PALETTE.gold });
     button(this, WIDTH / 2, y + 58, 300, 46, 'Skirmish vs CPU', () => go(this, 'Menu', { view: 'skirmish' }), { fill: PALETTE.lavender });
     button(this, WIDTH / 2, y + 116, 300, 46, '2 Players (one phone)', () => go(this, 'Menu', { view: 'versus' }), { fill: PALETTE.lavender });
+    button(this, WIDTH / 2, y + 174, 300, 46, 'Daily Skirmish', () => this.dailyBrief(), { fill: PALETTE.lavender });
 
     text(this, WIDTH / 2, 566, 'Art: Aleksandr Makarov', { color: PALETTE.lavender });
     button(this, 86, 612, 156, 40, '< All Games', () => { window.location.href = '../'; }, { fill: PALETTE.indigo, color: PALETTE.cream });
@@ -192,10 +195,22 @@ export class Menu extends Phaser.Scene {
     }
   }
 
-  start(def, kind) {
+  /** Daily Skirmish: today's seed picks the map and the dice; the CPU plays a fixed level. */
+  dailyBrief() {
+    sfx('tap');
+    const seed = todaySeed();
+    const m = SKIRMISH[seed % SKIRMISH.length];
+    const saved = loadBattle();
+    const lines = [`Today everyone fights on ${m.name} against the same CPU. Win in as few days as you can.`];
+    if (saved && !saved.over) lines.push({ text: 'This replaces your battle in progress.', color: PALETTE.orange });
+    modal(this, 'Daily Skirmish', lines, [['Start', () => this.start(m, 'skirmish', { seed, daily: today() })], ['Back', null]], { row: true });
+  }
+
+  start(def, kind, { seed = (Date.now() & 0xffffff) >>> 0, daily = null } = {}) {
     clearBattle();
     const controllers = kind === 'versus' ? ['human', 'human'] : ['human', 'cpu'];
-    const state = newGame(def, { seed: (Date.now() & 0xffffff) >>> 0, controllers, mode: kind, missionId: kind === 'campaign' ? def.id : null });
+    const state = newGame(def, { seed, controllers, mode: kind, missionId: kind === 'campaign' ? def.id : null });
+    if (daily) { state.daily = daily; state.name = `Daily: ${def.name}`; }
     saveBattle(state);
     store.start = { state, fresh: true };
     sfx('power');
