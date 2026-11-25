@@ -4,6 +4,7 @@ import { WIDTH, HEIGHT } from '../../../shared/core/boot.js';
 import { showHowTo } from '../../../shared/core/howto.js';
 import { RULES } from '../rules.js';
 import { TABLES } from '../tables.js';
+import { down, hit, stick, hideWhilePad } from '../padkit.js';
 import { skillLabel } from '../adaptive.js';
 
 /** Top bar used by every Game Night screen: back button + title. */
@@ -138,7 +139,7 @@ export function swipeArea(scene, rect, { onSwipe, onTap, min = 24 }) {
  * A button you hold down (for action games). Returns { isDown, wasPressed() }.
  * Uses its own pointer tracking so several can be held at once (multi-touch).
  */
-export function holdButton(scene, x, y, w, h, label, { fill = PALETTE.lavender, color = PALETTE.night, size = 16 } = {}) {
+export function holdButton(scene, x, y, w, h, label, { fill = PALETTE.lavender, color = PALETTE.night, size = 16, pad = [] } = {}) {
   const c = scene.add.container(x, y).setDepth(60);
   const shadow = scene.add.rectangle(0, 4, w, h, hex(PALETTE.ink));
   const edge = scene.add.rectangle(0, 0, w, h, hex(PALETTE.night));
@@ -152,9 +153,11 @@ export function holdButton(scene, x, y, w, h, label, { fill = PALETTE.lavender, 
   zone.on('pointerdown', (p) => { state.pointers.add(p.id); state.pressed = true; update(); });
   zone.on('pointerup', (p) => { state.pointers.delete(p.id); update(); });
   zone.on('pointerout', (p) => { state.pointers.delete(p.id); update(); });
+  zone.padSkip = true; // the controller presses these with its own buttons (pad), not the menu frame
+  if (pad.length) hideWhilePad(scene, c);
   return {
-    get isDown() { return state.isDown; },
-    wasPressed() { const v = state.pressed; state.pressed = false; return v; },
+    get isDown() { return state.isDown || pad.some((n) => down(n)); },
+    wasPressed() { const v = state.pressed || pad.some((n) => hit(n)); state.pressed = false; return v; },
     container: c,
   };
 }
@@ -171,3 +174,14 @@ export function fitLine(t, parts, maxW = 348) {
     }
   }
 }
+
+/**
+ * An arcade table that reads the controller itself: the gold menu frame only works in its popups
+ * (game-over and pause), and Start / B there go back to the menu.
+ */
+export function arcadePad(scene) {
+  scene.padNav = 'modal';
+  scene.padModalDepth = 90;
+}
+
+export { stick, hit, down, hideWhilePad };

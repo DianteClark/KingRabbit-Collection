@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { PALETTE, hex } from '../../../shared/core/palette.js';
 import { text } from '../../../shared/core/ui.js';
 import { WIDTH } from '../../../shared/core/boot.js';
-import { header, go, setBackground, toast, modal, fitLine } from './common.js';
+import { header, go, setBackground, toast, modal, fitLine, arcadePad, stick, hit } from './common.js';
 import { getBest, submitBest } from '../save.js';
 import { earn } from '../trophies.js';
 import { sfx } from '../../../shared/core/sfx.js';
@@ -55,6 +55,7 @@ export class BlockBreaker extends Phaser.Scene {
       if (tap && !over.length && !this.clearing && this.balls.some((b) => b.stuck)) this.launch();
     });
 
+    arcadePad(this); // controller: stick / d-pad moves the paddle, A launches
     this.loadLevel(0);
   }
 
@@ -118,6 +119,9 @@ export class BlockBreaker extends Phaser.Scene {
   update(_, ms) {
     if (this.over || this.clearing) return;
     const dt = Math.min(ms / 1000, 1 / 30);
+    const sx = stick().x;
+    if (sx) this.paddle.x = Phaser.Math.Clamp(this.paddle.x + sx * 420 * dt, F.x + this.paddle.w / 2, F.x + F.w - this.paddle.w / 2);
+    if ((hit('a') || hit('b')) && this.balls.some((b) => b.stuck)) this.launch();
     this.paddle.img.x = Math.round(this.paddle.x);
 
     // If the ball hasn't touched the paddle or a brick for 12s, give it a nudge.

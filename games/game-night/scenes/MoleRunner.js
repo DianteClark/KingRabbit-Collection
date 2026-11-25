@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { PALETTE, hex } from '../../../shared/core/palette.js';
 import { text } from '../../../shared/core/ui.js';
 import { WIDTH } from '../../../shared/core/boot.js';
-import { header, go, setBackground, toast, modal, holdButton, fitLine } from './common.js';
+import { header, go, setBackground, toast, modal, holdButton, fitLine, arcadePad } from './common.js';
 import { getBest, submitBest } from '../save.js';
 import { sfx } from '../../../shared/core/sfx.js';
 import { getSkill, tune, reportResult } from '../adaptive.js';
@@ -36,13 +36,14 @@ export class MoleRunner extends Phaser.Scene {
 
     const y = 520;
     this.pad = {
-      up: holdButton(this, 96, y - 54, 64, 50, '^', { size: 32 }),
-      down: holdButton(this, 96, y + 54, 64, 50, 'v', { size: 32 }),
-      left: holdButton(this, 30, y, 56, 50, '<', { size: 32 }),
-      right: holdButton(this, 162, y, 56, 50, '>', { size: 32 }),
+      up: holdButton(this, 96, y - 54, 64, 50, '^', { size: 32, pad: ['up'] }),
+      down: holdButton(this, 96, y + 54, 64, 50, 'v', { size: 32, pad: ['down'] }),
+      left: holdButton(this, 30, y, 56, 50, '<', { size: 32, pad: ['left'] }),
+      right: holdButton(this, 162, y, 56, 50, '>', { size: 32, pad: ['right'] }),
     };
-    this.digL = holdButton(this, 250, y - 14, 120, 60, 'Dig left', { fill: PALETTE.orange });
-    this.digR = holdButton(this, 250, y + 62, 120, 60, 'Dig right', { fill: PALETTE.orange });
+    this.digL = holdButton(this, 250, y - 14, 120, 60, 'Dig left', { fill: PALETTE.orange, pad: ['x2', 'l'] });
+    this.digR = holdButton(this, 250, y + 62, 120, 60, 'Dig right', { fill: PALETTE.orange, pad: ['b', 'a', 'r'] });
+    arcadePad(this); // controller: d-pad runs, X / L dig left, A / B / R dig right
 
     this.score = 0; this.lives = 3; this.levelIdx = 0; this.over = false; this.levelsCleared = 0; this.dying = false;
     this.startLevel();

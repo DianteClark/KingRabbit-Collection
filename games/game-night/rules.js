@@ -110,6 +110,7 @@ export const RULES = {
       { heading: 'Goal', text: 'Hit the puck into the computer\'s goal at the top. First to 7 goals wins.' },
       { heading: 'Controls', items: ['Drag anywhere in your half to move your blue mallet.', 'Your mallet can\'t cross the centre line.', 'Swing through the puck to hit it harder, and bank shots off the side walls.'] },
       { heading: 'After a goal', text: 'The player who let the goal in gets the puck on their side.' },
+      { heading: 'Controller', text: 'The stick or d-pad slides your mallet. On the game-over screen A picks and B goes back to the menu. The touch buttons hide while you use the controller and come back when you touch the screen.' },
     ],
   },
   BlockBreaker: {
@@ -119,6 +120,7 @@ export const RULES = {
       { heading: 'Controls', items: ['Drag left and right to move the paddle. Tap to launch the ball.', 'Where the ball hits the paddle sets its angle: the edges send it out sideways.'] },
       { heading: 'Bricks', items: ['Green and orange bricks break in one hit. Red takes 2 hits and lavender takes 3.', 'Higher bricks are worth more points.'] },
       { heading: 'Power-ups', text: 'Catch falling capsules with the paddle: W makes the paddle wide, M splits the ball into three, S slows the ball down, and + gives an extra ball.' },
+      { heading: 'Controller', text: 'Stick or d-pad moves the paddle, A launches the ball. On the game-over screen A picks and B goes back to the menu. The touch buttons hide while you use the controller and come back when you touch the screen.' },
     ],
   },
   SpaceRocks: {
@@ -128,6 +130,7 @@ export const RULES = {
       { heading: 'Controls', items: ['< and > rotate the ship. Go fires the thruster. Fire shoots.', 'Your ship drifts in space and wraps around the screen edges, and so do the rocks.'] },
       { heading: 'Rocks', items: ['Big rocks split into two medium ones, and medium rocks split into two small ones.', 'Big 20, medium 50, small 100 points.', 'Touching a rock costs a ship. You have three, and you blink (safe) for a moment after respawning.'] },
       { heading: 'Saucer and extra ships', items: ['From wave 2 a flying saucer crosses now and then, shooting at you. Hit it for 1000 points, but don\'t ram it.', 'You earn an extra ship every 10,000 points.'] },
+      { heading: 'Controller', text: 'Left and right turn, up or B thrusts, A or X fires. On the game-over screen A picks and B goes back to the menu. The touch buttons hide while you use the controller and come back when you touch the screen.' },
     ],
   },
   Bowling: {
@@ -156,6 +159,7 @@ export const RULES = {
       { heading: 'The map', items: ['Brick walls break when shot. Steel blocks shells (star shells break it).', 'Water blocks tanks but not shells. Bushes hide tanks.', 'If any shell hits your flag, the game is over.'] },
       { heading: 'Enemies', items: ['Green tanks are basic, red tanks are fast, and white tanks take two hits.', 'Some patrol, some hunt you, and some head straight for your flag, shooting through bricks on the way. Harder levels send more of them, faster.', 'Shells cancel out when they collide.'] },
       { heading: 'Power-ups', items: ['Every fourth enemy glows gold: destroy it to drop a power-up. Drive over it before it vanishes.', 'Helmet: shield. Stopwatch: freezes enemies. Shovel: steel walls round your flag. Star: faster double shells. Grenade: destroys every enemy on screen. Tank: extra life.'] },
+      { heading: 'Controller', text: 'D-pad or stick drives, A, B or X fires. On the game-over screen A picks and B goes back to the menu. The touch buttons hide while you use the controller and come back when you touch the screen.' },
     ],
   },
   BoxBox: {
@@ -172,6 +176,7 @@ export const RULES = {
       { heading: 'Goal', text: 'Line up three or more gems of the same colour to clear them, and keep the well from filling up.' },
       { heading: 'Controls', items: ['< and > (or swipe) move the falling stack. Hold them to keep sliding.', 'The faint outline shows where the stack will land.', 'Turn (or tap the well) rotates the order of its three gems.', 'Drop (or swipe down) drops it instantly for bonus points.'] },
       { heading: 'Scoring', items: ['Lines count across, down and diagonally.', 'After gems clear, the ones above fall and can clear again: chains multiply your score.', 'Every 30 gems cleared, the level and speed go up.', 'The game ends when there is no room for a new stack at the top.'] },
+      { heading: 'Controller', text: 'Left and right slide the piece, A or up turns it, B or down drops it. On the game-over screen A picks and B goes back to the menu. The touch buttons hide while you use the controller and come back when you touch the screen.' },
     ],
   },
   MoleRunner: {
@@ -182,6 +187,7 @@ export const RULES = {
       { heading: 'Digging', items: ['Dig left / Dig right makes a hole in the brick diagonally below you on that side. Stone can\'t be dug.', 'Holes fill back in after a few seconds. Don\'t be standing in one when it does!', 'Enemies that fall into a hole get stuck for a moment, and you can run across their heads. If the hole fills while they\'re in it, they reappear at the top.'] },
       { heading: 'Lives', text: 'You have three lives. Touching an enemy costs one and restarts the level.' },
       { heading: 'Levels', text: 'There are 6 levels. After the last one they repeat with quicker enemies.' },
+      { heading: 'Controller', text: 'D-pad or stick runs and climbs, X or L digs left, A, B or R digs right. On the game-over screen A picks and B goes back to the menu. The touch buttons hide while you use the controller and come back when you touch the screen.' },
     ],
   },
 };
