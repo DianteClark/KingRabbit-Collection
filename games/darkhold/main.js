@@ -8,6 +8,9 @@ import * as G from './logic/game.js';
 import * as Bot from './logic/bot.js';
 import { save, saveRun, loadRun } from './save.js';
 import { DEBUG } from './debug.js';
+import { initTrophies } from './trophies.js';
+
+initTrophies();
 
 startGame({ scenes: [Boot, Title, ClassSelect, Play, End], background: '#08070d' });
 
