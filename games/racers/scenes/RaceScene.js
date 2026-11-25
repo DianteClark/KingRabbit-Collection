@@ -146,7 +146,7 @@ export class RaceScene extends Phaser.Scene {
           }
           break;
         case 'finish':
-          if (mine) this.playerFinished(e.place);
+          if (mine) this.playerFinished(e.place, e.dnf);
           break;
         default:
       }
@@ -154,13 +154,13 @@ export class RaceScene extends Phaser.Scene {
     if (p.wrongT >= 5) award('wrong-way');
   }
 
-  playerFinished(place) {
+  playerFinished(place, dnf = false) {
     if (this.finishedAt != null) return;
     this.finishedAt = this.time.now;
-    const race = this.race; const d = this.data0;
+    const d = this.data0;
     const solo = d.mode === 'tt' || d.mode === 'daily';
-    sfx(solo || place <= 3 ? 'win' : 'lose');
-    this.hud.finishBanner(solo ? 'FINISH!' : place === 1 ? 'YOU WIN!' : `${['', '1st', '2nd', '3rd', '4th', '5th', '6th'][place]} place`);
+    sfx(!dnf && (solo || place <= 3) ? 'win' : 'lose');
+    this.hud.finishBanner(dnf ? 'Out of time' : solo ? 'FINISH!' : place === 1 ? 'YOU WIN!' : `${['', '1st', '2nd', '3rd', '4th', '5th', '6th'][place]} place`);
     this.summary = this.settle(place);
   }
 
@@ -170,9 +170,11 @@ export class RaceScene extends Phaser.Scene {
     const solo = d.mode === 'tt' || d.mode === 'daily';
     const rows = race.results();
     const out = { mode: d.mode, trackId: d.trackId, rows, place, total: p.finishTime, laps: p.lapTimes.slice(), model: this.model, colour: this.colour };
+    const dnf = !!p.dnf;
+    out.dnf = dnf;
     save.set('races', (save.get('races') || 0) + 1);
     stat('races');
-    award('first-finish');
+    if (!dnf) award('first-finish');
     const best = { ...(save.get('best') || {}) };
     const b = { ...(best[d.trackId] || {}) };
     if (!solo) {
@@ -194,10 +196,10 @@ export class RaceScene extends Phaser.Scene {
     }
     // laps: best lap and the ghost (Time Trial keeps the ghost; the daily only its best time)
     const laps = race.record ? race.record.laps : [];
-    const fastest = Math.min(...p.lapTimes);
+    const fastest = p.lapTimes.length ? Math.min(...p.lapTimes) : Infinity;
     out.bestLap = fastest;
     out.prevBestLap = b.lap ?? null;
-    if (b.lap == null || fastest < b.lap) {
+    if (isFinite(fastest) && (b.lap == null || fastest < b.lap)) {
       b.lap = fastest;
       out.newBestLap = true;
       if (d.mode === 'tt') {

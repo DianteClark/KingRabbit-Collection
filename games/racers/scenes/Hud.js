@@ -23,6 +23,7 @@ export class Hud extends Phaser.Scene {
     this.auto = save.get('autoGas') !== false;
     this.L = layout(this.auto);
     this.hint = null;
+    this.warned = false;
   }
 
   create() {
@@ -46,10 +47,10 @@ export class Hud extends Phaser.Scene {
     this.arrows = this.add.graphics();
     this.meterText = text(this, L.buttons.boost.x, L.buttons.boost.y + L.buttons.boost.r + 10, '', { color: PALETTE.gold });
     this.rain = this.race.def.mood === 'rain' ? this.makeRain() : null;
-    this.wrongText = text(this, WIDTH / 2, 120, 'WRONG WAY!', { size: 32, color: PALETTE.red }).setVisible(false).setDepth(30);
+    this.wrongText = text(this, WIDTH / 2, 104, 'WRONG WAY!', { size: 32, color: PALETTE.red }).setVisible(false).setDepth(30);
     this.countText = text(this, WIDTH / 2, 150, '', { size: 32, color: PALETTE.gold }).setDepth(31);
     this.countBg = this.add.rectangle(WIDTH / 2, 150, 120, 52, hex(PALETTE.ink), 0.6).setDepth(30).setVisible(false);
-    this.hintBox = this.add.container(WIDTH / 2, 70).setDepth(35).setVisible(false);
+    this.hintBox = this.add.container(WIDTH / 2, 58).setDepth(35).setVisible(false);
     this.hintBg = this.add.rectangle(0, 0, 400, 32, hex(PALETTE.ink), 0.75).setStrokeStyle(2, hex(PALETTE.gold));
     this.hintText = text(this, 0, 0, '', { color: PALETTE.cream });
     this.hintBox.add([this.hintBg, this.hintText]);
@@ -75,7 +76,9 @@ export class Hud extends Phaser.Scene {
   // ------------------------------------------------------------------ input
 
   setupInput() {
-    this.input.addPointer(4);
+    // room for two thumbs plus a spare finger or two (only added once per game)
+    const have = this.input.manager.pointersTotal;
+    if (have < 6) this.input.addPointer(6 - have);
     const L = this.L;
     this.input.on('pointerdown', (p) => {
       if (this.modalOpen || this.leaving) return;
@@ -150,6 +153,10 @@ export class Hud extends Phaser.Scene {
     this.bestText.setText(bestLap != null ? `Best ${fmtTime(bestLap)}` : '');
     this.drawDots();
     this.drawControls();
+    const left = race.deadline != null && !p.finished ? Math.ceil(race.deadline - race.time) : null;
+    this.lapText.setColor(left != null && left <= 10 ? PALETTE.red : PALETTE.cream);
+    if (left != null) this.lapText.setText(`Finish in ${left}`);
+    if (left != null && !this.warned) { this.warned = true; this.toast('Everyone else is home: hurry!'); }
     this.wrongText.setVisible(p.wrongT > 1 && Math.floor(race.time * 3) % 2 === 0 && !p.finished);
     if (this.rain) this.updateRain();
     this.updateHints();
@@ -302,8 +309,8 @@ export class Hud extends Phaser.Scene {
   }
 
   toast(msg) {
-    const t = text(this, WIDTH / 2, 110, msg, { color: PALETTE.gold }).setDepth(41);
-    const bg = this.add.rectangle(WIDTH / 2, 110, t.width + 20, 28, hex(PALETTE.ink), 0.6).setDepth(40);
+    const t = text(this, WIDTH / 2, 104, msg, { color: PALETTE.gold }).setDepth(41);
+    const bg = this.add.rectangle(WIDTH / 2, 104, t.width + 20, 28, hex(PALETTE.ink), 0.6).setDepth(40);
     this.tweens.add({ targets: [t, bg], alpha: 0, delay: 1100, duration: 300, onComplete: () => { t.destroy(); bg.destroy(); } });
   }
 
@@ -314,11 +321,13 @@ export class Hud extends Phaser.Scene {
 
   finishBanner(msg) { this.banner(msg, '', 2400); }
 
+  /** Message strip below the top bar (kept clear of your car, which sits mid-screen). */
   banner(msg, sub = '', hold = 1400) {
-    const c = this.add.container(0, 0).setDepth(45);
-    c.add(this.add.rectangle(WIDTH / 2, 150, WIDTH, sub ? 80 : 60, hex(PALETTE.ink), 0.65));
-    c.add(text(this, WIDTH / 2, sub ? 138 : 150, msg, { size: 32, color: PALETTE.gold }));
-    if (sub) c.add(text(this, WIDTH / 2, 170, sub, { color: PALETTE.cream }));
+    const y = 100;
+    const c = this.add.container(WIDTH / 2, y).setDepth(45);
+    c.add(this.add.rectangle(0, 0, 360, sub ? 64 : 48, hex(PALETTE.ink), 0.65));
+    c.add(text(this, 0, sub ? -10 : 0, msg, { size: 32, color: PALETTE.gold }));
+    if (sub) c.add(text(this, 0, 18, sub, { color: PALETTE.cream }));
     c.setScale(1, 0);
     this.tweens.add({ targets: c, scaleY: 1, duration: 150, ease: 'Back.easeOut' });
     this.tweens.add({ targets: c, alpha: 0, delay: hold, duration: 300, onComplete: () => c.destroy() });

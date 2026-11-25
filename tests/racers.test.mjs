@@ -7,7 +7,7 @@ const base = new URL('../games/racers/', import.meta.url).href;
 const { buildTrack, validate, locate, pointAt, racingLine } = await import(base + 'logic/track.js');
 const { TRACKS, CUPS, LAYOUTS, trackDef, LAPS } = await import(base + 'logic/tracks.js');
 const { newCar, stepCar, placeCar, collideTrack, respawn, physics, MODELS, modelById, DT, forwardSpeed, speedOf, CAR_R } = await import(base + 'logic/car.js');
-const { Race, simulate, getTrack, rubberBand, COUNTDOWN } = await import(base + 'logic/race.js');
+const { Race, simulate, rubberBand, COUNTDOWN, FINISH_WINDOW } = await import(base + 'logic/race.js');
 const getAI = await import(base + 'logic/ai.js');
 const { tune } = getAI;
 const CUP = await import(base + 'logic/cup.js');
@@ -276,6 +276,23 @@ test('positions follow distance, finishers first; results estimate the rest', ()
   assert.deepEqual(res.map((r) => r.place), [1, 2, 3, 4, 5, 6]);
   for (let k = 1; k < res.length; k++) assert.ok(res[k].time >= res[k - 1].time);
   void p2Last;
+});
+
+test('a race never hangs: after the last rival finishes you get a short window, then it is called', () => {
+  const race = new Race({ trackId: 'downtown', player: { model: 'hatch', colour: 'red' }, rivals: rivals([1, 1, 1, 1, 1]), grid: 5 });
+  let done = null;
+  for (let i = 0; i < 60 * 260 && !done; i++) {
+    const ev = race.step({});            // you never touch the controls
+    done = ev.find((e) => e.type === 'finish' && e.car.human) || null;
+  }
+  assert.ok(done && done.dnf, 'called as out of time');
+  assert.equal(done.place, 6);
+  assert.equal(race.phase, 'done');
+  const res = race.results();
+  assert.equal(res[5].human, true);
+  assert.equal(res[5].dnf, true);
+  const lastRival = Math.max(...race.cars.filter((c) => !c.human).map((c) => c.finishTime));
+  assert.ok(Math.abs(race.player.finishTime - (lastRival + FINISH_WINDOW)) < 0.1);
 });
 
 test('grid slots sit behind the line on the road, two abreast', () => {

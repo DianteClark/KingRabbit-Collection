@@ -56,7 +56,7 @@ export class Results extends Phaser.Scene {
       const c = me ? PALETTE.gold : PALETTE.cream;
       text(this, 40, y, ordinal(row.place), { color: me ? PALETTE.gold : PALETTE.lavender, origin: [0, 0.5] });
       text(this, 96, y, row.name, { color: c, origin: [0, 0.5] });
-      const t = i === 0 ? fmtTime(row.time) : `+${(row.time - win).toFixed(2)}`;
+      const t = row.dnf ? 'Out of time' : i === 0 ? fmtTime(row.time) : `+${(row.time - win).toFixed(2)}`;
       text(this, 356, y, t, { color: c, origin: [1, 0.5] });
     });
   }

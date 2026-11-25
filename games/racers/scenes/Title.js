@@ -95,9 +95,9 @@ export class Title extends Phaser.Scene {
     shape.fillStyle(0xffffff).fillRect(x0, y - 44, w, 88);
     const mask = shape.createGeometryMask();
     this.stripCars = [
-      { s: this.add.image(0, y + 12, mine, '0').setScale(2), off: 0, speed: 120, lane: 12 },
-      { s: this.add.image(0, y - 12, r1, '0').setScale(2), off: 90, speed: 112, lane: -12 },
-      { s: this.add.image(0, y + 12, r2, '0').setScale(2), off: 210, speed: 104, lane: 12 },
+      { s: this.add.image(0, y + 12, mine, '0').setScale(2), off: 0, speed: 110, lane: 12 },
+      { s: this.add.image(0, y - 12, r1, '0').setScale(2), off: 70, speed: 110, lane: -12 },
+      { s: this.add.image(0, y + 12, r2, '0').setScale(2), off: 190, speed: 110, lane: 12 },
     ];
     this.stripCars.forEach((c) => c.s.setMask(mask));
     this.strip = { x0, w, y, t: 0 };
@@ -108,9 +108,7 @@ export class Title extends Phaser.Scene {
     st.t += dt / 1000;
     for (const c of this.stripCars) {
       const x = st.x0 - 30 + ((st.t * c.speed + c.off) % (st.w + 60));
-      const wob = Math.sin(st.t * 2 + c.off) * 4;
-      c.s.setPosition(Math.round(x), Math.round(st.y + c.lane + wob));
-      c.s.setFrame(Math.abs(Math.cos(st.t * 2 + c.off)) > 0.8 ? (wob > 0 ? '1' : '15') : '0');
+      c.s.setPosition(Math.round(x), Math.round(st.y + c.lane));
     }
   }
 

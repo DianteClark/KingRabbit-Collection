@@ -8,6 +8,7 @@ import { gridSlots } from './raster.js';
 
 export const COUNTDOWN = 3;       // seconds of 3-2-1 before GO
 const STUCK_AFTER = 2.2;          // seconds nearly still while trying to go -> respawn
+export const FINISH_WINDOW = 25;  // seconds you get after the last rival finishes
 
 const cache = new Map();
 /** Track geometry and racing line are pure functions of the track id: build each once. */
@@ -122,6 +123,17 @@ export class Race {
     collideCars(this.cars);
     for (const car of this.cars) collideTrack(this.t, car, []);
     for (const car of this.cars) this.laps_(car, ev);
+    // once every rival is home you get a little while to finish, then the race is called
+    const p = this.player;
+    if (p && !p.finished && this.cars.length > 1 && this.cars.every((c) => c.human || c.finished)) {
+      if (this.deadline == null) this.deadline = this.time + FINISH_WINDOW;
+      if (this.time >= this.deadline) {
+        p.finished = true; p.dnf = true; p.finishTime = this.time;
+        this.order.push(p);
+        this.phase = 'done';
+        ev.push({ type: 'finish', car: p, place: this.order.length, dnf: true });
+      }
+    }
     if (this.record && this.player && !this.player.finished && this.steps % 2 === 0) {
       const p = this.player;
       this.record.frames.push(Math.round(p.x * 2), Math.round(p.y * 2), Math.round(p.h * 100));
@@ -187,7 +199,7 @@ export class Race {
         time = this.time + Math.max(0, this.laps * L - c.dist) / Math.max(40, pace);
         est = true;
       }
-      return { car: c, name: c.name, human: !!c.human, time, est, best: c.lapTimes.length ? Math.min(...c.lapTimes) : null };
+      return { car: c, name: c.name, human: !!c.human, time, est, dnf: !!c.dnf, best: c.lapTimes.length ? Math.min(...c.lapTimes) : null };
     });
     // finishers keep their order; the rest by estimated time (never ahead of a real finisher)
     const fin = this.order.map((c) => rows.find((r) => r.car === c));
