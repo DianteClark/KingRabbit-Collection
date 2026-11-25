@@ -409,6 +409,7 @@ export class Play extends Phaser.Scene {
   buildControls() {
     this.stepBtn = button(this, 50, CTRL_Y, 84, 46, 'Step', () => this.stepOnce(), { fill: PALETTE.lavender });
     this.runBtn = button(this, 150, CTRL_Y, 100, 46, 'Run', () => this.runPressed(), { fill: PALETTE.leaf, color: PALETTE.cream, silent: true });
+    this.runBtn.padFirst = true; // the controller's frame starts on Run
     this.resetBtn = button(this, 250, CTRL_Y, 84, 46, 'Reset', () => this.resetRun(), { fill: PALETTE.lavender });
     this.speedBtn = button(this, 326, CTRL_Y, 56, 46, `${this.speed}x`, () => {
       this.speed = SPEEDS[(SPEEDS.indexOf(this.speed) + 1) % SPEEDS.length];
@@ -438,6 +439,10 @@ export class Play extends Phaser.Scene {
   setupDrag() {
     this.press = null;
     this.drag = null;
+    // Controller: the gold frame picks slots, commands and buttons; A taps (finished here, as the
+    // scene-wide pointerup would), Start runs or pauses the program.
+    this.padAfterPress = () => { const pr = this.press; this.press = null; if (pr && !this.blocked()) this.tap(pr); };
+    this.padStart = () => this.runPressed();
     this.input.on('pointermove', (p) => {
       if (!this.press || this.drag) { if (this.drag) this.moveDrag(p); return; }
       if (!p.isDown) return;

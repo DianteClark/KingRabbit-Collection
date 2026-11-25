@@ -50,6 +50,7 @@ export const RULES = {
         '2 stars: a few over. 1 star: any solution.',
         'Stuck? The Hint button has a tip, and can show an answer.',
         'Your programs and best scores are saved on this phone.',
+        'Controller: the d-pad moves a gold frame over the commands, program slots and buttons; A taps it (a command in the palette adds it, one in your program removes it), B goes back and Start runs or pauses the program.',
         'Daily: each day the menu offers one level for everyone (even one you have not reached). Solve it in as few commands as you can.',
       ],
     },

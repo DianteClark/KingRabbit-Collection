@@ -148,6 +148,7 @@ export class Combat extends Phaser.Scene {
   band() {
     this.add.rectangle(0, BAND_Y - 22, WIDTH, 44, hex(PALETTE.ink), 0.6).setOrigin(0);
     this.pauseBtn = button(this, 34, BAND_Y, 60, 38, '', () => this.togglePause(), { fill: PALETTE.gold }).setDepth(20);
+    this.padStart = () => { if (!this.ending) this.togglePause(); }; // controller Start = pause / play
     this.pauseIcon = this.add.graphics();
     this.pauseBtn.face.add(this.pauseIcon);
     this.speedBtn = button(this, 98, BAND_Y, 56, 38, '1x', () => this.toggleSpeed(), { fill: PALETTE.lavender }).setDepth(20);
