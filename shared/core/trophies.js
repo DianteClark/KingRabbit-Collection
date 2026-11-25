@@ -131,9 +131,29 @@ export function reportDaily(gameId, score, { lower = false } = {}) {
 
 export const playedDailyToday = (gameId) => load().daily?.[gameId]?.best?.[today()] != null;
 
+/** Today's best daily score for a game (or null), plus the current streak. */
+export function dailyBest(gameId) {
+  const d = load().daily?.[gameId];
+  return { best: d?.best?.[today()] ?? null, streak: d?.streak || 0 };
+}
+
 // ---------------------------------------------------------------- toast
 
+// Toasts wait their turn so several trophies at once don't stack on top of each other.
+const queue = [];
+let showing = false;
 function toast(name, tier) {
+  queue.push([name, tier]);
+  if (!showing) next();
+}
+function next() {
+  const item = queue.shift();
+  if (!item) { showing = false; return; }
+  showing = true;
+  showToast(...item);
+  setTimeout(next, 3000);
+}
+function showToast(name, tier) {
   sfx('coin');
   const el = document.createElement('div');
   const color = { bronze: '#d88038', silver: '#b9b6c9', gold: '#e3d245' }[tier] || '#e3d245';
