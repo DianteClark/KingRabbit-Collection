@@ -7,7 +7,7 @@ import { modal, openHowTo, kitChip } from './common.js';
 import { PHASE } from '../logic/match.js';
 import { dirToPitch } from '../logic/view.js';
 import { W, L } from '../logic/constants.js';
-import { applyResult, needsPens, matchData, QUIT_SCORE } from '../flow.js';
+import { applyResult, needsPens, matchData, QUIT_SCORE, isFriendly } from '../flow.js';
 import { save } from '../save.js';
 
 // Landscape layout (640x360): scoreboard bar with the mini-map inside it across the top, the
@@ -69,6 +69,7 @@ export class Hud extends Phaser.Scene {
     const d = this.ms.data0;
     if (d.mode === 'cup') return ['QF', 'SF', 'Final'][(save.get('cup') || {}).round || 0] || 'Cup';
     if (d.mode === 'endless') return `Run ${(save.get('endless') || {}).streak || 0}`;
+    if (d.mode === 'daily') return 'Daily';
     return '';
   }
 
@@ -296,12 +297,12 @@ export class Hud extends Phaser.Scene {
     if (this.modalOpen || this.m.phase === PHASE.OVER) return;
     this.setModal(true);
     const mode = this.ms.data0.mode;
-    const lines = mode === 'quick' ? ['Match paused'] : ['Quitting now counts', 'as a 3-0 defeat'];
+    const lines = isFriendly(mode) ? ['Match paused'] : ['Quitting now counts', 'as a 3-0 defeat'];
     const md = modal(this, 'Paused', lines, [
       ['Resume', () => { md.destroy(); this.setModal(false); }],
       ['Quit match', () => {
         md.destroy();
-        if (mode === 'quick') { this.leave('Menu'); return; }
+        if (isFriendly(mode)) { this.leave('Menu'); return; }
         const res = applyResult(this.ms.data0, QUIT_SCORE);
         this.leave(mode === 'cup' ? 'Cup' : 'Endless', res);
       }],
@@ -325,9 +326,9 @@ export class Hud extends Phaser.Scene {
     const res = applyResult(d, s);
     sfx(res.won ? 'win' : res.draw ? 'select' : 'lose');
     const title = res.won ? 'You win!' : res.draw ? 'Draw' : 'You lose';
-    if (d.mode === 'quick') {
-      modal(this, title, [line, stats], [
-        ['Rematch', () => this.leave('MatchScene', matchData('quick', d.away))],
+    if (isFriendly(d.mode)) {
+      modal(this, title, [line, d.mode === 'daily' ? `${stats}   Daily: goal difference counts` : stats], [
+        ['Rematch', () => this.leave('MatchScene', matchData(d.mode, d.away))],
         ['Menu', () => this.leave('Menu')],
       ]);
     } else if (d.mode === 'cup') {

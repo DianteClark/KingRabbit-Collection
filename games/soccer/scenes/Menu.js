@@ -9,7 +9,7 @@ import { skillLabel, resetSkill } from '../adaptive.js';
 import { kitTexture } from '../sprites.js';
 import { PLAYER_TEAM, TEAMS, teamById } from '../logic/teams.js';
 import { ROUND_NAMES, opponentOf } from '../logic/cup.js';
-import { settleUnfinished } from '../flow.js';
+import { settleUnfinished, matchData, dailyOpponent } from '../flow.js';
 
 const LENGTH_LABEL = { short: 'Short', normal: 'Normal', long: 'Long' };
 const NEXT_LENGTH = { short: 'normal', normal: 'long', long: 'short' };
@@ -35,9 +35,11 @@ export class Menu extends Phaser.Scene {
     }
     const streak = (save.get('endless') || {}).streak || 0;
     const best = save.get('endlessBest') || 0;
-    this.modeButton(98, 'Quick Match', 'Pick any opponent', () => go(this, 'Pick'));
-    this.modeButton(178, 'Cup', cupSub, () => go(this, 'Cup'));
-    this.modeButton(258, 'Endless', streak ? `Run: ${streak} wins  Best ${best}` : `Best run: ${best} wins`, () => go(this, 'Endless'));
+    this.modeButton(84, 'Quick Match', 'Pick any opponent', () => go(this, 'Pick'));
+    this.modeButton(152, 'Cup', cupSub, () => go(this, 'Cup'));
+    this.modeButton(220, 'Endless', streak ? `Run: ${streak} wins  Best ${best}` : `Best run: ${best} wins`, () => go(this, 'Endless'));
+    const dOpp = dailyOpponent();
+    this.modeButton(288, 'Daily Match', `Today: ${dOpp.name}`, () => go(this, 'MatchScene', matchData('daily')));
 
     const r = save.get('record') || { w: 0, d: 0, l: 0 };
     text(this, 164, 222, `W${r.w} D${r.d} L${r.l}   CPU level ${skillLabel()}/10`, { color: PALETTE.lavender });
@@ -100,9 +102,9 @@ export class Menu extends Phaser.Scene {
   }
 
   modeButton(y, label, sub, fn) {
-    const b = button(this, 484, y, 272, 70, '', fn, { fill: PALETTE.cream });
-    b.face.add(text(this, 0, -11, label, { size: 32, color: PALETTE.night }));
-    b.face.add(text(this, 0, 17, sub, { color: PALETTE.indigo }));
+    const b = button(this, 484, y, 272, 60, '', fn, { fill: PALETTE.cream });
+    b.face.add(text(this, 0, -9, label, { size: 32, color: PALETTE.night }));
+    b.face.add(text(this, 0, 15, sub, { color: PALETTE.indigo }));
     return b;
   }
 

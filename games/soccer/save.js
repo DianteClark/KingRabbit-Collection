@@ -7,6 +7,7 @@ export const save = createSave('soccer', {
   cup: null, cupsWon: 0, cupRuns: 0,
   endless: { streak: 0 }, endlessBest: 0,
   length: 'normal', opponent: 'foxes', seenHelp: false, unfinished: null,
+  beaten: {}, // team id -> true once you have beaten it (any mode), for the Grand Tour trophy
 });
 
 /** outcome 'w' | 'd' | 'l' */

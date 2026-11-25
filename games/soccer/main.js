@@ -7,5 +7,8 @@ import { Endless } from './scenes/Endless.js';
 import { MatchScene } from './scenes/MatchScene.js';
 import { Hud } from './scenes/Hud.js';
 import { Penalties } from './scenes/Penalties.js';
+import { initTrophies } from './trophies.js';
+
+initTrophies();
 
 startGame({ scenes: [Boot, Menu, Pick, Cup, Endless, MatchScene, Hud, Penalties], orientation: 'landscape' });
