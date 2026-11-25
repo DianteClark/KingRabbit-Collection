@@ -1,6 +1,10 @@
 import Phaser from 'phaser';
 import { sfx } from '../../../shared/core/sfx.js';
 import { Game, newState } from '../logic/game.js';
+import { migrate } from '../logic/migrate.js';
+import { handleTrophyEvent } from '../trophies.js';
+
+const TROPHY_EVENTS = new Set(['get', 'gems', 'die', 'block', 'trigger', 'bought', 'bossDown', 'ending']);
 import { TILE, COLS, ROWS, ROOM_W, ROOM_H, AREA_NAMES } from '../logic/constants.js';
 import { ROOMS } from '../logic/data.js';
 import { paintRoom } from './painter.js';
@@ -22,8 +26,10 @@ export class Play extends Phaser.Scene {
 
   create() {
     let state = this.startData.fresh ? null : save.get('game');
-    if (state && state.v !== 1) state = null;
+    state = migrate(state);
     if (state && state.hp <= 0) state.hp = state.maxHp;
+    this.migratedNote = !!state?.migrated;
+    if (state) delete state.migrated;
     this.g = new Game({ state: state || newState(), skill: getSkill(), seed: (Date.now() & 0xffff) + 1 });
     if (!state) save.set('game', this.g.s);
     window.__hq = this; // for browser tests and debugging
@@ -320,7 +326,9 @@ export class Play extends Phaser.Scene {
   handleEvents() {
     const g = this.g;
     const evs = g.events.splice(0);
+    const ctx = { s: g.s, allChestsOpen: () => g.allChestsOpen() };
     for (const ev of evs) {
+      if (TROPHY_EVENTS.has(ev.type)) handleTrophyEvent(ev, ctx);
       switch (ev.type) {
         case 'sfx': if (!jingle(ev.name)) sfx(ev.name); break;
         case 'cells': this.repaint(); break;

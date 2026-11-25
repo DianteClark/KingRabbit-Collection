@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { SHEETS, charStrips, slimeStrips, ROW_OF, GROUP, NPC_ROW } from '../art.js';
 import { PALETTE } from '../../../shared/core/palette.js';
+import { initTrophies } from '../trophies.js';
 
 export class Boot extends Phaser.Scene {
   constructor() { super('Boot'); }
@@ -24,6 +25,7 @@ export class Boot extends Phaser.Scene {
   }
 
   create() {
+    initTrophies();
     makeAnims(this);
     makeTextures(this);
     this.scene.start('Title');

@@ -42,12 +42,12 @@ export class Hud extends Phaser.Scene {
     button(this, PAUSE_BTN.x, PAUSE_BTN.y, PAUSE_BTN.w, PAUSE_BTN.h, '<', () => this.pauseMenu(), { size: 32, fill: PALETTE.cream });
     button(this, HELP_BTN.x, HELP_BTN.y, HELP_BTN.w, HELP_BTN.h, '?', () => this.help(), { size: 32, fill: PALETTE.gold });
     this.hearts = [];
-    for (let i = 0; i < 10; i++) this.hearts.push(this.add.image(24 + (i % 5) * 24, 62 + Math.floor(i / 5) * 20, 'heart').setScale(2));
-    this.gemIcon = this.add.image(26, 108, 'items', itemFrame('gem')).setScale(1.25);
-    this.gemText = text(this, 40, 108, '0', { color: PALETTE.cream, origin: [0, 0.5] });
-    this.keyIcon = this.add.image(84, 108, 'items', itemFrame('key'));
-    this.keyText = text(this, 94, 108, '0', { color: PALETTE.cream, origin: [0, 0.5] });
-    this.bossKey = this.add.image(124, 108, 'items', itemFrame('bigkey'));
+    for (let i = 0; i < 10; i++) this.hearts.push(this.add.image(14 + (i % 2) * 20, 58 + Math.floor(i / 2) * 18, 'heart').setScale(2));
+    this.gemIcon = this.add.image(24, 158, 'items', itemFrame('gem')).setScale(1.25);
+    this.gemText = text(this, 24, 178, '0', { color: PALETTE.cream });
+    this.keyIcon = this.add.image(14, 206, 'items', itemFrame('key'));
+    this.keyText = text(this, 32, 206, '0', { color: PALETTE.cream });
+    this.bossKey = this.add.image(24, 228, 'items', itemFrame('bigkey'));
     // frame around the room
     const fr = this.add.graphics();
     fr.lineStyle(2, hex(PALETTE.ink)).strokeRect(VIEW.x - 1, VIEW.y - 1, VIEW.w + 2, VIEW.h + 2);
@@ -55,11 +55,11 @@ export class Hud extends Phaser.Scene {
     // ------------------------------------------------ controls
     this.pad = this.add.graphics();
     this.swordLabel = text(this, SWORD.x, SWORD.y, 'SWORD', { color: PALETTE.night });
-    this.itemIcon = this.add.image(ITEMB.x, ITEMB.y - 2, 'items', 0).setScale(2);
+    this.itemIcon = this.add.image(ITEMB.x, ITEMB.y - 1, 'items', 0).setScale(2);
     this.itemLabel = text(this, ITEMB.x, ITEMB.y, 'ITEM', { color: PALETTE.night });
-    this.itemCount = text(this, ITEMB.x + 26, ITEMB.y + 24, '', { color: PALETTE.cream });
+    this.itemCount = text(this, ITEMB.x - 22, ITEMB.y + 20, '', { color: PALETTE.cream });
     this.swapLabel = text(this, SWAP.x, SWAP.y, 'SWAP', { color: PALETTE.night });
-    this.stickHint = text(this, STICK.x, STICK.y - 70, 'MOVE', { color: PALETTE.lavender });
+    this.stickHint = text(this, STICK.x, STICK.y - 52, 'MOVE', { color: PALETTE.lavender });
 
     // ------------------------------------------------ overlays
     this.flash = this.add.rectangle(VIEW.x, VIEW.y, VIEW.w, VIEW.h, 0xd8343a, 0).setOrigin(0).setDepth(30);
@@ -70,7 +70,8 @@ export class Hud extends Phaser.Scene {
     this.refresh();
     this.ready = true;
     this.play.banner(true);
-    this.play.hintGoal();
+    if (this.play.migratedNote) this.time.delayedCall(400, () => this.toast('The vale was redrawn wider! You restart at this area\'s start, items kept.'));
+    else this.play.hintGoal();
     // A brand-new adventure: the elder starts talking by himself (after the How to Play sheet
     // the very first time), so nobody has to guess what to do in the first room.
     const intro = () => this.time.delayedCall(450, () => this.play.startIntro());
@@ -87,11 +88,13 @@ export class Hud extends Phaser.Scene {
     const items = [];
     const tag = (x, y, msg) => {
       const t = text(this, x, y, msg, { color: PALETTE.night }).setDepth(45);
-      const bg = this.add.rectangle(x, y, t.width + 14, t.height + 8, hex(PALETTE.gold)).setDepth(44).setStrokeStyle(2, hex(PALETTE.ink));
+      const cx = Math.max(t.width / 2 + 10, Math.min(WIDTH - t.width / 2 - 10, x));
+      t.setX(Math.round(cx));
+      const bg = this.add.rectangle(cx, y, t.width + 14, t.height + 8, hex(PALETTE.gold)).setDepth(44).setStrokeStyle(2, hex(PALETTE.ink));
       items.push(t, bg);
     };
-    tag(STICK.x + 6, STICK.y - 72, 'Drag here\nto walk');
-    tag(SWORD.x - 8, SWORD.y - 62, 'Tap to swing');
+    tag(STICK.x + 20, STICK.y - 70, 'Drag here\nto walk');
+    tag(SWORD.x - 104, SWORD.y, 'Tap to swing');
     this.tweens.add({ targets: items, y: '-=4', yoyo: true, repeat: 7, duration: 380 });
     this.time.delayedCall(6500, () => this.tweens.add({ targets: items, alpha: 0, duration: 400, onComplete: () => items.forEach((o) => o.destroy()) }));
   }
@@ -198,7 +201,7 @@ export class Hud extends Phaser.Scene {
     const label = g.mode === 'play' ? g.actionLabel() : '';
     const btn = (c, down, fill, enabled = true) => {
       gpad.fillStyle(hex(PALETTE.ink), 0.6).fillCircle(c.x, c.y + 4, c.r);
-      gpad.fillStyle(hex(fill), enabled ? (down ? 1 : 0.9) : 0.35).fillCircle(c.x, c.y + (down ? 3 : 0), c.r - 2);
+      gpad.fillStyle(hex(fill), enabled ? (down ? 1 : 0.8) : 0.3).fillCircle(c.x, c.y + (down ? 3 : 0), c.r - 2);
       gpad.lineStyle(3, hex(PALETTE.night), 1).strokeCircle(c.x, c.y + (down ? 3 : 0), c.r - 2);
     };
     const swordDown = this.down.sword.size > 0;
@@ -249,11 +252,12 @@ export class Hud extends Phaser.Scene {
     this.closeDialogBox();
     const c = this.add.container(0, 0).setDepth(50);
     // over the lower part of the room, a little wider than it
-    const x0 = LEFT - 24; const w = VIEW.w + 48;
-    // keep the speaker in sight: if the player is low on screen, the box goes to the top
+    // inside the room (never over the HUD or the buttons), at its bottom - or its top when the
+    // bottom box would cover you
+    const x0 = LEFT + 8; const w = VIEW.w - 16;
     const cam = this.play.cameras.main;
     const py = VIEW.y + (this.g.p.y - (cam.midPoint.y - VIEW.h / 4)) * 2;
-    const top = py > HEIGHT - 140 ? 4 : HEIGHT - 128; // only when the bottom box would cover you
+    const top = py > VIEW.y + VIEW.h - 150 ? VIEW.y + 8 : VIEW.y + VIEW.h - 132;
     c.add(panel(this, x0, top, w, 124, { fill: PALETTE.night, inner: PALETTE.cream }));
     const body = text(this, x0 + 16, top + 14, '', { color: PALETTE.cream, origin: [0, 0], align: 'left', wrap: w - 40 });
     const more = text(this, x0 + w - 22, top + 104, 'v', { color: PALETTE.gold });
