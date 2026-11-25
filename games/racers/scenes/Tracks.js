@@ -36,7 +36,7 @@ export class Tracks extends Phaser.Scene {
       const b = best[tr.id] || {};
       let third;
       if (!open) third = 'Locked';
-      else if (this.mode === 'tt') third = b.lap != null ? `Lap ${fmtTime(b.lap)}` : 'No time yet';
+      else if (this.mode === 'tt') third = b.ttLap != null ? `Lap ${fmtTime(b.ttLap)}` : 'No time yet';
       else third = b.place ? `Best: ${ordinal(b.place)}` : 'Not raced yet';
       c.add(text(this, 0, 22, third, { color: open ? PALETTE.gold : PALETTE.lavender }));
     });

@@ -258,9 +258,13 @@ def main():
                 tp[x, y] = (208, 70, 72, 255) if (x // 4) % 2 == 0 else (222, 238, 214, 255)
             if y == 16 and (x // 4) % 2 == 0:
                 tp[x, y] = (222, 238, 214, 255)
-    red = recolour(rotsprite(car_sprite(**{k2: v for k2, v in MODELS['coupe'].items()}), -25, 20),
-                   [(240, 96, 96), (208, 70, 72), (140, 40, 52)])
-    th.alpha_composite(red.resize((40, 40), Image.NEAREST).crop((4, 4, 36, 36)), (0, 0))
+    red = recolour(rotsprite(car_sprite(**MODELS['coupe']), -22.5, 20), [(240, 96, 96), (208, 70, 72), (140, 40, 52)])
+    blue = recolour(rotsprite(car_sprite(**MODELS['hatch']), 0, 20), [(120, 164, 240), (89, 125, 206), (48, 52, 109)])
+    # skid marks behind the drifting red car
+    for x in range(3, 13):
+        tp[x, 20 + (x % 3 == 0)] = (52, 48, 56, 255)
+    th.alpha_composite(blue, (-9, 6))
+    th.alpha_composite(red, (10, 4))
     th.save(os.path.join(ROOT, 'games/public/thumbs/racers.png'))
 
 

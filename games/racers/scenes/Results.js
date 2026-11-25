@@ -32,6 +32,7 @@ export class Results extends Phaser.Scene {
     } else {
       text(this, x, 92, fmtTime(r.total), { size: 32, color: PALETTE.gold });
       let line = r.newBestLap ? 'New best lap!' : `Best lap ${fmtTime(r.prevBestLap)}`;
+      if (r.newBestLap && r.prevBestLap != null) line = `New best lap! (-${(r.prevBestLap - r.bestLap).toFixed(2)})`;
       if (r.mode === 'daily' && r.daily) line = r.daily.isBest ? "Today's best!" : `Today's best ${fmtTime(r.daily.best)}`;
       text(this, x, 124, line, { color: r.newBestLap || r.daily?.isBest ? PALETTE.leaf : PALETTE.lavender });
       if (r.mode === 'daily' && r.daily) text(this, x, 148, `Streak: ${r.daily.streak} day${r.daily.streak === 1 ? '' : 's'}`, { color: PALETTE.lavender });

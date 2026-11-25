@@ -9,7 +9,7 @@ import { skillLabel, resetSkill } from '../adaptive.js';
 import { carTexture } from '../art.js';
 import { modelById } from '../logic/car.js';
 import { CUPS, trackById } from '../logic/tracks.js';
-import { dailyConfig, fmtTime, newCup, nextTrack } from '../logic/cup.js';
+import { dailyConfig, fmtTime, newCup, nextTrack, cupOver } from '../logic/cup.js';
 import { GAME_ID, TROPHIES } from '../trophies.js';
 
 export class Title extends Phaser.Scene {
@@ -42,7 +42,7 @@ export class Title extends Phaser.Scene {
     const cup = save.get('cup');
     const prog = save.get('progress') || { cups: [] };
     let cupSub;
-    if (cup) cupSub = `${CUPS[cup.cup].name}: race ${cup.race + 1} of 4`;
+    if (cup) cupSub = cupOver(cup) ? `${CUPS[cup.cup].name}: final table` : `${CUPS[cup.cup].name}: race ${cup.race + 1} of 4`;
     else {
       const won = (prog.cups || []).filter((p) => p === 1).length;
       cupSub = won ? `Cups won: ${won} of 3` : 'Four races for points';

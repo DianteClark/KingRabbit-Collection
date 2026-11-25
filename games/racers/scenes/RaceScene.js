@@ -198,11 +198,13 @@ export class RaceScene extends Phaser.Scene {
     const laps = race.record ? race.record.laps : [];
     const fastest = p.lapTimes.length ? Math.min(...p.lapTimes) : Infinity;
     out.bestLap = fastest;
-    out.prevBestLap = b.lap ?? null;
-    if (isFinite(fastest) && (b.lap == null || fastest < b.lap)) {
-      b.lap = fastest;
-      out.newBestLap = true;
-      if (d.mode === 'tt') {
+    if (isFinite(fastest) && (b.lap == null || fastest < b.lap)) b.lap = fastest;   // best lap in any mode
+    if (d.mode === 'tt') {
+      // Time Trial keeps its own best lap and the ghost of it
+      out.prevBestLap = b.ttLap ?? null;
+      if (isFinite(fastest) && (b.ttLap == null || fastest < b.ttLap)) {
+        b.ttLap = fastest;
+        out.newBestLap = true;
         const lap = laps.reduce((m, l) => (!m || l.time < m.time ? l : m), null);
         if (lap) { b.ghost = packGhost(lap.frames); b.gm = this.model; b.gc = this.colour; }
         if (out.prevBestLap != null) award('ghost');
