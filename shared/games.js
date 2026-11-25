@@ -34,6 +34,6 @@ export const GAMES = [
   { id: 'gem-quest', title: 'Gem Quest', tagline: 'Match gems, power your hero', cat: 'classic', status: 'playable' },
   { id: 'pixel-quest', title: 'Pixel Quest', tagline: 'A classic party RPG', cat: 'adventure', status: 'playable' },
   { id: 'colony', title: 'Colony', tagline: 'Keep your settlers alive', cat: 'sim', status: 'playable' },
+  { id: 'racers', title: 'Tiny Town Racers', tagline: 'Drift through the city streets', cat: 'action', status: 'playable', landscape: true },
   // In development
-  { id: 'racers', title: 'Tiny Town Racers', tagline: 'Drift through the city streets', cat: 'action', status: 'soon', landscape: true },
 ];
