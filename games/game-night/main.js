@@ -22,7 +22,7 @@ import { Pool } from './scenes/Pool.js';
 import { Tanks } from './scenes/Tanks.js';
 import { MoleRunner } from './scenes/MoleRunner.js';
 import { initTrophies } from './trophies.js';
-import { installPad } from './padkit.js';
+import { installPad } from '../../shared/core/padkit.js';
 
 initTrophies();
 

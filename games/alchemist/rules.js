@@ -62,5 +62,6 @@ export const RULES = {
       ],
     },
     { heading: 'Credits', text: 'Art by Aleksandr Makarov (LAS Alchemist Lab and LAS Adventure Pack). Font BoldPixels by YukiPixels (CC BY-SA 4.0). Music and sounds made in code.' },
+    { heading: 'Controller', text: 'On the title screen, in menus, panels and popups the d-pad moves a gold frame over the buttons, A taps it and B goes back. Playing on the shop, garden and cauldron is still done by touch.' },
   ],
 };

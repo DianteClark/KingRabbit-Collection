@@ -9,7 +9,7 @@ import { Result } from './scenes/Result.js';
 import { GameOver } from './scenes/GameOver.js';
 import { Ending } from './scenes/Ending.js';
 import { initTrophies } from './trophies.js';
-import { installPad } from './padkit.js';
+import { installPad } from '../../shared/core/padkit.js';
 
 initTrophies();
 

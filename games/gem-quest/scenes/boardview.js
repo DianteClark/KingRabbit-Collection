@@ -2,6 +2,7 @@
 // logic returns. Shared by battles and riddle stones.
 import { Phaser, PALETTE, hex, sfx, GEM_COLORS, gemFrame, outlined } from './common.js';
 import { SIZE, adjacent, idx, xy } from '../logic/board.js';
+import { hit, rep, usingPad } from '../../../shared/core/padkit.js';
 
 const OVERLAY = { h: 'ov_h', v: 'ov_v', bomb: 'ov_bomb' };
 
@@ -42,6 +43,16 @@ export class BoardView {
     this.hintTweens = [];
 
     this.zone = scene.add.zone(x, y, this.size, this.size).setOrigin(0).setInteractive().setDepth(depth + 3);
+    this.zone.padSkip = true;
+    // Controller: a cursor on the board. Y switches between the board and the screen's buttons
+    // (the shared gold frame), so while the board has focus the d-pad, A and B belong to it.
+    this.cur = idx(Math.floor(SIZE / 2), Math.floor(SIZE / 2));
+    this.padFocus = true;
+    this.curBox = scene.add.rectangle(0, 0, cell - 2, cell - 2).setStrokeStyle(3, hex(PALETTE.cream)).setDepth(depth + 1).setVisible(false);
+    scene.padNav = () => (this.padFocus ? 'modal' : undefined);
+    const tick = () => this.padTick();
+    scene.events.on('update', tick);
+    scene.events.once('shutdown', () => scene.events.off('update', tick));
     this.zone.on('pointerdown', (p) => this.down(p));
     const onMove = (p) => this.move(p);
     const onUp = (p) => this.up(p);
@@ -156,6 +167,31 @@ export class BoardView {
     }
     this.select(i);
     sfx('select');
+  }
+
+  /** Controller: d-pad moves the cursor, A picks the gem under it, then a direction swaps it. B drops it. */
+  padTick() {
+    if (!usingPad()) { this.curBox.setVisible(false); return; }
+    if (hit('y2')) this.padFocus = !this.padFocus;
+    this.curBox.setVisible(this.padFocus);
+    if (!this.padFocus) return;
+    for (const [n, dx, dy] of [['left', -1, 0], ['right', 1, 0], ['up', 0, -1], ['down', 0, 1]]) {
+      if (!rep(n)) continue;
+      const [cx, cy] = xy(this.cur);
+      const nx = cx + dx; const ny = cy + dy;
+      if (nx < 0 || ny < 0 || nx >= SIZE || ny >= SIZE) break;
+      const to = idx(nx, ny);
+      if (this.selected >= 0 && this.selected === this.cur) { const a = this.selected; this.select(-1); this.trySwap(a, to); }
+      this.cur = to;
+      break;
+    }
+    if (hit('a')) {
+      if (!this.enabled) this.onTapBlocked?.();
+      else if (this.selected === this.cur) this.select(-1);
+      else if (this.board.cells[this.cur]) { this.select(this.cur); sfx('select'); }
+    } else if (hit('b') && this.selected >= 0) this.select(-1);
+    const [px, py] = this.pos(this.cur);
+    this.curBox.setPosition(px, py);
   }
 
   select(i) {

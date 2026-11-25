@@ -13,6 +13,7 @@ export const RULES = {
         'Pull further for a harder putt. The dotted line shows where the ball starts to roll, and the bar at the bottom shows the power.',
         'Let go to putt. Changed your mind? Slide your finger back onto the ball and let go there.',
         'A quick tap never putts, so you can\'t hit the ball by accident.',
+        'Controller: point the stick (or d-pad) where the ball should go, hold A to build power and let go to putt (a quick tap never putts); B cancels. In menus and popups the d-pad moves a gold frame, A picks and B goes back.',
       ],
     },
     {

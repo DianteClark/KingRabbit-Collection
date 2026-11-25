@@ -11,6 +11,7 @@ export const RULES = {
         'Tap a person, chest, sign or switch (or face it and press A) to use it.',
         'Shopkeepers stand behind counters: talk to them across the counter.',
         'The Menu shows your goal, party, items, gear and spells, and lets you save.',
+        'Controller: d-pad or stick to walk, A to talk, use things and move messages on, B to stop, Start for the Menu. In battles and menus the d-pad moves a gold frame over the commands and targets, A picks and B goes back. The arrow pad hides while you use the controller.',
       ],
     },
     {

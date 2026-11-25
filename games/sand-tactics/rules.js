@@ -66,5 +66,6 @@ export const RULES = {
     },
     { heading: 'Saving', text: 'The battle saves itself after every move. Close the page any time and tap Continue to pick up where you left off.' },
     { heading: 'Credits', text: 'Art: Battle of the Sands by Aleksandr Makarov (iknowkingrabbit). Font: BoldPixels by YukiPixels.' },
+    { heading: 'Controller', text: 'On the title screen, in menus, panels and popups the d-pad moves a gold frame over the buttons, A taps it and B goes back. Playing on the battle map is still done by touch.' },
   ],
 };

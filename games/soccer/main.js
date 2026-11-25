@@ -8,7 +8,7 @@ import { MatchScene } from './scenes/MatchScene.js';
 import { Hud } from './scenes/Hud.js';
 import { Penalties } from './scenes/Penalties.js';
 import { initTrophies } from './trophies.js';
-import { installPad } from './padkit.js';
+import { installPad } from '../../shared/core/padkit.js';
 
 initTrophies();
 

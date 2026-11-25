@@ -92,5 +92,6 @@ export const RULES = {
     },
     { heading: 'Saving', text: 'The game saves after every move and every turn. Close the page any time and tap Continue to carry on.' },
     { heading: 'Credits', text: 'Art: the Pangea packs by Aleksandr Makarov (iknowkingrabbit). Font: BoldPixels by YukiPixels. Civilizations and leaders are made up.' },
+    { heading: 'Controller', text: 'On the title screen, in menus, panels and popups the d-pad moves a gold frame over the buttons, A taps it and B goes back. Playing on the map is still done by touch.' },
   ],
 };

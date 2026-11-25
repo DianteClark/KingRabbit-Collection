@@ -2,8 +2,9 @@ import { startGame } from '../../shared/core/boot.js';
 import { Boot } from './scenes/Boot.js';
 import { Menu } from './scenes/Menu.js';
 import { World } from './scenes/World.js';
+import { installPad } from '../../shared/core/padkit.js';
 import { initTrophies } from './trophies.js';
 
 initTrophies();
 
-startGame({ scenes: [Boot, Menu, World] });
+startGame({ scenes: [Boot, Menu, World] }).then(installPad);

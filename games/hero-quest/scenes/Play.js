@@ -25,6 +25,7 @@ export class Play extends Phaser.Scene {
   init(data) { this.startData = data || {}; }
 
   create() {
+    this.padNav = 'off'; // the Hud reads the controller
     let state = this.startData.fresh ? null : save.get('game');
     state = migrate(state);
     if (state && state.hp <= 0) state.hp = state.maxHp;

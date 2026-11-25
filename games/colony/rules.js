@@ -58,5 +58,6 @@ export const RULES = {
       ],
     },
     { heading: 'Credits', text: 'Pixel art: MAS Overworld and MAS Roguelike by Aleksandr Makarov (iknowkingrabbit). Font: BoldPixels. Music and sounds made for this game.' },
+    { heading: 'Controller', text: 'In menus, panels and popups the d-pad moves a gold frame over the buttons, A taps it and B goes back. Placing and ordering on the map is still done by touch.' },
   ],
 };

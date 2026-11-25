@@ -11,7 +11,7 @@ import { STAGES } from '../logic/stages.js';
 import { save } from '../save.js';
 import { skillLabel } from '../adaptive.js';
 import { openHelp } from './common.js';
-import { down, hit, stick, hideWhilePad } from '../padkit.js';
+import { down, hit, stick, hideWhilePad } from '../../../shared/core/padkit.js';
 import { musicOn, setMusicOn } from '../music.js';
 
 const { WIDTH, HEIGHT } = LANDSCAPE;

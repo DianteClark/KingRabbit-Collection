@@ -11,6 +11,7 @@ import { makeRng } from '../logic/rng.js';
 import { dailySetup, breather, dailyScore, WAVES } from '../logic/daily.js';
 import { playMusic, jingle, fx } from '../music.js';
 import { save } from '../save.js';
+import { hit } from '../../../shared/core/padkit.js';
 import { give, checkTrophies, GAME } from '../trophies.js';
 
 const FIELD_TOP = 54;
@@ -44,6 +45,10 @@ export class Battle extends Phaser.Scene {
     // The scene object is reused for every battle: reset what the last one left behind.
     this.ending = false; this.choosing = null; this.targetMode = null; this.markers = null; this.dailyRun = null; this.st = null;
     this.input.on('pointerup', () => { if (this.tapResolve && !busyUi(this) && Date.now() - (this.__modalClosedAt || 0) > 250) { const r = this.tapResolve; this.tapResolve = null; r(); } });
+    // Controller: A moves messages on, like a tap (menus and targets use the gold frame).
+    // Scene events outlive a restart, so hook this only once.
+    this.padNav = () => (this.tapResolve ? 'off' : undefined); // while a message waits, A is for it
+    if (!this.padHooked) { this.padHooked = true; this.events.on('update', () => { if (this.tapResolve && !busyUi(this) && hit('a')) { const r = this.tapResolve; this.tapResolve = null; r(); } }); }
 
     if (this.daily) {
       const d = dailySetup(store.daily?.seed ?? 1);

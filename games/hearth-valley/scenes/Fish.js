@@ -8,6 +8,7 @@ import { ATLAS } from '../art.js';
 import * as G from '../logic/game.js';
 import * as D from '../logic/data.js';
 import { newReel, stepReel, inBar, biteDelay, HOOK_WINDOW } from '../logic/fishing.js';
+import { hit, down } from '../../../shared/core/padkit.js';
 import { jingle, playMusic, swish } from '../music.js';
 
 const TRACK = { x: 118, top: 150, h: 330, w: 44 };
@@ -70,6 +71,9 @@ export class Fish extends Phaser.Scene {
     this.input.keyboard?.on('keydown-SPACE', () => this.down());
     this.input.keyboard?.on('keyup-SPACE', () => { this.downs = 0; });
     window.__fish = this;
+    // Controller: A works like a tap and hold on the water; B gives up / reels in.
+    this.padNav = 'modal';
+    this.padA = false;
     this.cast();
   }
 
@@ -116,6 +120,10 @@ export class Fish extends Phaser.Scene {
   }
 
   update(t, delta) {
+    if (this.okBtn.visible) { if (hit('a')) this.finish(); } else {
+      if (hit('a')) { this.padA = true; this.down(); } else if (this.padA && !down('a')) { this.padA = false; this.downs = Math.max(0, this.downs - 1); }
+      if (hit('b')) this.cancel();
+    }
     if (this.__modal?.active || document.getElementById('howto')) return;
     const dt = delta / 1000;
     if (this.timed && !this.over && this.phase !== 'done') {

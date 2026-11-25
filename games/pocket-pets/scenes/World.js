@@ -10,7 +10,7 @@ import * as DATA from '../logic/data.js';
 import { SPECIES, ITEMS, STARTERS } from '../logic/data.js';
 import { TYPE_INFO } from '../logic/types.js';
 import { petName } from '../logic/pet.js';
-import { hit, stick, hideWhilePad } from '../padkit.js';
+import { hit, stick, hideWhilePad } from '../../../shared/core/padkit.js';
 import { partyPanel, bagPanel, dexPanel, shopPanel, boxPanel, blocking, closeAll } from './panels.js';
 
 const T = 32; // tile size on screen

@@ -56,5 +56,6 @@ export const RULES = {
     },
     { heading: 'Saving and settings', text: 'The game saves itself after every move. Close the tab whenever you like and tap Continue to pick up where you left off. The < button on the map opens a menu where you can turn sound off or skip watching enemy moves.' },
     { heading: 'Credits', text: 'Art: HAS Heroic Fantasy by Aleksandr Makarov (iknowkingrabbit). Font: BoldPixels.' },
+    { heading: 'Controller', text: 'On the title screen, in menus, panels and popups the d-pad moves a gold frame over the buttons, A taps it and B goes back. Playing on the adventure map and in battles is still done by touch.' },
   ],
 };

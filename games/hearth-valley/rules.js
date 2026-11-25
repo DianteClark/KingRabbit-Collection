@@ -6,6 +6,7 @@ export const RULES = {
       'Hold the big thumb pad to walk. Slide your thumb to turn.',
       'Or tap a spot to walk there. Tap something farther away (a person, a door, the bin) to walk up to it and use it.',
       'Walk off the edge of a road to go to the next area: the town is east, the woods are north.',
+      'Controller: d-pad or stick to walk, A to use the tool or talk (and to move messages on), B to stop, L and R to change tool, X for the Bag, Y for Craft, Start for the Menu. When fishing, A works like tapping and holding the screen. In menus the d-pad moves a gold frame, A picks and B goes back. The thumb pad hides while you use the controller.',
     ] },
     { heading: 'Tools', items: [
       'Pick a tool in the bar, then press A (or tap the tile right next to you) to use it on the tile you face.',

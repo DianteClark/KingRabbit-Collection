@@ -16,11 +16,12 @@ import { initTrophies } from './trophies.js';
 
 initTrophies();
 import * as C from './logic/cards.js';
+import { installPad } from '../../shared/core/padkit.js';
 import { handCard, wideCard } from './scenes/cardview.js';
 
 startGame({
   scenes: [Boot, Menu, HeroSelect, MapScene, Battle, Reward, Rest, Treasure, Event, Shop, RunEnd, DeckView],
-});
+}).then(installPad);
 
 // Test hooks for the automated browser checks: only in dev, or with ?debug in the address.
 if (DEBUG) window.__spire = { R, B, C, handCard, wideCard, saveRun, loadRun };

@@ -5,7 +5,8 @@ import { Title } from './scenes/Title.js';
 import { World } from './scenes/World.js';
 import { Battle } from './scenes/Battle.js';
 import { Ending } from './scenes/Ending.js';
+import { installPad } from '../../shared/core/padkit.js';
 import { initTrophies } from './trophies.js';
 
 initTrophies();
-startGame({ scenes: [Boot, Title, World, Battle, Ending] });
+startGame({ scenes: [Boot, Title, World, Battle, Ending] }).then(installPad);

@@ -12,6 +12,7 @@ import { DUNGEONS } from '../logic/constants.js';
 import { objective } from '../logic/story.js';
 import { musicOn, setMusicOn } from '../music.js';
 import { ROOMS } from '../logic/data.js';
+import { hit, stick, usingPad } from '../../../shared/core/padkit.js';
 // Landscape layout (see layout.js): the room fills the middle, full height. Left margin: pause,
 // hearts, gems, keys and the stick. Right margin: help, then SWAP / ITEM / SWORD for the thumb.
 import { VIEW, LEFT, RIGHT, MID as MARGIN_R, STICK, SWORD, ITEMB, SWAP, PAUSE_BTN, HELP_BTN, stickZone, hitSword, hitItem, hitSwap } from '../layout.js';
@@ -67,6 +68,9 @@ export class Hud extends Phaser.Scene {
     this.bannerBg = this.add.rectangle(MARGIN_R, VIEW.y + 26, VIEW.w, 44, hex(PALETTE.ink), 0.6).setDepth(30).setAlpha(0);
 
     this.setupInput();
+    // Controller: the gold menu frame only works in popups; Start opens / closes the pause menu.
+    this.padNav = 'modal';
+    this.padStart = () => (this.modal ? this.modal.close() : this.pauseMenu());
     this.refresh();
     this.ready = true;
     this.play.banner(true);
@@ -161,6 +165,12 @@ export class Hud extends Phaser.Scene {
       const ky = (k.DOWN.isDown || k.S.isDown ? 1 : 0) - (k.UP.isDown || k.W.isDown ? 1 : 0);
       if (kx || ky) { const d = Math.hypot(kx, ky); out.mx = kx / d; out.my = ky / d; }
     }
+    // Controller: stick or d-pad walks, A = sword (talk / read / open), B or X = item, Y, L or R = swap.
+    const ps = stick();
+    if (ps.x || ps.y) { const d = Math.max(1, Math.hypot(ps.x, ps.y)); out.mx = ps.x / d; out.my = ps.y / d; }
+    if (hit('a')) this.press.attack = true;
+    if (hit('b') || hit('x2')) this.press.item = true;
+    if (hit('y2') || hit('l') || hit('r')) this.press.cycle = true;
     Object.assign(out, this.press);
     this.press = { attack: false, item: false, cycle: false };
     return out;
@@ -168,7 +178,10 @@ export class Hud extends Phaser.Scene {
 
   // ------------------------------------------------------------------ drawing
 
-  update() { this.refresh(); }
+  update() {
+    if (this.dialog && hit('a')) this.advanceDialog(); // A moves a conversation on, like a tap
+    this.refresh();
+  }
 
   refresh() {
     const g = this.g; if (!g) return;
@@ -222,6 +235,12 @@ export class Hud extends Phaser.Scene {
       gpad.fillStyle(hex(PALETTE.ink), 0.6).fillRoundedRect(SWAP.x - SWAP.w / 2, SWAP.y - SWAP.h / 2 + 3, SWAP.w, SWAP.h, 8);
       gpad.fillStyle(hex(PALETTE.lavender), 0.9).fillRoundedRect(SWAP.x - SWAP.w / 2, SWAP.y - SWAP.h / 2, SWAP.w, SWAP.h, 8);
     }
+    // While a controller is in use the stick and buttons hide (the item icon stays: it shows
+    // what B uses). They come back on the next touch.
+    const padOn = usingPad();
+    gpad.setVisible(!padOn);
+    this.swordLabel.setVisible(!padOn);
+    if (padOn) { this.itemLabel.setVisible(false); this.swapLabel.setVisible(false); this.stickHint.setVisible(false); }
   }
 
   flashHurt() {
