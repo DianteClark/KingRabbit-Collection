@@ -7,6 +7,7 @@ import { showTip, showConfirm, anyOpen, closeAll } from './panels.js';
 import * as G from '../logic/game.js';
 import { AREAS, AREA_ORDER, INGREDIENTS } from '../logic/data.js';
 import { SPOT_ART } from '../art.js';
+import { earn } from '../trophies.js';
 import { playMusic } from '../music.js';
 
 const FIELD_TOP = 134;
@@ -53,7 +54,7 @@ export class Gather extends Phaser.Scene {
     if (!info.open) {
       if (info.can) {
         showConfirm(`Open the ${AREAS[a].name}?`, `It costs ${info.cost} coins (you have ${this.s.coins}).`, `Pay ${info.cost}`, () => {
-          if (G.unlockArea(this.s, a).ok) { persist(); sfx('power'); this.area = a; this.drawArea(); }
+          if (G.unlockArea(this.s, a).ok) { persist(); sfx('power'); earn(a); this.area = a; this.drawArea(); }
         });
       } else {
         sfx('error');

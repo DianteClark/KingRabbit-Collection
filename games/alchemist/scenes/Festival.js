@@ -7,6 +7,7 @@ import { showShelf, showConfirm, anyOpen, closeAll } from './panels.js';
 import * as G from '../logic/game.js';
 import { FESTIVAL, POTIONS } from '../logic/data.js';
 import { noteBest } from '../save.js';
+import { earn } from '../trophies.js';
 import { playMusic, jingle } from '../music.js';
 
 const PANEL_Y = 380;
@@ -104,6 +105,7 @@ export class Festival extends Phaser.Scene {
     const res = G.enterFestival(s, key);
     if (!res) return;
     persist();
+    if (res.done && s.result?.kind === 'win') earn('festival');
     this.ui.removeAll(true);
     this.shows.removeAll(true);
     // your potion and Vex's go up on the stage

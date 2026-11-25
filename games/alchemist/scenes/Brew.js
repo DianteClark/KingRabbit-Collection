@@ -7,6 +7,7 @@ import { showTip, showBook, anyOpen, closeAll } from './panels.js';
 import * as G from '../logic/game.js';
 import { INGREDIENTS, ING_ORDER, POTIONS, ELEMENTS, EL_INFO } from '../logic/data.js';
 import { stirZone, needleAt, stirHit, STIR } from '../logic/brew.js';
+import { earn, stat } from '../trophies.js';
 import { playMusic, bubble, jingle } from '../music.js';
 
 const GRID_TOP = 366;
@@ -244,6 +245,15 @@ export class Brew extends Phaser.Scene {
     if (!r.ok) { this.game2 = null; toast(this, r.why || 'That did not work.', 470); this.redraw(); return; }
     persist();
     this.pot = [];
+    stat('potions brewed', r.n);
+    if (r.potion === 'sludge') earn('sludge');
+    else {
+      earn('first-brew');
+      if (r.stars >= 3) earn('three-star');
+      const known = Object.keys(this.s.known).filter((k) => k !== 'sludge').length;
+      if (known >= 10) earn('recipes-10');
+      if (known >= Object.keys(POTIONS).length - 1) earn('all-recipes');
+    }
     this.showResult(r);
   }
 
