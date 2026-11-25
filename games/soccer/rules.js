@@ -16,6 +16,7 @@ export const RULES = {
         'You always control the player marked with the gold arrow. It switches to the player nearest the ball by itself.',
         'Press PASS or SHOOT while a pass is coming to you to play it first time.',
         'Keyboard: arrows or WASD to run, X or J to pass/tackle, Space or K to shoot.',
+        'Controller: left stick or d-pad to run, A to pass/tackle, B or X to shoot (hold to charge), Start to pause. In menus the d-pad moves a gold frame, A picks and B goes back. The touch controls hide while you use the controller and come back when you touch the screen.',
       ],
     },
     {
